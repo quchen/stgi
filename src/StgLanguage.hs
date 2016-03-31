@@ -10,8 +10,8 @@ newtype Program = Program Binds
 data Binds = Binds (Map Var LambdaForm)
 data LambdaForm = LambdaForm [Var] UpdateFlag [Var] Expr
 data UpdateFlag = Update | NoUpdate
-data Expr = Let Binds Expr
-          | LetRec Binds Expr
+data Rec = NonRecursive | Recursive
+data Expr = Let Rec Binds Expr
           | Case Expr Alts
           | AppF Var [Atom]
           | AppC Constr [Atom]

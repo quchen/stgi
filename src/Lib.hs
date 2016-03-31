@@ -17,6 +17,20 @@ newtype Heap = Heap (Map MemAddr LambdaForm)
 heapLookup :: MemAddr -> Heap -> Maybe LambdaForm
 heapLookup addr (Heap heap) = M.lookup addr heap
 
+heapAlloc :: LambdaForm -> Heap -> (MemAddr, Heap)
+heapAlloc lambdaForm (Heap h) = (addr, heap')
+  where
+    addr = MemAddr (case M.maxViewWithKey h of
+        Just ((MemAddr x,_),_) -> x + 1
+        Nothing                -> 0 )
+    heap' = Heap (M.insert addr lambdaForm h)
+
+heapAllocMany :: [LambdaForm] -> Heap -> ([MemAddr], Heap)
+heapAllocMany [] heap = ([], heap)
+heapAllocMany (lf:lfs) heap =
+    let (addr, heap') = heapAlloc lf heap
+        (addrs, heap'') = heapAllocMany lfs heap'
+    in (addr:addrs, heap'')
 
 newtype MemAddr = MemAddr Int deriving (Eq, Ord, Show)
 data Value = Addr MemAddr | PrimInt Int
@@ -24,8 +38,19 @@ data Code = Eval Expr Locals
           | Enter MemAddr
           | ReturnCon Constr [Value]
           | ReturnInt Int
-data Globals = Globals (Map Var MemAddr)
-data Locals = Locals (Map Var MemAddr)
+newtype Globals = Globals (Map Var MemAddr)
+newtype Locals = Locals (Map Var MemAddr)
+
+emptyLocals :: Locals
+emptyLocals = Locals M.empty
+
+addLocal :: (Var, MemAddr) -> Locals -> Locals
+addLocal (var, addr) (Locals locals) = Locals (M.insert var addr locals)
+
+addLocals :: [(Var, MemAddr)] -> Locals -> Locals
+addLocals defs locals = foldr addLocal locals defs
+
+unionLocals (Locals l1) (Locals l2) = Locals (M.union l1 l2)
 
 val :: Locals -> Globals -> Atom -> Either String Value
 val (Locals locals) (Globals globals) = \case
@@ -54,8 +79,6 @@ initialState main' globals = StgState
     , stgHeap        = Heap M.empty
     , stgGlobals     = globals }
 
-
-
 stgStep :: StgState -> Either String StgState
 stgStep (StgState (Eval (AppF f@(Var _) xs) locals) argS retS updS heap globals) = do
     a <- case val locals globals (AtomVar f) of
@@ -70,5 +93,14 @@ stgStep (StgState (Enter a) argS retS updS heap globals)
     | Just (LambdaForm free update bound body) <- heapLookup a heap
     , Just (wsa, argS') <- popN (length bound) argS
   = Right (
-    let locals = Locals (M.fromList (zip
-    in StgState (Eval body locals) argS' retS updS heap globals)
+    let locals = undefined
+    in StgState (Eval body locals) argS' retS updS heap globals )
+
+stgStep (StgState (Eval (Let rec binds expr) locals) argS retS updS heap globals)
+  = Right (StgState (Eval expr locals' argS retS updS heap globals))
+  where
+    locals' = undefined
+
+    localsRhs = case rec of
+        NonRecursive -> locals
+        Recursive    -> locals'

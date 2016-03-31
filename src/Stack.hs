@@ -27,13 +27,9 @@ pop (Stack (x:xs)) = Just (x, Stack xs)
 pop _ = Nothing
 
 popN :: Int -> Stack a -> Maybe ([a], Stack a)
-popN n _ | n < 0 = Nothing
-popN 0 s = Just ([], s)
-popN n (Stack []) = Nothing
-popN n (Stack (x:xs)) = do
-    (pops, stack) <- popN (n-1) (Stack xs)
-    Just (x : pops, stack)
-
+popN n stack@(Stack xs)
+    | size stack < n = Nothing
+    | (top, bottom) <- splitAt n xs = Just (top, Stack bottom)
 
 peek :: Stack a -> Maybe a
 peek = fmap fst . pop
