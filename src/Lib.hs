@@ -5,12 +5,11 @@ module Lib where
 
 
 import           Control.Applicative
-import           Control.Monad
 import qualified Data.List           as L
 import           Data.Map            (Map)
 import qualified Data.Map            as M
+import           Data.Maybe
 import           Data.Monoid
-import           GHC.Exts            (fromList)
 
 import           Stack               (Stack (..), (<>>))
 import qualified Stack               as S
@@ -72,6 +71,9 @@ addLocal (var, addr) (Locals locals) = Locals (M.insert var addr locals)
 addLocals :: [(Var, Value)] -> Locals -> Locals
 addLocals defs locals = foldr addLocal locals defs
 
+makeLocals :: [(Var, Value)] -> Locals
+makeLocals defs = addLocals defs emptyLocals
+
 unionLocals :: Locals -> Locals -> Locals
 unionLocals (Locals l1) (Locals l2) = Locals (M.union l1 l2)
 
@@ -83,6 +85,12 @@ val (Locals locals) (Globals globals) = \case
 vals :: Locals -> Globals -> [Atom] -> Maybe [Value]
 vals locals globals = traverse (val locals globals)
 
+unsafeVals :: Locals -> Globals -> [Atom] -> [Value]
+unsafeVals l g a = fromMaybe (error "Variable not found") (vals l g a)
+
+localVal :: Locals -> Var -> Maybe Value
+localVal (Locals locals) var = M.lookup var locals
+
 data StgState = StgState
     { stgCode        :: Code
     , stgArgStack    :: Stack Value
@@ -90,7 +98,7 @@ data StgState = StgState
     , stgUpdateStack :: Stack (Stack Value, Stack (Alts, Locals), MemAddr)
     , stgHeap        :: Heap
     , stgGlobals     :: Globals
-    , ticks          :: Integer }
+    , stgTicks       :: Integer }
 
 initialState :: Expr -> Globals -> StgState
 initialState main' globals = StgState
@@ -100,65 +108,109 @@ initialState main' globals = StgState
     , stgUpdateStack = mempty
     , stgHeap        = Heap M.empty
     , stgGlobals     = globals
-    , ticks          = 0 }
+    , stgTicks       = 0 }
 
 stgStep :: StgState -> StgState
 
 -- (1) DONE
-stgStep (StgState (Eval (AppF f xs) locals) argS retS updS heap globals ticks)
+stgStep s@StgState
+    { stgCode     = Eval (AppF f xs) locals
+    , stgArgStack = argS
+    , stgGlobals  = globals }
     | Just (Addr a) <- val locals globals (AtomVar f)
-  = do
-    xsVals <- vals locals globals xs
-    let argS' = xsVals <>> argS
-    pure (StgState (Enter a) argS' retS updS heap globals ticks)
 
--- (2)
-stgStep (StgState (Enter a) argS retS updS heap globals ticks)
-    | Just (Closure (LambdaForm free update bound body) freeVals) <- heapLookup a heap
+  = let xsVals = unsafeVals locals globals xs
+        argS' = xsVals <>> argS
+
+    in s { stgCode     = Enter a
+         , stgArgStack = argS' }
+
+-- (2) DONE
+stgStep s@StgState
+    { stgCode     = Enter a
+    , stgArgStack = argS
+    , stgHeap     = heap }
+    | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- heapLookup a heap
     , Just (args, argS') <- S.popN (length bound) argS
-  = Right (
-    let locals = addLocals (zip free freeVals ++ zip bound args) emptyLocals
-    in StgState (Eval body locals) argS' retS updS heap globals ticks)
 
--- (3)
-stgStep (StgState (Eval (Let rec binds expr) locals) argS retS updS heap globals ticks)
-  = Right (StgState (Eval expr locals') argS retS updS heap globals ticks)
-  where
-    locals' = undefined
+  = let locals = makeLocals (zip free freeVals ++ zip bound args)
 
-    localsRhs = case rec of
-        NonRecursive -> locals
-        Recursive    -> locals'
+    in s { stgCode     = Eval body locals
+         , stgArgStack = argS' }
+
+-- (3) DONE
+stgStep s@StgState
+    { stgCode = Eval (Let rec (Binds binds) expr) locals
+    , stgHeap = heap }
+
+  = let locals' = makeLocals (zipWith (\n a -> (n, Addr a))
+                             (M.keys binds)
+                             addrs )
+
+        (addrs, heap') = heapAllocMany (map liftClosure (M.elems binds)) heap
+
+        liftClosure :: LambdaForm -> Closure
+        liftClosure lf@(LambdaForm free _ _ _) =
+            let freeVals :: [Value]
+                freeVals = fromMaybe (error "FOOBAR")
+                                     (traverse (localVal localsRhs) free)
+            in Closure lf freeVals
+
+        localsRhs = case rec of
+            NonRecursive -> locals
+            Recursive    -> locals'
+
+    in s { stgCode = Eval expr locals'
+         , stgHeap = heap' }
+
+
+
 
 -- (4) DONE
-stgStep (StgState (Eval (Case expr alts) locals) argS retS updS heap globals ticks)
+stgStep s@StgState
+    { stgCode        = (Eval (Case expr alts) locals)
+    , stgReturnStack = retS }
+
   = let retS' = (alts, locals) :< retS
-    in Right (StgState (Eval expr locals) argS retS updS heap globals ticks)
+
+    in s { stgCode        = Eval expr locals
+         , stgReturnStack = retS'  }
 
 -- (5) DONE
-stgStep (StgState (Eval (AppC con xs) locals) argS retS updS heap globals ticks) = do
-    valsXs <- vals locals globals xs
-    Right (StgState (ReturnCon con valsXs) argS retS updS heap globals ticks)
+stgStep s@StgState
+    { stgCode    = Eval (AppC con xs) locals
+    , stgGlobals = globals }
+
+  = let valsXs = unsafeVals locals globals xs
+
+    in s { stgCode = ReturnCon con valsXs }
 
 -- (6)
-stgStep (StgState (ReturnCon con ws) argS retS updS heap globals ticks)
+stgStep s@StgState
+    { stgCode        = ReturnCon con ws
+    , stgReturnStack = retS }
     | (alts@(AlgebraicAlts _ _), locals) :< retS' <- retS
     , Left (Right (AAlt _con vars expr)) <- lookupAlts alts con
+
   = let locals' = undefined
-    in Right (StgState (Eval expr locals) argS retS' updS heap globals ticks)
+        _hideUnused = undefined locals' vars ws
+
+    in s { stgCode        = Eval expr locals
+         , stgReturnStack = retS' }
 
 -- (7)
 
 -- (8)
 
 -- (9) DONE
-stgStep (StgState (Eval (Lit (Literal k)) _locals) argS retS updS heap globals ticks)
-  = Right (StgState (ReturnInt k) argS retS updS heap globals ticks)
+stgStep s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
+  = s { stgCode = ReturnInt k }
 
 -- (10) DONE
-stgStep (StgState (Eval (AppF f []) locals) argS retS updS heap globals ticks)
-    | Right (PrimInt k) <- val locals emptyGlobals (AtomVar f)
-  = Right (StgState (ReturnInt k) argS retS updS heap globals ticks)
+stgStep s@StgState { stgCode = Eval (AppF f []) locals}
+    | Just (PrimInt k) <- val locals emptyGlobals (AtomVar f)
+
+  = s { stgCode = ReturnInt k }
 
 -- (11)
 
@@ -169,25 +221,60 @@ stgStep (StgState (Eval (AppF f []) locals) argS retS updS heap globals ticks)
 -- (14)
 
 -- (15)
-stgStep (StgState (Enter addr) argS retS updS heap globals ticks)
-    | Just (LambdaForm vs Update [] body) <- heapLookup addr heap
+stgStep s@StgState
+    { stgCode        = Enter addr
+    , stgArgStack    = argS
+    , stgReturnStack = retS
+    , stgUpdateStack = updS
+    , stgHeap        = heap
+    , stgGlobals     = globals
+    , stgTicks       = ticks }
+    | Just (Closure (LambdaForm free Update [] body) freeVals) <- heapLookup addr heap
+
   = let updS' = (argS, retS, addr) :< updS
         -- addLocals :: [(Var, MemAddr)] -> Locals -> Locals
-        locals = addLocals (zip undefined undefined) emptyLocals
-    in Right (StgState (Eval body locals) Empty Empty updS' heap globals ticks)
+        locals = makeLocals (zip undefined undefined)
+        _ignoreUnused = undefined globals ticks free freeVals
+
+    in s { stgCode        = Eval body locals
+         , stgArgStack    = Empty
+         , stgReturnStack = Empty
+         , stgUpdateStack = updS' }
 
 -- (16)
-stgStep (StgState (ReturnCon con ws) Empty Empty ((argSU, retSU, addrU) :< updS') heap globals ticks) = do
-    let vs = let newVar _old i = Var ("Var:tick " ++ show ticks ++ "#" ++ show i)
+stgStep s@StgState
+    { stgCode        = ReturnCon con ws
+    , stgArgStack    = Empty
+    , stgReturnStack = Empty
+    , stgUpdateStack = (argSU, retSU, addrU) :< updS'
+    , stgHeap        = heap
+    , stgTicks       = ticks }
+
+  = let vs = let newVar _old i = Var ("Var:tick " ++ show ticks ++ "#" ++ show i)
              in zipWith newVar ws [0..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
-        heap' = heapUpdate addrU lf heap
+        heap' = heapUpdate addrU (Closure lf ws) heap
         ticks' = ticks+1
-    Right (StgState (ReturnCon con ws) argSU retSU updS' heap' globals ticks')
+
+    in s { stgCode        = ReturnCon con ws
+         , stgArgStack    = argSU
+         , stgReturnStack = retSU
+         , stgUpdateStack = updS'
+         , stgHeap        = heap'
+         , stgTicks       = ticks' }
 
 -- (17)
-stgStep (StgState (Enter addr) argS Empty ((argSU, retSU, addrU) :< updS') heap globals ticks) = do
-    let argS' = argS <> argSU
-    undefined
+stgStep s@StgState
+    { stgCode        = Enter addr
+    , stgArgStack    = argS
+    , stgReturnStack = Empty
+    , stgUpdateStack = (argSU, retSU, addrU) :< updS'
+    , stgHeap        = heap
+    , stgGlobals     = globals
+    , stgTicks       = ticks }
+
+  = let argS' = argS <> argSU
+
+    in undefined s addr retSU addrU updS' heap globals ticks argS'
 
 -- (17a)

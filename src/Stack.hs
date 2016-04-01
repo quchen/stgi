@@ -10,7 +10,6 @@ module Stack (
 
 
 import           Data.Foldable as F
-import qualified Data.List     as L
 import           Data.Monoid
 
 
@@ -43,7 +42,3 @@ fromList = foldr (:<) Empty
 
 size :: Stack a -> Int
 size = foldl' (\acc _ -> acc+1) 0
-
-null :: Stack a -> Bool
-null Empty = True
-null _ = False
