@@ -257,7 +257,15 @@ stgStep s@StgState
 
 -- (12)
 
--- (13)
+
+-- (13) DONE
+stgStep s@StgState
+    { stgCode        = ReturnInt k
+    , stgReturnStack = (alts@PrimitiveAlts{}, locals) :< retS' }
+    | Right (Left (DefaultNotBound expr)) <- lookupAlts alts (Right (Literal k))
+
+  = s { stgCode        = Eval expr locals
+      , stgReturnStack = retS' }
 
 -- (14)
 
