@@ -220,11 +220,10 @@ stgStep s@StgState
 -- (8) DONE
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
-    , stgReturnStack = retS
+    , stgReturnStack = (alts@AlgebraicAlts{}, locals) :< retS'
     , stgHeap        = heap
     , stgTicks       = ticks }
-    | (alts@AlgebraicAlts{}, locals) :< retS' <- retS
-    , Left (Left (DefaultBound (AtomVar v) expr)) <- lookupAlts alts (Left con)
+    | Left (Left (DefaultBound (AtomVar v) expr)) <- lookupAlts alts (Left con)
 
   = let locals' = addLocal (v, Addr addr) locals
         (addr, heap') = heapAlloc closure heap
@@ -256,7 +255,15 @@ stgStep s@StgState
       , stgReturnStack = retS' }
 
 -- (12)
+stgStep s@StgState
+    { stgCode        = ReturnInt k
+    , stgReturnStack = (alts@PrimitiveAlts{}, locals) :< retS' }
+    | Right (Left (DefaultBound (AtomVar v) expr)) <- lookupAlts alts (Right (Literal k))
 
+  = let locals' = addLocal (v, PrimInt k) locals
+
+    in s { stgCode        = Eval expr locals'
+         , stgReturnStack = retS' }
 
 -- (13) DONE
 stgStep s@StgState
