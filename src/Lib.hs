@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 
 module Lib where
 
@@ -15,6 +16,7 @@ import           Data.Monoid
 import           Stack               (Stack (..), (<>>))
 import qualified Stack               as S
 import           StgLanguage
+
 
 
 data Closure = Closure LambdaForm [Value]
@@ -59,14 +61,8 @@ data Code = Eval Expr Locals
           | Enter MemAddr
           | ReturnCon Constr [Value]
           | ReturnInt Int
-newtype Globals = Globals (Map Var Value)
-newtype Locals = Locals (Map Var Value)
-
-emptyGlobals :: Globals
-emptyGlobals = Globals M.empty
-
-emptyLocals :: Locals
-emptyLocals = Locals M.empty
+newtype Globals = Globals (Map Var Value) deriving (Monoid)
+newtype Locals = Locals (Map Var Value) deriving (Monoid)
 
 addLocal :: (Var, Value) -> Locals -> Locals
 addLocal (var, addr) (Locals locals) = Locals (M.insert var addr locals)
@@ -75,10 +71,7 @@ addLocals :: [(Var, Value)] -> Locals -> Locals
 addLocals defs locals = foldr addLocal locals defs
 
 makeLocals :: [(Var, Value)] -> Locals
-makeLocals defs = addLocals defs emptyLocals
-
-unionLocals :: Locals -> Locals -> Locals
-unionLocals (Locals l1) (Locals l2) = Locals (M.union l1 l2)
+makeLocals defs = addLocals defs mempty
 
 val :: Locals -> Globals -> Atom -> Maybe Value
 val (Locals locals) (Globals globals) = \case
@@ -232,7 +225,7 @@ stgStep s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
 
 -- (10) DONE
 stgStep s@StgState { stgCode = Eval (AppF f []) locals}
-    | Just (PrimInt k) <- val locals emptyGlobals (AtomVar f)
+    | Just (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k }
 
