@@ -25,7 +25,7 @@ data Expr = Let Rec Binds Expr
           | Case Expr Alts
           | AppF Var    [Atom]
           | AppC Constr [Atom]
-          | AppP Prim   [Atom]
+          | AppP PrimOp [Atom]
           | Lit Literal
           deriving (Eq, Ord, Show)
 
@@ -46,10 +46,7 @@ data DefaultAlt = DefaultNotBound Expr
 data Literal = Literal Int
     deriving (Eq, Ord, Show)
 
-data Prim = Prim Op Int Int
-    deriving (Eq, Ord, Show)
-
-data Op = Add | Sub | Mul | Div | Mod
+data PrimOp = Add | Sub | Mul | Div | Mod
     deriving (Eq, Ord, Show)
 
 data Var = Var String

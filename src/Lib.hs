@@ -274,7 +274,20 @@ stgStep s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
 
--- (14)
+-- (14) DONE
+stgStep s@StgState
+    { stgCode = Eval (AppP op [AtomVar x, AtomVar y]) locals }
+    | Just (PrimInt xVal) <- localVal locals x
+    , Just (PrimInt yVal) <- localVal locals y
+
+  = let apply = \case
+            Add -> (+)
+            Sub -> (-)
+            Mul -> (*)
+            Div -> quot
+            Mod -> rem
+
+    in s { stgCode = ReturnInt (apply op xVal yVal) }
 
 -- (15)
 stgStep s@StgState
