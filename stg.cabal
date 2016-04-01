@@ -15,9 +15,12 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
-                     , Stack
-                     , StgLanguage
+  exposed-modules:     Stack
+                     , Stg.Language
+                     , Stg.Machine.Env
+                     , Stg.Machine.Heap
+                     , Stg.Machine.Step
+                     , Stg.Machine.Types
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
                      , containers

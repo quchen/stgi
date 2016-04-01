@@ -1,48 +1,26 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE LambdaCase #-}
 
-module Lib where
+module Stg.Machine.Step (
+    initialState,
+    stgStep,
+) where
 
 
 
-import           Control.Applicative
-import qualified Data.Foldable       as F
-import qualified Data.List           as L
-import           Data.Map            (Map)
-import qualified Data.Map            as M
+import qualified Data.Foldable     as F
+import qualified Data.List         as L
+import qualified Data.Map          as M
 import           Data.Maybe
 import           Data.Monoid
 
-import           Stack               (Stack (..), (<>>))
-import qualified Stack               as S
-import           StgLanguage
+import           Stack             (Stack (..), (<>>))
+import qualified Stack             as S
+import           Stg.Language
+import           Stg.Machine.Env
+import           Stg.Machine.Heap
+import           Stg.Machine.Types
 
 
-
-data Closure = Closure LambdaForm [Value]
-
-newtype Heap = Heap (Map MemAddr Closure)
-
-heapLookup :: MemAddr -> Heap -> Maybe Closure
-heapLookup addr (Heap heap) = M.lookup addr heap
-
-heapUpdate :: MemAddr -> Closure -> Heap -> Heap
-heapUpdate addr cl (Heap h) = Heap (M.adjust (const cl) addr h)
-
-heapAlloc :: Closure -> Heap -> (MemAddr, Heap)
-heapAlloc lambdaForm (Heap h) = (addr, heap')
-  where
-    addr = MemAddr (case M.maxViewWithKey h of
-        Just ((MemAddr x,_),_) -> x + 1
-        Nothing                -> 0 )
-    heap' = Heap (M.insert addr lambdaForm h)
-
-heapAllocMany :: [Closure] -> Heap -> ([MemAddr], Heap)
-heapAllocMany [] heap = ([], heap)
-heapAllocMany (cl:cls) heap =
-    let (addr, heap') = heapAlloc cl heap
-        (addrs, heap'') = heapAllocMany cls heap'
-    in (addr:addrs, heap'')
 
 lookupAAlts :: AAlts -> Constr -> Either DefaultAlt AAlt
 lookupAAlts (AAlts alts def) constr
@@ -54,38 +32,6 @@ lookupPAlts (PAlts alts def) lit
     | Just alt <- L.find (\(PAlt lit' _) -> lit' == lit) alts = Right alt
     | otherwise = Left def
 
-
-newtype MemAddr = MemAddr Int deriving (Eq, Ord, Show)
-data Value = Addr MemAddr | PrimInt Int
-data Code = Eval Expr Locals
-          | Enter MemAddr
-          | ReturnCon Constr [Value]
-          | ReturnInt Int
-newtype Globals = Globals (Map Var Value) deriving (Monoid)
-newtype Locals = Locals (Map Var Value) deriving (Monoid)
-
-addLocal :: (Var, Value) -> Locals -> Locals
-addLocal (var, addr) (Locals locals) = Locals (M.insert var addr locals)
-
-addLocals :: [(Var, Value)] -> Locals -> Locals
-addLocals defs locals = foldr addLocal locals defs
-
-makeLocals :: [(Var, Value)] -> Locals
-makeLocals defs = addLocals defs mempty
-
-val :: Locals -> Globals -> Atom -> Maybe Value
-val (Locals locals) (Globals globals) = \case
-    AtomLit (Literal k) -> Just (PrimInt k)
-    AtomVar v           -> M.lookup v locals <|> M.lookup v globals
-
-vals :: Locals -> Globals -> [Atom] -> Maybe [Value]
-vals locals globals = traverse (val locals globals)
-
-unsafeVals :: Locals -> Globals -> [Atom] -> [Value]
-unsafeVals l g a = fromMaybe (error "Variable not found") (vals l g a)
-
-localVal :: Locals -> Var -> Maybe Value
-localVal (Locals locals) var = M.lookup var locals
 
 data StgState = StgState
     { stgCode        :: Code

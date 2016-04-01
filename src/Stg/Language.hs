@@ -1,4 +1,4 @@
-module StgLanguage where
+module Stg.Language where
 
 
 
