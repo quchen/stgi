@@ -246,7 +246,7 @@ stgStep s@StgState
     , stgHeap        = heap
     , stgTicks       = ticks }
 
-  = let vs = let newVar _old i = Var ("Var/Upd:tick " ++ show ticks ++ "#" ++ show i)
+  = let vs = let newVar _old i = Var ("Var/Upd1:tick " ++ show ticks ++ "#" ++ show i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = heapUpdate addrU (Closure lf ws) heap
@@ -258,26 +258,27 @@ stgStep s@StgState
          , stgHeap        = heap'
          , stgTicks       = ticks+1 }
 
--- (17) DONE
+-- (17a) DONE
 stgStep s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
     , stgReturnStack = Empty
     , stgUpdateStack = (argSU, retSU, addrU) :< updS'
-    , stgHeap        = heap }
-    | Just (Closure (LambdaForm vs NoUpdate xs body) wsf) <- heapLookup addr heap
+    , stgHeap        = heap
+    , stgTicks       = ticks }
+    | Just (Closure (LambdaForm _vs NoUpdate xs body) _wsf) <- heapLookup addr heap
     , S.size argS < L.length xs
 
   = let argS' = argS <> argSU
         (xs1, xs2) = splitAt (S.size argS) xs
-        moreArgsClosure = Closure (LambdaForm (vs <> xs1) NoUpdate xs2 body)
-                                  (wsf <> F.toList argS)
+        f = Var ("Var/Upd2:tick " ++ show ticks)
+        moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate xs2 body)
+                                  (Addr addr : F.toList argS)
         heap' = heapUpdate addrU moreArgsClosure heap
 
     in s { stgCode        = Enter addr
          , stgArgStack    = argS'
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
-         , stgHeap        = heap' }
-
--- (17a)
+         , stgHeap        = heap'
+         , stgTicks       = ticks+1}
