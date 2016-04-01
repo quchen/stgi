@@ -5,6 +5,7 @@ module Lib where
 
 
 import           Control.Applicative
+import qualified Data.Foldable       as F
 import qualified Data.List           as L
 import           Data.Map            (Map)
 import qualified Data.Map            as M
@@ -328,18 +329,26 @@ stgStep s@StgState
          , stgHeap        = heap'
          , stgTicks       = ticks+1 }
 
--- (17)
+-- (17) DONE
 stgStep s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
     , stgReturnStack = Empty
     , stgUpdateStack = (argSU, retSU, addrU) :< updS'
-    , stgHeap        = heap
-    , stgGlobals     = globals
-    , stgTicks       = ticks }
+    , stgHeap        = heap }
+    | Just (Closure (LambdaForm vs NoUpdate xs body) wsf) <- heapLookup addr heap
+    , S.size argS < L.length xs
 
   = let argS' = argS <> argSU
+        (xs1, xs2) = splitAt (S.size argS) xs
+        moreArgsClosure = Closure (LambdaForm (vs <> xs1) NoUpdate xs2 body)
+                                  (wsf <> F.toList argS)
+        heap' = heapUpdate addrU moreArgsClosure heap
 
-    in undefined s addr retSU addrU updS' heap globals ticks argS'
+    in s { stgCode        = Enter addr
+         , stgArgStack    = argS'
+         , stgReturnStack = retSU
+         , stgUpdateStack = updS'
+         , stgHeap        = heap' }
 
 -- (17a)
