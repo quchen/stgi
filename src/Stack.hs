@@ -1,42 +1,49 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Stack (
-    Stack,
-    push,
-    pushMany,
-    pop,
+    Stack(..),
     popN,
-    peek,
-    size
+    size,
+    (<>>),
 ) where
 
 
 
+import           Data.Foldable as F
+import qualified Data.List     as L
 import           Data.Monoid
 
 
+data Stack a = Empty | a :< Stack a
 
-newtype Stack a = Stack [a]
+instance Functor Stack where
+    fmap _ Empty = Empty
+    fmap f (x :< xs) = f x :< fmap f xs
 
-push :: a -> Stack a -> Stack a
-push x (Stack xs) = Stack (x:xs)
-
-pushMany :: [a] -> Stack a -> Stack a
-pushMany xs stack = Stack xs <> stack
-
-pop :: Stack a -> Maybe (a, Stack a)
-pop (Stack (x:xs)) = Just (x, Stack xs)
-pop _ = Nothing
-
-popN :: Int -> Stack a -> Maybe ([a], Stack a)
-popN n stack@(Stack xs)
-    | size stack < n = Nothing
-    | (top, bottom) <- splitAt n xs = Just (top, Stack bottom)
-
-peek :: Stack a -> Maybe a
-peek = fmap fst . pop
-
-size :: Stack a -> Int
-size (Stack s) = length s
+instance Foldable Stack where
+    foldMap _ Empty = mempty
+    foldMap f (x :< xs) = f x <> foldMap f xs
 
 instance Monoid (Stack a) where
-    mempty = Stack []
-    Stack xs `mappend` Stack ys = Stack (xs ++ ys)
+    mempty = Empty
+    Empty `mappend` s = s
+    (x :< xs) `mappend` ys = x :< (xs <> ys)
+
+(<>>) :: [a] -> Stack a -> Stack a
+list <>> stack = fromList list <> stack
+
+-- TODO: This is probably terribly inefficient
+popN :: Int -> Stack a -> Maybe ([a], Stack a)
+popN n stack | n > size stack = Nothing
+popN n stack = Just (let (xs, ys) = splitAt n (F.toList stack)
+                     in (xs, fromList ys) )
+
+fromList :: [a] -> Stack a
+fromList = foldr (:<) Empty
+
+size :: Stack a -> Int
+size = foldl' (\acc _ -> acc+1) 0
+
+null :: Stack a -> Bool
+null Empty = True
+null _ = False
