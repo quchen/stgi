@@ -213,7 +213,7 @@ stgStep s@StgState
         (addr, heap') = heapAlloc closure heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
         vs = let newVar _old i = Var ("Var/Def:tick " ++ show ticks ++ "#" ++ show i)
-             in zipWith newVar ws [0..]
+             in zipWith newVar ws [0::Integer ..]
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
          , stgHeap        = heap'
@@ -301,7 +301,7 @@ stgStep s@StgState
     , stgTicks       = ticks }
 
   = let vs = let newVar _old i = Var ("Var/Upd:tick " ++ show ticks ++ "#" ++ show i)
-             in zipWith newVar ws [0..]
+             in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = heapUpdate addrU (Closure lf ws) heap
 
