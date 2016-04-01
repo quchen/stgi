@@ -200,12 +200,29 @@ stgStep s@StgState
 stgStep s@StgState
     { stgCode        = ReturnCon con _ws
     , stgReturnStack = (alts@AlgebraicAlts{}, locals) :< retS' }
-    | Left (Left (DefaultAlt expr)) <- lookupAlts alts con
+    | Left (Left (DefaultNotBound expr)) <- lookupAlts alts con
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
 
--- (8)
+-- (8) DONE
+stgStep s@StgState
+    { stgCode        = ReturnCon con ws
+    , stgReturnStack = retS
+    , stgHeap        = heap
+    , stgTicks       = ticks }
+    | (alts@AlgebraicAlts{}, locals) :< retS' <- retS
+    , Left (Left (DefaultBound (AtomVar v) expr)) <- lookupAlts alts con
+
+  = let locals' = addLocal (v, Addr addr) locals
+        (addr, heap') = heapAlloc closure heap
+        closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
+        vs = let newVar _old i = Var ("Var/Def:tick " ++ show ticks ++ "#" ++ show i)
+             in zipWith newVar ws [0..]
+    in s { stgCode        = Eval expr locals'
+         , stgReturnStack = retS'
+         , stgHeap        = heap'
+         , stgTicks       = ticks+1 }
 
 -- (9) DONE
 stgStep s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
@@ -255,7 +272,7 @@ stgStep s@StgState
     , stgHeap        = heap
     , stgTicks       = ticks }
 
-  = let vs = let newVar _old i = Var ("Var:tick " ++ show ticks ++ "#" ++ show i)
+  = let vs = let newVar _old i = Var ("Var/Upd:tick " ++ show ticks ++ "#" ++ show i)
              in zipWith newVar ws [0..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = heapUpdate addrU (Closure lf ws) heap
