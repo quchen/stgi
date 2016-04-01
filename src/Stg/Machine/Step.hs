@@ -17,20 +17,9 @@ import           Stack             (Stack (..), (<>>))
 import qualified Stack             as S
 import           Stg.Language
 import           Stg.Machine.Env
-import           Stg.Machine.Heap
+import qualified Stg.Machine.Heap  as H
 import           Stg.Machine.Types
 
-
-
-lookupAAlts :: AAlts -> Constr -> Either DefaultAlt AAlt
-lookupAAlts (AAlts alts def) constr
-    | Just alt <- L.find (\(AAlt c _ _) -> c == constr) alts = Right alt
-    | otherwise = Left def
-
-lookupPAlts :: PAlts -> Literal -> Either DefaultAlt PAlt
-lookupPAlts (PAlts alts def) lit
-    | Just alt <- L.find (\(PAlt lit' _) -> lit' == lit) alts = Right alt
-    | otherwise = Left def
 
 
 data StgState = StgState
@@ -64,7 +53,7 @@ initialState mainVar binds = StgState
 
     addrs :: [MemAddr]
     heap :: Heap
-    (addrs, heap) = heapAllocMany (map liftClosure globalVals) mempty
+    (addrs, heap) = H.allocMany (map liftClosure globalVals) mempty
 
     -- TODO: Unify this with the other liftClosure
     liftClosure :: LambdaForm -> Closure
@@ -74,6 +63,20 @@ initialState mainVar binds = StgState
                                  (traverse (globalVal globals) free)
         in Closure lf freeVals
 
+-- | Look up an algebraic constructor among the given alternatives, and return
+-- the first match. If nothing matches, return the default alternative.
+lookupAAlts :: AAlts -> Constr -> Either DefaultAlt AAlt
+lookupAAlts (AAlts alts def) constr
+    | Just alt <- L.find (\(AAlt c _ _) -> c == constr) alts = Right alt
+    | otherwise = Left def
+
+-- | 'lookupAAlts' for primitive literals.
+lookupPAlts :: PAlts -> Literal -> Either DefaultAlt PAlt
+lookupPAlts (PAlts alts def) lit
+    | Just alt <- L.find (\(PAlt lit' _) -> lit' == lit) alts = Right alt
+    | otherwise = Left def
+
+-- | Perform a single STG machine step.
 stgStep :: StgState -> StgState
 
 -- (1) DONE
@@ -94,7 +97,7 @@ stgStep s@StgState
     { stgCode     = Enter a
     , stgArgStack = argS
     , stgHeap     = heap }
-    | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- heapLookup a heap
+    | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- H.lookup a heap
     , Just (args, argS') <- S.popN (length bound) argS
 
   = let locals = makeLocals (zip free freeVals ++ zip bound args)
@@ -111,7 +114,7 @@ stgStep s@StgState
                              (M.keys binds)
                              addrs )
 
-        (addrs, heap') = heapAllocMany (map liftClosure (M.elems binds)) heap
+        (addrs, heap') = H.allocMany (map liftClosure (M.elems binds)) heap
 
         liftClosure :: LambdaForm -> Closure
         liftClosure lf@(LambdaForm free _ _ _) =
@@ -178,7 +181,7 @@ stgStep s@StgState
     | Left (DefaultBound (AtomVar v) expr) <- lookupAAlts alts con
 
   = let locals' = addLocals [(v, Addr addr)] locals
-        (addr, heap') = heapAlloc closure heap
+        (addr, heap') = H.alloc closure heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
         vs = let newVar _old i = Var ("Var/Def:tick " ++ show ticks ++ "#" ++ show i)
              in zipWith newVar ws [0::Integer ..]
@@ -248,7 +251,7 @@ stgStep s@StgState
     , stgReturnStack = retS
     , stgUpdateStack = updS
     , stgHeap        = heap }
-    | Just (Closure (LambdaForm free Update [] body) freeVals) <- heapLookup addr heap
+    | Just (Closure (LambdaForm free Update [] body) freeVals) <- H.lookup addr heap
         -- TODO: Is the closure removed from the heap?
 
   = let updS' = (argS, retS, addr) :< updS
@@ -271,7 +274,7 @@ stgStep s@StgState
   = let vs = let newVar _old i = Var ("Var/Upd1:tick " ++ show ticks ++ "#" ++ show i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
-        heap' = heapUpdate addrU (Closure lf ws) heap
+        heap' = H.update addrU (Closure lf ws) heap
 
     in s { stgCode        = ReturnCon con ws
          , stgArgStack    = argSU
@@ -288,7 +291,7 @@ stgStep s@StgState
     , stgUpdateStack = (argSU, retSU, addrU) :< updS'
     , stgHeap        = heap
     , stgTicks       = ticks }
-    | Just (Closure (LambdaForm _vs NoUpdate xs body) _wsf) <- heapLookup addr heap
+    | Just (Closure (LambdaForm _vs NoUpdate xs body) _wsf) <- H.lookup addr heap
     , S.size argS < L.length xs
 
   = let argS' = argS <> argSU
@@ -296,7 +299,7 @@ stgStep s@StgState
         f = Var ("Var/Upd2:tick " ++ show ticks)
         moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate xs2 body)
                                   (Addr addr : F.toList argS)
-        heap' = heapUpdate addrU moreArgsClosure heap
+        heap' = H.update addrU moreArgsClosure heap
 
     in s { stgCode        = Enter addr
          , stgArgStack    = argS'
