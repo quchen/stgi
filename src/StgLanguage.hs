@@ -39,7 +39,7 @@ data AAlt = AAlt Constr [Var] Expr
 data PAlt = PAlt Literal Expr
     deriving (Eq, Ord, Show)
 
-data DefaultAlt = VarDefault
+data DefaultAlt = DefaultAlt Expr
     deriving (Eq, Ord, Show)
 
 data Literal = Literal Int
