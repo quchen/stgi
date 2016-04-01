@@ -205,7 +205,7 @@ stgStep s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
 
 -- (10)
 -- TODO: Test (10)
-stgStep s@StgState { stgCode = Eval (AppF f []) locals}
+stgStep s@StgState { stgCode = Eval (AppF f []) locals }
     | Just (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k }
@@ -322,3 +322,8 @@ stgStep s@StgState
          , stgUpdateStack = updS'
          , stgHeap        = heap'
          , stgTicks       = ticks+1}
+
+stgStep StgState
+    { stgCode        = x@ReturnInt{}
+    , stgUpdateStack = Empty }
+  = error ("(" ++ show x ++ ") state with empty update stack")
