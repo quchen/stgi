@@ -188,9 +188,8 @@ stgStep s@StgState
 -- (6) DONE
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
-    , stgReturnStack = retS }
-    | (alts@AlgebraicAlts{}, locals) :< retS' <- retS
-    , Left (Right (AAlt _con vars expr)) <- lookupAlts alts con
+    , stgReturnStack = (alts@AlgebraicAlts{}, locals) :< retS' }
+    | Left (Right (AAlt _con vars expr)) <- lookupAlts alts con
 
   = let locals' = addLocals (zip vars ws) locals
 
@@ -200,9 +199,8 @@ stgStep s@StgState
 -- (7) DONE
 stgStep s@StgState
     { stgCode        = ReturnCon con _ws
-    , stgReturnStack = retS }
-    | (alts@AlgebraicAlts{}, locals) :< retS' <- retS
-    , Left (Left (DefaultAlt expr)) <- lookupAlts alts con
+    , stgReturnStack = (alts@AlgebraicAlts{}, locals) :< retS' }
+    | Left (Left (DefaultAlt expr)) <- lookupAlts alts con
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
