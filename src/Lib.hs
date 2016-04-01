@@ -44,14 +44,14 @@ heapAllocMany (cl:cls) heap =
         (addrs, heap'') = heapAllocMany cls heap'
     in (addr:addrs, heap'')
 
-lookupAAlts :: [AAlt] -> DefaultAlt -> Constr -> Either DefaultAlt AAlt
-lookupAAlts aAlts def constr
-    | Just alt <- L.find (\(AAlt c _ _) -> c == constr) aAlts = Right alt
+lookupAAlts :: AAlts -> Constr -> Either DefaultAlt AAlt
+lookupAAlts (AAlts alts def) constr
+    | Just alt <- L.find (\(AAlt c _ _) -> c == constr) alts = Right alt
     | otherwise = Left def
 
-lookupPAlts :: [PAlt] -> DefaultAlt -> Literal -> Either DefaultAlt PAlt
-lookupPAlts pAlts def lit
-    | Just alt <- L.find (\(PAlt lit' _) -> lit' == lit) pAlts = Right alt
+lookupPAlts :: PAlts -> Literal -> Either DefaultAlt PAlt
+lookupPAlts (PAlts alts def) lit
+    | Just alt <- L.find (\(PAlt lit' _) -> lit' == lit) alts = Right alt
     | otherwise = Left def
 
 
@@ -184,8 +184,8 @@ stgStep s@StgState
 -- (6) DONE
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
-    , stgReturnStack = (AlgebraicAlts alts def, locals) :< retS' }
-    | Right (AAlt _con vars expr) <- lookupAAlts alts def con
+    , stgReturnStack = (AlgebraicAlts alts, locals) :< retS' }
+    | Right (AAlt _con vars expr) <- lookupAAlts alts con
 
   = let locals' = addLocals (zip vars ws) locals
 
@@ -195,8 +195,8 @@ stgStep s@StgState
 -- (7) DONE
 stgStep s@StgState
     { stgCode        = ReturnCon con _ws
-    , stgReturnStack = (AlgebraicAlts alts def, locals) :< retS' }
-    | Left (DefaultNotBound expr) <- lookupAAlts alts def con
+    , stgReturnStack = (AlgebraicAlts alts, locals) :< retS' }
+    | Left (DefaultNotBound expr) <- lookupAAlts alts con
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
@@ -204,10 +204,10 @@ stgStep s@StgState
 -- (8) DONE
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
-    , stgReturnStack = (AlgebraicAlts alts def, locals) :< retS'
+    , stgReturnStack = (AlgebraicAlts alts, locals) :< retS'
     , stgHeap        = heap
     , stgTicks       = ticks }
-    | Left (DefaultBound (AtomVar v) expr) <- lookupAAlts alts def con
+    | Left (DefaultBound (AtomVar v) expr) <- lookupAAlts alts con
 
   = let locals' = addLocal (v, Addr addr) locals
         (addr, heap') = heapAlloc closure heap
@@ -232,8 +232,8 @@ stgStep s@StgState { stgCode = Eval (AppF f []) locals}
 -- (11) DONE
 stgStep s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (PrimitiveAlts alts def, locals) :< retS' }
-    | Right (PAlt _k expr) <- lookupPAlts alts def (Literal k)
+    , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
+    | Right (PAlt _k expr) <- lookupPAlts alts (Literal k)
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
@@ -241,8 +241,8 @@ stgStep s@StgState
 -- (12)
 stgStep s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (PrimitiveAlts alts def, locals) :< retS' }
-    | Left (DefaultBound (AtomVar v) expr) <- lookupPAlts alts def (Literal k)
+    , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
+    | Left (DefaultBound (AtomVar v) expr) <- lookupPAlts alts (Literal k)
 
   = let locals' = addLocal (v, PrimInt k) locals
 
@@ -252,8 +252,8 @@ stgStep s@StgState
 -- (13) DONE
 stgStep s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (PrimitiveAlts alts def, locals) :< retS' }
-    | Left (DefaultNotBound expr) <- lookupPAlts alts def (Literal k)
+    , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
+    | Left (DefaultNotBound expr) <- lookupPAlts alts (Literal k)
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }

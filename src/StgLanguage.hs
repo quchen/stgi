@@ -29,8 +29,14 @@ data Expr = Let Rec Binds Expr
           | Lit Literal
           deriving (Eq, Ord, Show)
 
-data Alts = AlgebraicAlts [AAlt] DefaultAlt
-          | PrimitiveAlts [PAlt] DefaultAlt
+data Alts = AlgebraicAlts AAlts
+          | PrimitiveAlts PAlts
+          deriving (Eq, Ord, Show)
+
+data AAlts = AAlts [AAlt] DefaultAlt
+          deriving (Eq, Ord, Show)
+
+data PAlts = PAlts [PAlt] DefaultAlt
           deriving (Eq, Ord, Show)
 
 data AAlt = AAlt Constr [Var] Expr
