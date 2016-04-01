@@ -23,9 +23,9 @@ data Rec = NonRecursive | Recursive
 
 data Expr = Let Rec Binds Expr
           | Case Expr Alts
-          | AppF Var    [Atom]
+          | AppF Var [Atom]
           | AppC Constr [Atom]
-          | AppP PrimOp [Atom]
+          | AppP PrimOp Atom Atom
           | Lit Literal
           deriving (Eq, Ord, Show)
 

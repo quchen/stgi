@@ -79,7 +79,8 @@ lookupPAlts (PAlts alts def) lit
 -- | Perform a single STG machine step.
 stgStep :: StgState -> StgState
 
--- (1) DONE
+-- (1)
+-- TODO: Test (1)
 stgStep s@StgState
     { stgCode     = Eval (AppF f xs) locals
     , stgArgStack = argS
@@ -92,7 +93,8 @@ stgStep s@StgState
     in s { stgCode     = Enter a
          , stgArgStack = argS' }
 
--- (2) DONE
+-- (2)
+-- TODO: Test (2)
 stgStep s@StgState
     { stgCode     = Enter a
     , stgArgStack = argS
@@ -105,7 +107,8 @@ stgStep s@StgState
     in s { stgCode     = Eval body locals
          , stgArgStack = argS' }
 
--- (3) DONE
+-- (3)
+-- TODO: Test (3)
 stgStep s@StgState
     { stgCode = Eval (Let rec (Binds binds) expr) locals
     , stgHeap = heap }
@@ -133,7 +136,8 @@ stgStep s@StgState
 
 
 
--- (4) DONE
+-- (4)
+-- TODO: Test (4)
 stgStep s@StgState
     { stgCode        = (Eval (Case expr alts) locals)
     , stgReturnStack = retS }
@@ -143,7 +147,8 @@ stgStep s@StgState
     in s { stgCode        = Eval expr locals
          , stgReturnStack = retS'  }
 
--- (5) DONE
+-- (5)
+-- TODO: Test (5)
 stgStep s@StgState
     { stgCode    = Eval (AppC con xs) locals
     , stgGlobals = globals }
@@ -152,7 +157,8 @@ stgStep s@StgState
 
     in s { stgCode = ReturnCon con valsXs }
 
--- (6) DONE
+-- (6)
+-- TODO: Test (6)
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
     , stgReturnStack = (AlgebraicAlts alts, locals) :< retS' }
@@ -163,7 +169,8 @@ stgStep s@StgState
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS' }
 
--- (7) DONE
+-- (7)
+-- TODO: Test (7)
 stgStep s@StgState
     { stgCode        = ReturnCon con _ws
     , stgReturnStack = (AlgebraicAlts alts, locals) :< retS' }
@@ -172,7 +179,8 @@ stgStep s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
 
--- (8) DONE
+-- (8)
+-- TODO: Test (8)
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
     , stgReturnStack = (AlgebraicAlts alts, locals) :< retS'
@@ -190,17 +198,20 @@ stgStep s@StgState
          , stgHeap        = heap'
          , stgTicks       = ticks+1 }
 
--- (9) DONE
+-- (9)
+-- TODO: Test (9)
 stgStep s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = s { stgCode = ReturnInt k }
 
--- (10) DONE
+-- (10)
+-- TODO: Test (10)
 stgStep s@StgState { stgCode = Eval (AppF f []) locals}
     | Just (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k }
 
--- (11) DONE
+-- (11)
+-- TODO: Test (11)
 stgStep s@StgState
     { stgCode        = ReturnInt k
     , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
@@ -220,7 +231,8 @@ stgStep s@StgState
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS' }
 
--- (13) DONE
+-- (13)
+-- TODO: Test (13)
 stgStep s@StgState
     { stgCode        = ReturnInt k
     , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
@@ -229,9 +241,10 @@ stgStep s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
 
--- (14) DONE
+-- (14)
+-- TODO: Test (14)
 stgStep s@StgState
-    { stgCode = Eval (AppP op [AtomVar x, AtomVar y]) locals }
+    { stgCode = Eval (AppP op (AtomVar x) (AtomVar y)) locals }
     | Just (PrimInt xVal) <- localVal locals x
     , Just (PrimInt yVal) <- localVal locals y
 
@@ -262,7 +275,8 @@ stgStep s@StgState
          , stgReturnStack = Empty
          , stgUpdateStack = updS' }
 
--- (16) DONE
+-- (16)
+-- TODO: Test (16)
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
     , stgArgStack    = Empty
@@ -283,7 +297,8 @@ stgStep s@StgState
          , stgHeap        = heap'
          , stgTicks       = ticks+1 }
 
--- (17a) DONE
+-- (17a)
+-- TODO: Test (17a)
 stgStep s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS

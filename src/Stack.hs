@@ -31,11 +31,20 @@ instance Monoid (Stack a) where
 (<>>) :: [a] -> Stack a -> Stack a
 list <>> stack = fromList list <> stack
 
--- TODO: This is probably terribly inefficient
+-- TODO: This is probably terribly inefficient. Test against _popN and
+-- replace if possible.
 popN :: Int -> Stack a -> Maybe ([a], Stack a)
 popN n stack | n > size stack = Nothing
 popN n stack = Just (let (xs, ys) = splitAt n (F.toList stack)
                      in (xs, fromList ys) )
+
+_popN :: Int -> Stack a -> Maybe ([a], Stack a)
+_popN n _ | n < 0 = Nothing
+_popN 0 stack = Just ([], stack)
+_popN _ Empty = Nothing
+_popN n (x :< xs) = case popN (n-1) xs of
+    Nothing -> Nothing  -- ^ Can't make this "_popN" since that's a hole :-/
+    Just (pops, rest) -> Just (x:pops, rest)
 
 fromList :: [a] -> Stack a
 fromList = foldr (:<) Empty
