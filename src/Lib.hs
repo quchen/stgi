@@ -307,7 +307,7 @@ stgStep s@StgState
          , stgReturnStack = Empty
          , stgUpdateStack = updS' }
 
--- (16)
+-- (16) DONE
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
     , stgArgStack    = Empty
@@ -320,14 +320,13 @@ stgStep s@StgState
              in zipWith newVar ws [0..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = heapUpdate addrU (Closure lf ws) heap
-        ticks' = ticks+1
 
     in s { stgCode        = ReturnCon con ws
          , stgArgStack    = argSU
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgTicks       = ticks' }
+         , stgTicks       = ticks+1 }
 
 -- (17)
 stgStep s@StgState
