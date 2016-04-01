@@ -295,15 +295,12 @@ stgStep s@StgState
     , stgArgStack    = argS
     , stgReturnStack = retS
     , stgUpdateStack = updS
-    , stgHeap        = heap
-    , stgGlobals     = globals
-    , stgTicks       = ticks }
+    , stgHeap        = heap }
     | Just (Closure (LambdaForm free Update [] body) freeVals) <- heapLookup addr heap
+        -- TODO: Is the closure removed from the heap?
 
   = let updS' = (argS, retS, addr) :< updS
-        -- addLocals :: [(Var, MemAddr)] -> Locals -> Locals
-        locals = makeLocals (zip undefined undefined)
-        _ignoreUnused = undefined globals ticks free freeVals
+        locals = makeLocals (zip free freeVals)
 
     in s { stgCode        = Eval body locals
          , stgArgStack    = Empty
