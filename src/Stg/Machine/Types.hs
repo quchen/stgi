@@ -21,11 +21,12 @@ data Code = Eval Expr Locals
           | ReturnInt Int
 
 newtype Globals = Globals (Map Var Value)
-    deriving (Monoid)
+    deriving Monoid
 
 newtype Locals = Locals (Map Var Value)
-    deriving (Monoid)
+    deriving Monoid
 
 data Closure = Closure LambdaForm [Value]
 
 newtype Heap = Heap (Map MemAddr Closure)
+    deriving Monoid

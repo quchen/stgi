@@ -1,13 +1,18 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Stg.Machine.Env (
-    addLocal,
+
+    -- * Locals
     addLocals,
     makeLocals,
     val,
     vals,
     unsafeVals,
     localVal,
+
+    -- * Globals
+    makeGlobals,
+    globalVal,
 ) where
 
 
@@ -15,20 +20,17 @@ module Stg.Machine.Env (
 import           Control.Applicative
 import qualified Data.Map            as M
 import           Data.Maybe
+import           Data.Monoid
 
 import           Stg.Language
 import           Stg.Machine.Types
 
 
-
-addLocal :: (Var, Value) -> Locals -> Locals
-addLocal (var, addr) (Locals locals) = Locals (M.insert var addr locals)
-
 addLocals :: [(Var, Value)] -> Locals -> Locals
-addLocals defs locals = foldr addLocal locals defs
+addLocals defs locals = makeLocals defs <> locals
 
 makeLocals :: [(Var, Value)] -> Locals
-makeLocals defs = addLocals defs mempty
+makeLocals = Locals . M.fromList
 
 val :: Locals -> Globals -> Atom -> Maybe Value
 val (Locals locals) (Globals globals) = \case
@@ -43,3 +45,9 @@ unsafeVals l g a = fromMaybe (error "Variable not found") (vals l g a)
 
 localVal :: Locals -> Var -> Maybe Value
 localVal (Locals locals) var = M.lookup var locals
+
+makeGlobals :: [(Var, Value)] -> Globals
+makeGlobals = Globals . M.fromList
+
+globalVal :: Globals -> Var -> Maybe Value
+globalVal (Globals globals) var = M.lookup var globals

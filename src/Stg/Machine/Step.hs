@@ -42,15 +42,37 @@ data StgState = StgState
     , stgGlobals     :: Globals
     , stgTicks       :: Integer }
 
-initialState :: Expr -> Globals -> StgState
-initialState main' globals = StgState
-    { stgCode        = Eval main' (Locals M.empty)
+initialState
+    :: Var -- ^ Main
+    -> Binds
+    -> StgState
+initialState mainVar binds = StgState
+    { stgCode        = Eval (AppF mainVar []) mempty
     , stgArgStack    = mempty
     , stgReturnStack = mempty
     , stgUpdateStack = mempty
-    , stgHeap        = Heap M.empty
+    , stgHeap        = heap
     , stgGlobals     = globals
     , stgTicks       = 0 }
+  where
+    globalVars :: [Var]
+    globalVals :: [LambdaForm]
+    (globalVars, globalVals) = let Binds b = binds in unzip (M.assocs b)
+
+    globals :: Globals
+    globals = makeGlobals (zipWith (\n a -> (n, Addr a)) globalVars addrs)
+
+    addrs :: [MemAddr]
+    heap :: Heap
+    (addrs, heap) = heapAllocMany (map liftClosure globalVals) mempty
+
+    -- TODO: Unify this with the other liftClosure
+    liftClosure :: LambdaForm -> Closure
+    liftClosure lf@(LambdaForm free _ _ _) =
+        let freeVals :: [Value]
+            freeVals = fromMaybe (error "FOOBAR-MAIN")
+                                 (traverse (globalVal globals) free)
+        in Closure lf freeVals
 
 stgStep :: StgState -> StgState
 
@@ -155,7 +177,7 @@ stgStep s@StgState
     , stgTicks       = ticks }
     | Left (DefaultBound (AtomVar v) expr) <- lookupAAlts alts con
 
-  = let locals' = addLocal (v, Addr addr) locals
+  = let locals' = addLocals [(v, Addr addr)] locals
         (addr, heap') = heapAlloc closure heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
         vs = let newVar _old i = Var ("Var/Def:tick " ++ show ticks ++ "#" ++ show i)
@@ -190,7 +212,7 @@ stgStep s@StgState
     , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
     | Left (DefaultBound (AtomVar v) expr) <- lookupPAlts alts (Literal k)
 
-  = let locals' = addLocal (v, PrimInt k) locals
+  = let locals' = addLocals [(v, PrimInt k)] locals
 
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS' }
