@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Stg.Machine.Step (
     initialState,
@@ -12,6 +13,8 @@ import qualified Data.List         as L
 import qualified Data.Map          as M
 import           Data.Maybe
 import           Data.Monoid
+import           Data.Text         (Text)
+import qualified Data.Text         as T
 
 import           Stack             (Stack (..), (<>>))
 import qualified Stack             as S
@@ -76,6 +79,9 @@ lookupPAlts (PAlts alts def) lit
     | Just alt <- L.find (\(PAlt lit' _) -> lit' == lit) alts = Right alt
     | otherwise = Left def
 
+show' :: Show a => a -> Text
+show' = T.pack . show
+
 -- | Perform a single STG machine step.
 stgStep :: StgState -> StgState
 
@@ -102,7 +108,7 @@ stgStep s@StgState
     | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- H.lookup a heap
     , Just (args, argS') <- S.popN (length bound) argS
 
-  = let locals = makeLocals (zip free freeVals ++ zip bound args)
+  = let locals = makeLocals (zip free freeVals <> zip bound args)
 
     in s { stgCode     = Eval body locals
          , stgArgStack = argS' }
@@ -191,7 +197,7 @@ stgStep s@StgState
   = let locals' = addLocals [(v, Addr addr)] locals
         (addr, heap') = H.alloc closure heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
-        vs = let newVar _old i = Var ("Var/Def:tick " ++ show ticks ++ "#" ++ show i)
+        vs = let newVar _old i = Var ("Var/Def:tick" <> show' ticks <> "#" <> show' i)
              in zipWith newVar ws [0::Integer ..]
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
@@ -285,7 +291,7 @@ stgStep s@StgState
     , stgHeap        = heap
     , stgTicks       = ticks }
 
-  = let vs = let newVar _old i = Var ("Var/Upd1:tick " ++ show ticks ++ "#" ++ show i)
+  = let vs = let newVar _old i = Var ("Var/Upd1:tick " <> show' ticks <> "#" <> show' i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = H.update addrU (Closure lf ws) heap
@@ -311,7 +317,7 @@ stgStep s@StgState
 
   = let argS' = argS <> argSU
         (xs1, xs2) = splitAt (S.size argS) xs
-        f = Var ("Var/Upd2:tick " ++ show ticks)
+        f = Var ("Var/Upd2:tick " <> show' ticks)
         moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate xs2 body)
                                   (Addr addr : F.toList argS)
         heap' = H.update addrU moreArgsClosure heap
@@ -326,4 +332,4 @@ stgStep s@StgState
 stgStep StgState
     { stgCode        = x@ReturnInt{}
     , stgUpdateStack = Empty }
-  = error ("(" ++ show x ++ ") state with empty update stack")
+  = error ("(" <> show x <> ") state with empty update stack")

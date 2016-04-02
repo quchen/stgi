@@ -2,7 +2,8 @@ module Stg.Language where
 
 
 
-import           Data.Map (Map)
+import           Data.Map  (Map)
+import           Data.Text (Text)
 
 
 
@@ -72,7 +73,7 @@ data PrimOp = Add | Sub | Mul | Div | Mod
     deriving (Eq, Ord, Show)
 
 -- | Variable.
-data Var = Var String
+data Var = Var Text
     deriving (Eq, Ord, Show)
 
 -- | Smallest unit of data.
