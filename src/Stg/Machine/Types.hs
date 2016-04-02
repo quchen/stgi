@@ -1,14 +1,24 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+-- | Types used in the execution of the STG machine.
 module Stg.Machine.Types where
 
 
 
 import           Data.Map     (Map)
 
+import           Stack
 import           Stg.Language
 
 
+data StgState = StgState
+    { stgCode        :: Code
+    , stgArgStack    :: Stack Value
+    , stgReturnStack :: Stack (Alts, Locals)
+    , stgUpdateStack :: Stack (Stack Value, Stack (Alts, Locals), MemAddr)
+    , stgHeap        :: Heap
+    , stgGlobals     :: Globals
+    , stgTicks       :: Integer }
 
 newtype MemAddr = MemAddr Int
     deriving (Eq, Ord, Show)

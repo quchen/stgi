@@ -1,3 +1,8 @@
+-- | A parser for the STG language, modeled after the decription in the 1992
+-- paper with a couple of minor differences:
+--
+--   * () instead of {}
+--   * Comment syntax like in Haskell
 module Stg.Parser (parse) where
 
 
@@ -64,8 +69,8 @@ arrowTok = symbol "->" *> pure ()
 hashTok :: Parser ()
 hashTok = symbol "#" *> pure ()
 
-curlied :: Parser a -> Parser a
-curlied = P.between (symbol "{") (symbol "}")
+parenthesized :: Parser a -> Parser a
+parenthesized = P.between (symbol "(") (symbol ")")
 
 
 --------------------------------------------------------------------------------
@@ -150,10 +155,10 @@ primOp = P.choice choices <* hashTok
               , P.char '%' *> pure Mod ]
 
 vars :: Parser [Var]
-vars = curlied (P.sepBy varTok commaTok)
+vars = parenthesized (P.sepBy varTok commaTok)
 
 atoms :: Parser [Atom]
-atoms = curlied (P.sepBy atom commaTok)
+atoms = parenthesized (P.sepBy atom commaTok)
 
 atom :: Parser Atom
 atom = AtomVar <$> varTok

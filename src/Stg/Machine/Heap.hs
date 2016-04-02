@@ -1,3 +1,4 @@
+-- | The STG heap maps memory addresses to closures.
 module Stg.Machine.Heap (
     lookup,
     update,

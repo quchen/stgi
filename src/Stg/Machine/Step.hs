@@ -25,15 +25,6 @@ import           Stg.Machine.Types
 
 
 
-data StgState = StgState
-    { stgCode        :: Code
-    , stgArgStack    :: Stack Value
-    , stgReturnStack :: Stack (Alts, Locals)
-    , stgUpdateStack :: Stack (Stack Value, Stack (Alts, Locals), MemAddr)
-    , stgHeap        :: Heap
-    , stgGlobals     :: Globals
-    , stgTicks       :: Integer }
-
 initialState
     :: Var -- ^ Main
     -> Binds

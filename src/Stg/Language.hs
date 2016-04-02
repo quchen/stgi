@@ -1,3 +1,5 @@
+-- | The STG language syntax tree, modeled after the decription in the 1992
+-- paper.
 module Stg.Language where
 
 
