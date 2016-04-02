@@ -60,7 +60,7 @@ data PAlt = PAlt Literal Expr
 -- as fallback.
 data DefaultAlt =
        DefaultNotBound Expr
-     | DefaultBound Atom Expr
+     | DefaultBound Var Expr
     deriving (Eq, Ord, Show)
 
 -- | Literals are the basis of primitive operations.
