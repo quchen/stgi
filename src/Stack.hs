@@ -5,17 +5,23 @@
 module Stack (
     Stack(..),
     popN,
-    size,
     (<>>),
+    fromList,
 ) where
 
 
 
 import           Data.Foldable as F
 import           Data.Monoid
+import qualified GHC.Exts      as OverloadedLists
+
 
 
 data Stack a = Empty | a :< Stack a
+    deriving (Eq, Ord)
+
+instance Show a => Show (Stack a) where
+    show s = "fromList " <> show (toList s)
 
 instance Functor Stack where
     fmap _ Empty = Empty
@@ -30,26 +36,23 @@ instance Monoid (Stack a) where
     Empty `mappend` s = s
     (x :< xs) `mappend` ys = x :< (xs <> ys)
 
+instance OverloadedLists.IsList (Stack a) where
+    type Item (Stack a) = a
+    fromList = fromList
+    toList = F.toList
+
 (<>>) :: [a] -> Stack a -> Stack a
 list <>> stack = fromList list <> stack
 
--- TODO: This is probably terribly inefficient. Test against _popN and
--- replace if possible.
+-- | Pop exactly n elements off the stack; fail if not enough elements are
+-- present.
 popN :: Int -> Stack a -> Maybe ([a], Stack a)
-popN n stack | n > size stack = Nothing
-popN n stack = Just (let (xs, ys) = splitAt n (F.toList stack)
-                     in (xs, fromList ys) )
-
-_popN :: Int -> Stack a -> Maybe ([a], Stack a)
-_popN n _ | n < 0 = Nothing
-_popN 0 stack = Just ([], stack)
-_popN _ Empty = Nothing
-_popN n (x :< xs) = case popN (n-1) xs of
-    Nothing -> Nothing  -- ^ Can't make this "_popN" since that's a hole :-/
+popN n _ | n < 0 = Nothing
+popN 0 stack = Just ([], stack)
+popN _ Empty = Nothing
+popN n (x :< xs) = case popN (n-1) xs of
+    Nothing -> Nothing
     Just (pops, rest) -> Just (x:pops, rest)
 
 fromList :: [a] -> Stack a
 fromList = foldr (:<) Empty
-
-size :: Stack a -> Int
-size = foldl' (\acc _ -> acc+1) 0

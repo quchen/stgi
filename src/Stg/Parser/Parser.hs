@@ -3,11 +3,12 @@
 --
 --   * () instead of {}
 --   * Comment syntax like in Haskell
-module Stg.Parser (parse) where
+module Stg.Parser.Parser (parse) where
 
 
 
 import           Control.Applicative
+import           Control.Monad
 import           Data.Bifunctor
 import qualified Data.Map              as M
 import           Data.Text             (Text)
@@ -26,29 +27,27 @@ space = L.space P.space
                 (L.skipLineComment "--")
                 (L.skipBlockComment "{-" "-}")
 
-symbol :: String -> Parser String
-symbol = L.symbol space
+symbol :: String -> Parser ()
+symbol = void (L.symbol space)
 
 semicolonTok :: Parser ()
-semicolonTok = symbol ";" *> pure ()
+semicolonTok = symbol ";"
 
 commaTok :: Parser ()
-commaTok = symbol ";" *> pure ()
+commaTok = symbol ";"
 
 letTok :: Parser (Binds -> Expr -> Expr)
 letTok = symbol "let" *> pure (Let NonRecursive)
 
-letrecTok :: Parser (Binds -> Expr -> Expr)
-letrecTok = symbol "letrec" *> pure (Let Recursive)
-
+letrecTok :: Parser (Binds -> Expr -> Expr) --
 inTok :: Parser ()
-inTok = symbol "in" *> pure ()
+inTok = symbol "in"
 
 caseTok :: Parser (Expr -> Alts -> Expr)
 caseTok = symbol "case" *> pure Case
 
 ofTok :: Parser ()
-ofTok = symbol "of" *> pure ()
+ofTok = symbol "of"
 
 varTok :: Parser Var
 varTok = liftA2 (\x xs -> Var (T.pack (x:xs)))
@@ -64,13 +63,19 @@ defNotBoundTok :: Parser (Expr -> DefaultAlt)
 defNotBoundTok = symbol "default" *> pure DefaultNotBound
 
 arrowTok :: Parser ()
-arrowTok = symbol "->" *> pure ()
+arrowTok = symbol "->"
 
 hashTok :: Parser ()
-hashTok = symbol "#" *> pure ()
+hashTok = symbol "#"
 
-parenthesized :: Parser a -> Parser a
-parenthesized = P.between (symbol "(") (symbol ")")
+openParenthesis :: Parser ()
+openParenthesis = symbol "("
+
+closeParenthesis :: Parser ()
+closeParenthesis = symbol ")"
+
+curlied :: Parser a -> Parser a
+curlied = P.between openParenthesis closeParenthesis
 
 
 --------------------------------------------------------------------------------

@@ -304,10 +304,10 @@ stgStep s@StgState
     , stgHeap        = heap
     , stgTicks       = ticks }
     | Just (Closure (LambdaForm _vs NoUpdate xs body) _wsf) <- H.lookup addr heap
-    , S.size argS < L.length xs
+    , F.length argS < L.length xs
 
   = let argS' = argS <> argSU
-        (xs1, xs2) = splitAt (S.size argS) xs
+        (xs1, xs2) = splitAt (F.length argS) xs
         f = Var ("Var/Upd2:tick " <> show' ticks)
         moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate xs2 body)
                                   (Addr addr : F.toList argS)
