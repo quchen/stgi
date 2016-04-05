@@ -3,7 +3,7 @@
 --
 --   * () instead of {}
 --   * Comment syntax like in Haskell
-module Stg.Parser.Parser (parse) where
+module Stg.Parser.Parser where
 
 
 
@@ -13,7 +13,9 @@ import           Data.Bifunctor
 import qualified Data.Map              as M
 import           Data.Text             (Text)
 import qualified Data.Text             as T
+import           Text.Megaparsec       ((<?>))
 import qualified Text.Megaparsec       as P
+import qualified Text.Megaparsec.Char  as C
 import qualified Text.Megaparsec.Lexer as L
 import           Text.Megaparsec.Text
 
@@ -22,13 +24,16 @@ import           Stg.Language
 --------------------------------------------------------------------------------
 -- Lexing
 
-space :: Parser ()
-space = L.space P.space
-                (L.skipLineComment "--")
-                (L.skipBlockComment "{-" "-}")
+spaceConsumer :: Parser ()
+spaceConsumer = L.space (P.some P.spaceChar *> pure ())
+                        (L.skipLineComment "--")
+                        (L.skipBlockComment "{-" "-}")
 
 symbol :: String -> Parser ()
-symbol = void (L.symbol space)
+symbol = void . L.symbol spaceConsumer
+
+lexeme :: Parser a -> Parser a
+lexeme = L.lexeme spaceConsumer
 
 semicolonTok :: Parser ()
 semicolonTok = symbol ";"
@@ -37,9 +42,9 @@ commaTok :: Parser ()
 commaTok = symbol ";"
 
 letTok :: Parser (Binds -> Expr -> Expr)
-letTok = symbol "let" *> pure (Let NonRecursive)
+letTok = P.try (C.string "let"    *> spaceConsumer *> pure (Let NonRecursive))
+     <|> P.try (C.string "letrec" *> spaceConsumer *> pure (Let Recursive))
 
-letrecTok :: Parser (Binds -> Expr -> Expr) --
 inTok :: Parser ()
 inTok = symbol "in"
 
@@ -49,13 +54,20 @@ caseTok = symbol "case" *> pure Case
 ofTok :: Parser ()
 ofTok = symbol "of"
 
+assignTok :: Parser ()
+assignTok = symbol "="
+
 varTok :: Parser Var
-varTok = liftA2 (\x xs -> Var (T.pack (x:xs)))
+varTok = lexeme p <?> "variable"
+  where
+    p = liftA2 (\x xs -> Var (T.pack (x:xs)))
                 P.lowerChar
                 (many P.alphaNumChar)
 
 conTok :: Parser Constr
-conTok = liftA2 (\_x _xs -> ConstrPlaceholder)
+conTok = lexeme p <?> "constructor"
+  where
+    p = liftA2 (\_x _xs -> ConstrPlaceholder)
                 P.upperChar
                 (many P.alphaNumChar)
 
@@ -74,8 +86,8 @@ openParenthesis = symbol "("
 closeParenthesis :: Parser ()
 closeParenthesis = symbol ")"
 
-curlied :: Parser a -> Parser a
-curlied = P.between openParenthesis closeParenthesis
+parenthesized :: Parser a -> Parser a
+parenthesized = P.between openParenthesis closeParenthesis
 
 
 --------------------------------------------------------------------------------
@@ -88,10 +100,11 @@ stgLanguage :: Parser Program
 stgLanguage = fmap Program binds
 
 binds :: Parser Binds
-binds = fmap (Binds . M.fromList) (P.sepBy binding semicolonTok)
+binds = fmap (Binds . M.fromList)
+             (P.sepBy binding semicolonTok)
 
 binding :: Parser (Var, LambdaForm)
-binding = liftA2 (,) varTok lambdaForm
+binding = (,) <$> varTok <* assignTok <*> lambdaForm
 
 lambdaForm :: Parser LambdaForm
 lambdaForm = LambdaForm
@@ -102,24 +115,20 @@ lambdaForm = LambdaForm
          <*> expr
 
 updateFlag :: Parser UpdateFlag
-updateFlag = symbol "u" *> pure Update
-         <|> symbol "n" *> pure NoUpdate
+updateFlag = p <?> help
+  where
+    p = symbol "u" *> pure Update <|> symbol "n" *> pure NoUpdate
+    help = "u (update), n (no update)"
 
 expr :: Parser Expr
 expr = P.choice [let', case', appF, appC, appP, lit]
   where
-    let' = P.try letrecTok <*> binds <* inTok <*> expr
-             <|> letTok    <*> binds <* inTok <*> expr
-
+    let'  = letTok <*> binds <* inTok <*> expr
     case' = caseTok <*> expr <* ofTok <*> alts
-
-    appF = AppF <$> varTok <*> atoms
-
-    appC = AppC <$> conTok <*> atoms
-
-    appP = AppP <$> primOp <*> atom <*> atom
-
-    lit = Lit <$> literal
+    appF  = AppF <$> varTok <*> atoms
+    appC  = AppC <$> conTok <*> atoms
+    appP  = AppP <$> primOp <*> atom <*> atom
+    lit   = Lit <$> literal
 
 alts :: Parser Alts
 alts = AlgebraicAlts <$> algebraicAlts
@@ -148,7 +157,7 @@ def = P.try defNotBoundTok <*> expr
   <|> DefaultBound         <$> varTok <*> expr
 
 literal :: Parser Literal
-literal = Literal . fromInteger <$> P.try L.decimal <* hashTok
+literal = Literal . fromInteger <$> P.try L.integer <* hashTok
 
 primOp :: Parser PrimOp
 primOp = P.choice choices <* hashTok

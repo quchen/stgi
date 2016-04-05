@@ -21,7 +21,7 @@ data Stack a = Empty | a :< Stack a
     deriving (Eq, Ord)
 
 instance Show a => Show (Stack a) where
-    show s = "fromList " <> show (toList s)
+    show = show . toList
 
 instance Functor Stack where
     fmap _ Empty = Empty
