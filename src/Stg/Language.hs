@@ -85,5 +85,5 @@ data Atom =
     deriving (Eq, Ord, Show)
 
 -- | Constructors of algebraic data types.
-data Constr = ConstrPlaceholder
+data Constr = Constr Text
     deriving (Eq, Ord, Show)

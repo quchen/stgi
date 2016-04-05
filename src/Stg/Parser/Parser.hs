@@ -29,11 +29,11 @@ spaceConsumer = L.space (P.some P.spaceChar *> pure ())
                         (L.skipLineComment "--")
                         (L.skipBlockComment "{-" "-}")
 
-symbol :: String -> Parser ()
-symbol = void . L.symbol spaceConsumer
-
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme spaceConsumer
+
+symbol :: String -> Parser ()
+symbol = void . lexeme . C.string
 
 semicolonTok :: Parser ()
 semicolonTok = symbol ";"
@@ -42,14 +42,14 @@ commaTok :: Parser ()
 commaTok = symbol ";"
 
 letTok :: Parser (Binds -> Expr -> Expr)
-letTok = P.try (C.string "let"    *> spaceConsumer *> pure (Let NonRecursive))
-     <|> P.try (C.string "letrec" *> spaceConsumer *> pure (Let Recursive))
+letTok = P.try (lexeme (C.string "let"    *> C.spaceChar) *> pure (Let NonRecursive))
+     <|> P.try (lexeme (C.string "letrec" *> C.spaceChar) *> pure (Let Recursive))
 
 inTok :: Parser ()
 inTok = symbol "in"
 
 caseTok :: Parser (Expr -> Alts -> Expr)
-caseTok = symbol "case" *> pure Case
+caseTok = lexeme (C.string "case" *> C.spaceChar) *> pure Case
 
 ofTok :: Parser ()
 ofTok = symbol "of"
@@ -67,7 +67,7 @@ varTok = lexeme p <?> "variable"
 conTok :: Parser Constr
 conTok = lexeme p <?> "constructor"
   where
-    p = liftA2 (\_x _xs -> ConstrPlaceholder)
+    p = liftA2 (\x xs -> Constr (T.pack (x:xs)))
                 P.upperChar
                 (many P.alphaNumChar)
 
@@ -80,15 +80,20 @@ arrowTok = symbol "->"
 hashTok :: Parser ()
 hashTok = symbol "#"
 
-openParenthesis :: Parser ()
-openParenthesis = symbol "("
+openParenthesisTok :: Parser ()
+openParenthesisTok = symbol "("
 
-closeParenthesis :: Parser ()
-closeParenthesis = symbol ")"
+closeParenthesisTok :: Parser ()
+closeParenthesisTok = symbol ")"
 
 parenthesized :: Parser a -> Parser a
-parenthesized = P.between openParenthesis closeParenthesis
+parenthesized = P.between openParenthesisTok closeParenthesisTok
 
+updateFlagTok :: Parser UpdateFlag
+updateFlagTok = lexeme (P.char '\\' *> flag) <?> help
+  where
+    flag = C.char 'u' *> pure Update <|> C.char 'n' *> pure NoUpdate
+    help = "u (update), n (no update)"
 
 --------------------------------------------------------------------------------
 -- Parsing
@@ -109,16 +114,10 @@ binding = (,) <$> varTok <* assignTok <*> lambdaForm
 lambdaForm :: Parser LambdaForm
 lambdaForm = LambdaForm
          <$> vars
-         <*> (P.char '\\' *> updateFlag)
+         <*> updateFlagTok
          <*> vars
          <*  arrowTok
          <*> expr
-
-updateFlag :: Parser UpdateFlag
-updateFlag = p <?> help
-  where
-    p = symbol "u" *> pure Update <|> symbol "n" *> pure NoUpdate
-    help = "u (update), n (no update)"
 
 expr :: Parser Expr
 expr = P.choice [let', case', appF, appC, appP, lit]
