@@ -39,7 +39,7 @@ semicolonTok :: Parser ()
 semicolonTok = symbol ";"
 
 commaTok :: Parser ()
-commaTok = symbol ";"
+commaTok = symbol ","
 
 letTok :: Parser (Binds -> Expr -> Expr)
 letTok = P.try (lexeme (C.string "let"    *> C.spaceChar) *> pure (Let NonRecursive))
@@ -102,7 +102,7 @@ parse :: Text -> Either String Program
 parse = first show . P.runParser stgLanguage "(string)"
 
 stgLanguage :: Parser Program
-stgLanguage = fmap Program binds
+stgLanguage = fmap Program binds <* P.eof
 
 binds :: Parser Binds
 binds = fmap (Binds . M.fromList)
@@ -130,29 +130,31 @@ expr = P.choice [let', case', appF, appC, appP, lit]
     lit   = Lit <$> literal
 
 alts :: Parser Alts
-alts = AlgebraicAlts <$> algebraicAlts
-   <|> PrimitiveAlts <$> primitiveAlts
+alts = algebraic <|> primitive
+  where
+    algebraic = Algebraic <$> algebraicAlts
+    primitive = Primitive <$> primitiveAlts
 
-algebraicAlts :: Parser AAlts
-algebraicAlts = AAlts
-            <$> P.sepBy aAlt semicolonTok
+algebraicAlts :: Parser AlgebraicAlts
+algebraicAlts = AlgebraicAlts
+            <$> P.sepBy algebraicAlt semicolonTok
             <*  semicolonTok
-            <*> def
+            <*> defaultAlt
 
-primitiveAlts :: Parser PAlts
-primitiveAlts = PAlts
-            <$> P.sepBy pAlt semicolonTok
+primitiveAlts :: Parser PrimitiveAlts
+primitiveAlts = PrimitiveAlts
+            <$> P.sepBy primitiveAlt semicolonTok
             <*  semicolonTok
-            <*> def
+            <*> defaultAlt
 
-aAlt :: Parser AAlt
-aAlt = AAlt <$> conTok <*> vars <*> expr
+algebraicAlt :: Parser AlgebraicAlt
+algebraicAlt = AlgebraicAlt <$> conTok <*> vars <*> expr
 
-pAlt :: Parser PAlt
-pAlt = PAlt <$> literal <*> expr
+primitiveAlt :: Parser PrimitiveAlt
+primitiveAlt = PrimitiveAlt <$> literal <*> expr
 
-def :: Parser DefaultAlt
-def = P.try defNotBoundTok <*> expr
+defaultAlt :: Parser DefaultAlt
+defaultAlt = P.try defNotBoundTok <*> expr
   <|> DefaultBound         <$> varTok <*> expr
 
 literal :: Parser Literal
@@ -161,7 +163,7 @@ literal = Literal . fromInteger <$> P.try L.integer <* hashTok
 primOp :: Parser PrimOp
 primOp = P.choice choices <* hashTok
   where
-    choices = [ P.char '+' *> pure Add
+    choices = [ P.char '+' *>  pure Add
               , P.char '-' *> pure Sub
               , P.char '*' *> pure Mul
               , P.char '/' *> pure Div

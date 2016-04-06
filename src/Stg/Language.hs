@@ -4,8 +4,10 @@ module Stg.Language where
 
 
 
-import           Data.Map  (Map)
-import           Data.Text (Text)
+import           Data.Map    (Map)
+import           Data.Monoid
+import           Data.Text   (Text, pack, unpack)
+import           GHC.Exts
 
 
 
@@ -37,26 +39,26 @@ data Expr =
 
 -- | List of possible alternatives in a 'Case' expression.
 data Alts =
-      AlgebraicAlts AAlts -- ^ Algebraic alternatives, like in True | False
-    | PrimitiveAlts PAlts -- ^ Primitive alternatives, like 1, 2, 3
+      Algebraic AlgebraicAlts -- ^ as in True | False
+    | Primitive PrimitiveAlts -- ^ like 1, 2, 3
     deriving (Eq, Ord, Show)
 
 -- | Algebraic alternatives, with a default as fallback.
-data AAlts = AAlts [AAlt] DefaultAlt
+data AlgebraicAlts = AlgebraicAlts [AlgebraicAlt] DefaultAlt
     deriving (Eq, Ord, Show)
 
--- | Primitive version of 'AAlts'.
-data PAlts = PAlts [PAlt] DefaultAlt
+-- | Primitive version of 'AlgebraicAlts'.
+data PrimitiveAlts = PrimitiveAlts [PrimitiveAlt] DefaultAlt
     deriving (Eq, Ord, Show)
 
 -- | A single algebraic alternative, consisting of a constructor with its
 -- pattern arguments, and an expression to continue at, should the pattern
 -- match.
-data AAlt = AAlt Constr [Var] Expr
+data AlgebraicAlt = AlgebraicAlt Constr [Var] Expr
     deriving (Eq, Ord, Show)
 
--- | Primitive version of 'AAlt'.
-data PAlt = PAlt Literal Expr
+-- | Primitive version of 'AlgebraicAlt'.
+data PrimitiveAlt = PrimitiveAlt Literal Expr
     deriving (Eq, Ord, Show)
 
 -- | If no viable alternative is found in a pattern match, use a 'DefaultAlt'
@@ -67,16 +69,32 @@ data DefaultAlt =
     deriving (Eq, Ord, Show)
 
 -- | Literals are the basis of primitive operations.
-data Literal = Literal Int
-    deriving (Eq, Ord, Show)
+newtype Literal = Literal Int
+    deriving (Eq, Ord)
+
+instance Show Literal where show (Literal i) = show i
+
+instance Num Literal where
+    Literal x + Literal y = Literal (x + y)
+    Literal x * Literal y = Literal (x * y)
+    Literal x - Literal y = Literal (x - y)
+
+    abs    (Literal i) = Literal (abs i)
+    signum (Literal i) = Literal (abs i)
+    negate (Literal i) = Literal (negate i)
+
+    fromInteger = Literal . fromInteger
 
 -- | Primitive operations on 'Literal's.
 data PrimOp = Add | Sub | Mul | Div | Mod
     deriving (Eq, Ord, Show)
 
 -- | Variable.
-data Var = Var Text
-    deriving (Eq, Ord, Show)
+newtype Var = Var Text
+    deriving (Eq, Ord)
+
+instance IsString Var where fromString = coerce . pack
+instance Show Var where show (Var v) = "\"" <> unpack v <> "\""
 
 -- | Smallest unit of data.
 data Atom =
@@ -85,5 +103,8 @@ data Atom =
     deriving (Eq, Ord, Show)
 
 -- | Constructors of algebraic data types.
-data Constr = Constr Text
-    deriving (Eq, Ord, Show)
+newtype Constr = Constr Text
+    deriving (Eq, Ord)
+
+instance IsString Constr where fromString = coerce . pack
+instance Show Constr where show (Constr c) = "\"" <> unpack c <> "\""

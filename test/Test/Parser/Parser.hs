@@ -18,7 +18,24 @@ tests = testGroup "Parser" [exampleParses]
 exampleParses :: TestTree
 exampleParses = testGroup "Successful parses"
     [ shouldParseToSuccess "a = () \\u () -> 1#"
-        (Binds [(Var "a",LambdaForm [] Update [] (Lit (Literal 1)))]) ]
+        (Binds [("a", LambdaForm [] Update []
+                          (Lit 1))])
+
+    , shouldParseToSuccess "a = () \\n () -> Maybe (a, 1#)"
+        (Binds [("a", LambdaForm [] NoUpdate []
+                          (AppC "Maybe"
+                                 [AtomVar "a" , AtomLit 1]))])
+
+   , shouldParseToSuccess
+        (unlines ["a = () \\n () ->"
+                 , "    let y = (a) \\u (x) -> Foo (x)"
+                 , "    in Con (y)" ])
+       (Binds [("a", LambdaForm [] NoUpdate []
+                         (Let NonRecursive (Binds
+                             [("y", LambdaForm ["a"] Update ["x"]
+                                        (AppC "Foo" [AtomVar "x"]))])
+                             (AppC "Con" [AtomVar "y"])))])
+    ]
 
 shouldParseToSuccess :: String -> Binds -> TestTree
 shouldParseToSuccess input output = shouldParseTo input (Right (Program output))

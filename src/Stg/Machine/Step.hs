@@ -59,15 +59,15 @@ initialState mainVar binds = StgState
 
 -- | Look up an algebraic constructor among the given alternatives, and return
 -- the first match. If nothing matches, return the default alternative.
-lookupAAlts :: AAlts -> Constr -> Either DefaultAlt AAlt
-lookupAAlts (AAlts alts def) constr
-    | Just alt <- L.find (\(AAlt c _ _) -> c == constr) alts = Right alt
+lookupAlgebraicAlts :: AlgebraicAlts -> Constr -> Either DefaultAlt AlgebraicAlt
+lookupAlgebraicAlts (AlgebraicAlts alts def) constr
+    | Just alt <- L.find (\(AlgebraicAlt c _ _) -> c == constr) alts = Right alt
     | otherwise = Left def
 
 -- | 'lookupAAlts' for primitive literals.
-lookupPAlts :: PAlts -> Literal -> Either DefaultAlt PAlt
-lookupPAlts (PAlts alts def) lit
-    | Just alt <- L.find (\(PAlt lit' _) -> lit' == lit) alts = Right alt
+lookupPrimitiveAlts :: PrimitiveAlts -> Literal -> Either DefaultAlt PrimitiveAlt
+lookupPrimitiveAlts (PrimitiveAlts alts def) lit
+    | Just alt <- L.find (\(PrimitiveAlt lit' _) -> lit' == lit) alts = Right alt
     | otherwise = Left def
 
 show' :: Show a => a -> Text
@@ -158,8 +158,8 @@ stgStep s@StgState
 -- TODO: Test (6)
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
-    , stgReturnStack = (AlgebraicAlts alts, locals) :< retS' }
-    | Right (AAlt _con vars expr) <- lookupAAlts alts con
+    , stgReturnStack = (Algebraic alts, locals) :< retS' }
+    | Right (AlgebraicAlt _con vars expr) <- lookupAlgebraicAlts alts con
 
   = let locals' = addLocals (zip vars ws) locals
 
@@ -170,8 +170,8 @@ stgStep s@StgState
 -- TODO: Test (7)
 stgStep s@StgState
     { stgCode        = ReturnCon con _ws
-    , stgReturnStack = (AlgebraicAlts alts, locals) :< retS' }
-    | Left (DefaultNotBound expr) <- lookupAAlts alts con
+    , stgReturnStack = (Algebraic alts, locals) :< retS' }
+    | Left (DefaultNotBound expr) <- lookupAlgebraicAlts alts con
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
@@ -180,10 +180,10 @@ stgStep s@StgState
 -- TODO: Test (8)
 stgStep s@StgState
     { stgCode        = ReturnCon con ws
-    , stgReturnStack = (AlgebraicAlts alts, locals) :< retS'
+    , stgReturnStack = (Algebraic alts, locals) :< retS'
     , stgHeap        = heap
     , stgTicks       = ticks }
-    | Left (DefaultBound v expr) <- lookupAAlts alts con
+    | Left (DefaultBound v expr) <- lookupAlgebraicAlts alts con
 
   = let locals' = addLocals [(v, Addr addr)] locals
         (addr, heap') = H.alloc closure heap
@@ -211,8 +211,8 @@ stgStep s@StgState { stgCode = Eval (AppF f []) locals }
 -- TODO: Test (11)
 stgStep s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
-    | Right (PAlt _k expr) <- lookupPAlts alts (Literal k)
+    , stgReturnStack = (Primitive alts, locals) :< retS' }
+    | Right (PrimitiveAlt _k expr) <- lookupPrimitiveAlts alts (Literal k)
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
@@ -220,8 +220,8 @@ stgStep s@StgState
 -- (12)
 stgStep s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
-    | Left (DefaultBound v expr) <- lookupPAlts alts (Literal k)
+    , stgReturnStack = (Primitive alts, locals) :< retS' }
+    | Left (DefaultBound v expr) <- lookupPrimitiveAlts alts (Literal k)
 
   = let locals' = addLocals [(v, PrimInt k)] locals
 
@@ -232,8 +232,8 @@ stgStep s@StgState
 -- TODO: Test (13)
 stgStep s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (PrimitiveAlts alts, locals) :< retS' }
-    | Left (DefaultNotBound expr) <- lookupPAlts alts (Literal k)
+    , stgReturnStack = (Primitive alts, locals) :< retS' }
+    | Left (DefaultNotBound expr) <- lookupPrimitiveAlts alts (Literal k)
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
