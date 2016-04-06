@@ -17,6 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Stack
                      , Stg.Language
+                     , Stg.Language.Prettyprint
                      , Stg.Machine.Env
                      , Stg.Machine.Heap
                      , Stg.Machine.Step
@@ -27,6 +28,8 @@ library
                      , containers
                      , megaparsec
                      , text
+                     , ansi-wl-pprint
+  default-extensions:  OverloadedStrings
   default-language:    Haskell2010
 
 executable stg-exe

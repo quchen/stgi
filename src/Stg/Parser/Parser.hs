@@ -122,12 +122,12 @@ lambdaForm = LambdaForm
 expr :: Parser Expr
 expr = P.choice [let', case', appF, appC, appP, lit]
   where
-    let'  = letTok <*> binds <* inTok <*> expr
-    case' = caseTok <*> expr <* ofTok <*> alts
-    appF  = AppF <$> varTok <*> atoms
-    appC  = AppC <$> conTok <*> atoms
-    appP  = AppP <$> primOp <*> atom <*> atom
-    lit   = Lit <$> literal
+    let'  = (letTok <*> binds <* inTok <*> expr) <?> "let"
+    case' = (caseTok <*> expr <* ofTok <*> alts) <?> "case"
+    appF  = (AppF <$> varTok <*> atoms)          <?> "function application"
+    appC  = (AppC <$> conTok <*> atoms)          <?> "constructor application"
+    appP  = (AppP <$> primOp <*> atom <*> atom)  <?> "primitive function application"
+    lit   = (Lit <$> literal)                    <?> "literal"
 
 alts :: Parser Alts
 alts = algebraic <|> primitive
@@ -137,33 +137,31 @@ alts = algebraic <|> primitive
 
 algebraicAlts :: Parser AlgebraicAlts
 algebraicAlts = AlgebraicAlts
-            <$> P.sepBy algebraicAlt semicolonTok
-            <*  semicolonTok
+            <$> P.sepEndBy algebraicAlt semicolonTok
             <*> defaultAlt
 
 primitiveAlts :: Parser PrimitiveAlts
 primitiveAlts = PrimitiveAlts
-            <$> P.sepBy primitiveAlt semicolonTok
-            <*  semicolonTok
+            <$> P.sepEndBy primitiveAlt semicolonTok
             <*> defaultAlt
 
 algebraicAlt :: Parser AlgebraicAlt
-algebraicAlt = AlgebraicAlt <$> conTok <*> vars <*> expr
+algebraicAlt = AlgebraicAlt <$> conTok <*> vars <* arrowTok <*> expr
 
 primitiveAlt :: Parser PrimitiveAlt
-primitiveAlt = PrimitiveAlt <$> literal <*> expr
+primitiveAlt = PrimitiveAlt <$> literal <* arrowTok <*> expr
 
 defaultAlt :: Parser DefaultAlt
 defaultAlt = P.try defNotBoundTok <*> expr
-  <|> DefaultBound         <$> varTok <*> expr
+         <|> DefaultBound         <$> varTok <*> expr
 
 literal :: Parser Literal
-literal = Literal . fromInteger <$> P.try L.integer <* hashTok
+literal = (Literal . fromInteger <$> L.integer <* hashTok) <?> "integer literal"
 
 primOp :: Parser PrimOp
-primOp = P.choice choices <* hashTok
+primOp = P.try (P.choice choices <* hashTok) <?> "primitive function"
   where
-    choices = [ P.char '+' *>  pure Add
+    choices = [ P.char '+' *> pure Add
               , P.char '-' *> pure Sub
               , P.char '*' *> pure Mul
               , P.char '/' *> pure Div
