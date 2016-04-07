@@ -7,12 +7,12 @@ module Stg.Language.Prettyprint (prettyprint) where
 
 import qualified Data.Map                     as M
 import qualified Data.Text                    as T
-import qualified Prelude                      as P
+import           Prelude                      hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
 import           Stg.Language
 
-prettyprint :: P.Int -> Program -> P.String
+prettyprint :: Int -> Program -> String
 prettyprint w x = displayS (renderPretty 0.4 w (pretty x)) ""
 
 instance Pretty Program where
@@ -30,8 +30,9 @@ instance Pretty LambdaForm where
              , "->"
              , pretty body ]
 
+-- | [a,b,c] ==> "(a, b, c)"
 parensCommaSep :: Pretty a => [a] -> Doc
-parensCommaSep xs = parens (align (cat (punctuate ", " (P.map pretty xs))))
+parensCommaSep = parens . align . hcat . punctuate ", " . map pretty
 
 prettyVars :: [Var] -> Doc
 prettyVars = parensCommaSep
@@ -56,7 +57,7 @@ instance Pretty Expr where
         "case" <+> pretty expr <+> "of"
         <$>
         indent 4 (pretty alts)
-    pretty (AppF var args) = pretty var <+> pretty args
+    pretty (AppF var args) = pretty var <+> prettyAtoms args
     pretty (AppC con args) = pretty con <+> prettyAtoms args
     pretty (AppP op arg1 arg2) = pretty op <+> pretty arg1 <+> pretty arg2
     pretty (Lit lit) = pretty lit
@@ -66,10 +67,10 @@ instance Pretty Alts where
     pretty (Primitive alts) = pretty alts
 
 instance Pretty AlgebraicAlts where
-    pretty (AlgebraicAlts alts def) = vsep (P.map pretty alts P.++ [pretty def])
+    pretty (AlgebraicAlts alts def) = vsep (map pretty alts ++ [pretty def])
 
 instance Pretty PrimitiveAlts where
-    pretty (PrimitiveAlts alts def) = vsep (P.map pretty alts P.++ [pretty def])
+    pretty (PrimitiveAlts alts def) = vsep (map pretty alts ++ [pretty def])
 
 instance Pretty AlgebraicAlt where
     pretty (AlgebraicAlt con args body) =
@@ -87,11 +88,11 @@ instance Pretty Literal where
     pretty (Literal i) = pretty i <> "#"
 
 instance Pretty PrimOp where
-    pretty Add = "(+)"
-    pretty Sub = "(-)"
-    pretty Mul = "(*)"
-    pretty Div = "(/)"
-    pretty Mod = "(%)"
+    pretty Add = "+#"
+    pretty Sub = "-#"
+    pretty Mul = "*#"
+    pretty Div = "/#"
+    pretty Mod = "%#"
 
 instance Pretty Var where
     pretty (Var name) = pretty (T.unpack name)

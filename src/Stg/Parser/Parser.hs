@@ -21,6 +21,8 @@ import           Text.Megaparsec.Text
 
 import           Stg.Language
 
+
+
 --------------------------------------------------------------------------------
 -- Lexing
 
@@ -33,7 +35,7 @@ lexeme :: Parser a -> Parser a
 lexeme = L.lexeme spaceConsumer
 
 symbol :: String -> Parser ()
-symbol = void . lexeme . C.string
+symbol s = void (lexeme (C.string s)) <?> s
 
 semicolonTok :: Parser ()
 semicolonTok = symbol ";"
@@ -62,14 +64,14 @@ varTok = lexeme p <?> "variable"
   where
     p = liftA2 (\x xs -> Var (T.pack (x:xs)))
                 P.lowerChar
-                (many P.alphaNumChar)
+                (P.many (P.alphaNumChar <|> P.char '\''))
 
 conTok :: Parser Constr
 conTok = lexeme p <?> "constructor"
   where
     p = liftA2 (\x xs -> Constr (T.pack (x:xs)))
                 P.upperChar
-                (many P.alphaNumChar)
+                (P.many (P.alphaNumChar <|> P.char '\''))
 
 defNotBoundTok :: Parser (Expr -> DefaultAlt)
 defNotBoundTok = symbol "default" *> pure DefaultNotBound
@@ -93,7 +95,7 @@ updateFlagTok :: Parser UpdateFlag
 updateFlagTok = lexeme (P.char '\\' *> flag) <?> help
   where
     flag = C.char 'u' *> pure Update <|> C.char 'n' *> pure NoUpdate
-    help = "u (update), n (no update)"
+    help = "\\u (update), \\n (no update)"
 
 --------------------------------------------------------------------------------
 -- Parsing
@@ -102,14 +104,14 @@ parse :: Text -> Either String Program
 parse = first show . P.runParser stgLanguage "(string)"
 
 stgLanguage :: Parser Program
-stgLanguage = fmap Program binds <* P.eof
+stgLanguage = spaceConsumer *> fmap Program binds <* P.eof
 
 binds :: Parser Binds
-binds = fmap (Binds . M.fromList)
-             (P.sepBy binding semicolonTok)
+binds = fmap (Binds . M.fromList) (P.sepBy binding semicolonTok)
+  where
+    binding :: Parser (Var, LambdaForm)
+    binding = (,) <$> varTok <* assignTok <*> lambdaForm
 
-binding :: Parser (Var, LambdaForm)
-binding = (,) <$> varTok <* assignTok <*> lambdaForm
 
 lambdaForm :: Parser LambdaForm
 lambdaForm = LambdaForm
@@ -118,19 +120,41 @@ lambdaForm = LambdaForm
          <*> vars
          <*  arrowTok
          <*> expr
+         <?> "lambda form"
 
 expr :: Parser Expr
 expr = P.choice [let', case', appF, appC, appP, lit]
   where
-    let'  = (letTok <*> binds <* inTok <*> expr) <?> "let"
-    case' = (caseTok <*> expr <* ofTok <*> alts) <?> "case"
-    appF  = (AppF <$> varTok <*> atoms)          <?> "function application"
-    appC  = (AppC <$> conTok <*> atoms)          <?> "constructor application"
-    appP  = (AppP <$> primOp <*> atom <*> atom)  <?> "primitive function application"
-    lit   = (Lit <$> literal)                    <?> "literal"
+    let' = letTok
+       <*> (binds <?> "list of free variables")
+       <*  inTok
+       <*> (expr <?> "body")
+       <?> "let"
+    case' = caseTok
+        <*> (expr <?> "case scrutinee")
+        <*  ofTok
+        <*> alts
+        <?> "case"
+    appF = AppF
+        <$> varTok
+        <*> atoms
+        <?> "function application"
+    appC = AppC
+        <$> conTok
+        <*> atoms
+        <?> "constructor application"
+    appP = AppP
+        <$> primOp
+        <*> atom
+        <*> atom
+        <?> "primitive function application"
+    lit = Lit
+        <$> literal
+        <?> "literal"
 
 alts :: Parser Alts
 alts = algebraic <|> primitive
+    <?> "case alternatives"
   where
     algebraic = Algebraic <$> algebraicAlts
     primitive = Primitive <$> primitiveAlts
@@ -139,27 +163,34 @@ algebraicAlts :: Parser AlgebraicAlts
 algebraicAlts = AlgebraicAlts
             <$> P.sepEndBy algebraicAlt semicolonTok
             <*> defaultAlt
+            <?> "algebraic alternatives"
 
 primitiveAlts :: Parser PrimitiveAlts
 primitiveAlts = PrimitiveAlts
             <$> P.sepEndBy primitiveAlt semicolonTok
             <*> defaultAlt
+            <?> "primitive alternatives"
 
 algebraicAlt :: Parser AlgebraicAlt
 algebraicAlt = AlgebraicAlt <$> conTok <*> vars <* arrowTok <*> expr
+    <?> "algebraic alternative"
 
 primitiveAlt :: Parser PrimitiveAlt
 primitiveAlt = PrimitiveAlt <$> literal <* arrowTok <*> expr
+    <?> "primitive alternative"
 
 defaultAlt :: Parser DefaultAlt
-defaultAlt = P.try defNotBoundTok <*> expr
-         <|> DefaultBound         <$> varTok <*> expr
+defaultAlt = P.try defNotBoundTok <* arrowTok <*>expr
+         <|> DefaultBound <$> varTok <* arrowTok <*> expr
+         <?> "default alternative"
 
 literal :: Parser Literal
-literal = (Literal . fromInteger <$> L.integer <* hashTok) <?> "integer literal"
+literal = (Literal . fromInteger) <$> L.integer <* hashTok
+    <?> "integer literal"
 
 primOp :: Parser PrimOp
-primOp = P.try (P.choice choices <* hashTok) <?> "primitive function"
+primOp = P.try (P.choice choices <* hashTok)
+    <?> "primitive function"
   where
     choices = [ P.char '+' *> pure Add
               , P.char '-' *> pure Sub
@@ -169,10 +200,13 @@ primOp = P.try (P.choice choices <* hashTok) <?> "primitive function"
 
 vars :: Parser [Var]
 vars = parenthesized (P.sepBy varTok commaTok)
+    <?> "variables"
 
 atoms :: Parser [Atom]
 atoms = parenthesized (P.sepBy atom commaTok)
+    <?> "atoms"
 
 atom :: Parser Atom
 atom = AtomVar <$> varTok
    <|> AtomLit <$> literal
+   <?> "atom"
