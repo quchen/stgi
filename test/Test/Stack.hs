@@ -34,7 +34,7 @@ test_popN = testGroup "popN"
         (\(NonNegative n) xs ->
             let popped = popN n xs
                 _ = xs :: Stack Int
-            in classify (isNothing popped) "Nothing"
+            in classify (isNothing popped) "overpopped"
                 (case popped of
                     Just (a,b) -> a <>> b === xs
                     Nothing -> property True ))
