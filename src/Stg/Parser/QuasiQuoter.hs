@@ -22,5 +22,5 @@ stg = QuasiQuoter
 
 stgExpQuoter :: String -> Q Exp
 stgExpQuoter stgSource = case parse (T.pack stgSource) of
-    Left err  -> fail err
+    Left err  -> fail (T.unpack err)
     Right ast -> [| ast |]

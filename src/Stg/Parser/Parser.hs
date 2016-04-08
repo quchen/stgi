@@ -100,8 +100,8 @@ updateFlagTok = lexeme (P.char '\\' *> flag) <?> help
 --------------------------------------------------------------------------------
 -- Parsing
 
-parse :: Text -> Either String Program
-parse = first show . P.runParser stgLanguage "(string)"
+parse :: Text -> Either Text Program
+parse = first (T.pack . show) . P.runParser stgLanguage "(string)"
 
 stgLanguage :: Parser Program
 stgLanguage = spaceConsumer *> fmap Program binds <* P.eof

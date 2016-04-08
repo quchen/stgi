@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | The STG language syntax tree, modeled after the decription in the 1992
@@ -30,25 +31,26 @@ import           Data.Monoid
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           GHC.Exts
+import           GHC.Generics
 import           Language.Haskell.TH.Lift
 
 
 
 newtype Program = Program Binds
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 newtype Binds = Binds (Map Var LambdaForm)
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 data LambdaForm = LambdaForm [Var] UpdateFlag [Var] Expr
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 data UpdateFlag = Update | NoUpdate
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic, Enum, Bounded)
 
 -- | Distinguish @let@ from @letrec@
 data Rec = NonRecursive | Recursive
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic, Enum, Bounded)
 
 -- | An expression in the STG language.
 data Expr =
@@ -58,42 +60,42 @@ data Expr =
     | AppC Constr [Atom]    -- ^ Constructor application
     | AppP PrimOp Atom Atom -- ^ Primitive function application
     | Lit Literal           -- ^ Literal expression
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | List of possible alternatives in a 'Case' expression.
 data Alts =
       Algebraic AlgebraicAlts -- ^ as in True | False
     | Primitive PrimitiveAlts -- ^ like 1, 2, 3
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | Algebraic alternatives, with a default as fallback.
 data AlgebraicAlts = AlgebraicAlts [AlgebraicAlt] DefaultAlt
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | Primitive version of 'AlgebraicAlts'.
 data PrimitiveAlts = PrimitiveAlts [PrimitiveAlt] DefaultAlt
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | A single algebraic alternative, consisting of a constructor with its
 -- pattern arguments, and an expression to continue at, should the pattern
 -- match.
 data AlgebraicAlt = AlgebraicAlt Constr [Var] Expr
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | Primitive version of 'AlgebraicAlt'.
 data PrimitiveAlt = PrimitiveAlt Literal Expr
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | If no viable alternative is found in a pattern match, use a 'DefaultAlt'
 -- as fallback.
 data DefaultAlt =
        DefaultNotBound Expr
      | DefaultBound Var Expr
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | Literals are the basis of primitive operations.
 newtype Literal = Literal Int
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic)
 
 instance Show Literal where show (Literal i) = show i
 
@@ -110,11 +112,11 @@ instance Num Literal where
 
 -- | Primitive operations on 'Literal's.
 data PrimOp = Add | Sub | Mul | Div | Mod
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic, Bounded, Enum)
 
 -- | Variable.
 newtype Var = Var Text
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic)
 
 instance IsString Var where fromString = coerce . T.pack
 instance Show Var where show (Var v) = "\"" <> T.unpack v <> "\""
@@ -123,15 +125,19 @@ instance Show Var where show (Var v) = "\"" <> T.unpack v <> "\""
 data Atom =
       AtomVar Var
     | AtomLit Literal
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | Constructors of algebraic data types.
 newtype Constr = Constr Text
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic)
 
 instance IsString Constr where fromString = coerce . T.pack
 instance Show Constr where show (Constr c) = "\"" <> T.unpack c <> "\""
 
+
+
+--------------------------------------------------------------------------------
+-- Lift instances
 deriveLiftMany [ ''Program, ''Literal, ''LambdaForm , ''UpdateFlag, ''Rec
                , ''Expr, ''Alts , ''AlgebraicAlts , ''PrimitiveAlts
                , ''AlgebraicAlt , ''PrimitiveAlt, ''DefaultAlt , ''PrimOp

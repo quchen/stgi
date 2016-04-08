@@ -6,14 +6,15 @@ module Stg.Language.Prettyprint (prettyprint) where
 
 
 import qualified Data.Map                     as M
+import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Prelude                      hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
 import           Stg.Language
 
-prettyprint :: Int -> Program -> String
-prettyprint w x = displayS (renderPretty 0.4 w (pretty x)) ""
+prettyprint :: Int -> Program -> Text
+prettyprint w x = T.pack (displayS (renderPretty 0.4 w (pretty x)) "")
 
 instance Pretty Program where
     pretty (Program binds) = pretty binds

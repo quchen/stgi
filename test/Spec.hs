@@ -3,6 +3,7 @@ module Main (main) where
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
+import qualified Test.Language         as Language
 import qualified Test.Parser           as Parser
 import qualified Test.Stack            as Stack
 
@@ -20,4 +21,5 @@ options = quickcheckOptions
 tests :: TestTree
 tests = testGroup "STG"
     [ Stack.tests
-    , Parser.tests ]
+    , Parser.tests
+    , Language.tests ]

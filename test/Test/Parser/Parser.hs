@@ -5,6 +5,7 @@ module Test.Parser.Parser (tests) where
 
 
 
+import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           Test.Orphans             ()
 import           Test.Tasty
@@ -17,29 +18,26 @@ import           Stg.Parser.Parser
 
 
 tests :: TestTree
-tests = testGroup "Explicit parses" [successfulParses]
-
-successfulParses :: TestTree
-successfulParses = testGroup "Successful" [simpleParses]
+tests = testGroup "Explicit parses" [simpleParses]
 
 simpleParses :: TestTree
 simpleParses = testGroup "Well-written programs"
     [ shouldParseToSuccess "Simple binding with literal"
         "one = () \\u () -> 1#"
         (Binds [("one", LambdaForm [] Update []
-                          (Lit 1))])
+                          (Lit 1) )])
 
     , shouldParseToSuccess "Constructor application"
         "con = () \\n () -> Maybe (b, 1#)"
         (Binds [("con", LambdaForm [] NoUpdate []
                           (AppC "Maybe"
-                                 [AtomVar "b" , AtomLit 1]))])
+                                 [AtomVar "b" , AtomLit 1] ))])
 
     , shouldParseToSuccess "Bound pattern"
         "id = () \\n (x) -> case x () of y -> y ()"
         (Binds [("id", LambdaForm [] NoUpdate ["x"]
                           (Case (AppF "x" [])
-                                (Algebraic (AlgebraicAlts [] (DefaultBound "y" (AppF "y" []))))))])
+                                (Algebraic (AlgebraicAlts [] (DefaultBound "y" (AppF "y" [])))) ))])
 
     , shouldParseToSuccess "Primitive function application"
         "add1 = () \\n (n) -> +# n 1#"
@@ -140,19 +138,19 @@ simpleParses = testGroup "Well-written programs"
                       (AppF "mf" [])))])
     ]
 
-shouldParseToSuccess :: String -> String -> Binds -> TestTree
+shouldParseToSuccess :: Text -> Text -> Binds -> TestTree
 shouldParseToSuccess testName input output =
     shouldParseTo testName input (Right (Program output))
 
-shouldParseTo :: String -> String -> Either String Program -> TestTree
+shouldParseTo :: Text -> Text -> Either Text Program -> TestTree
 shouldParseTo testName input output =
-    testCase testName
-        (let actual = parse (T.pack input)
+    testCase (T.unpack testName)
+        (let actual = parse input
              expected = output
              pretty = case actual of
-                 Left err -> unlines [ "============="
-                                     , "Parse error: "
-                                     , err
-                                     , "=============" ]
+                 Left err -> T.unlines [ "============="
+                                       , "Parse error: "
+                                       , err
+                                       , "=============" ]
                  Right r  -> prettyprint 80 r
-        in assertEqual pretty expected actual )
+        in assertEqual (T.unpack pretty) expected actual )

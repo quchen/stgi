@@ -35,6 +35,7 @@ library
                      , th-lift
   default-extensions:  OverloadedStrings
   other-extensions:    TemplateHaskell
+                     , DeriveGeneric
   default-language:    Haskell2010
 
 executable stg-exe
@@ -53,8 +54,12 @@ test-suite stg-test
   other-modules:       Test.Stack
                      , Test.Parser.Parser
                      , Test.Parser
+                     , Test.Language.Prettyprint
+                     , Test.Language
                      , Test.Parser.QuasiQuoter
                      , Test.Orphans
+                     , Test.Orphans.Stack
+                     , Test.Orphans.Language
   build-depends:       base
                      , stg
                      , text
@@ -62,6 +67,7 @@ test-suite stg-test
                      , tasty-hunit
                      , tasty-quickcheck, QuickCheck
                      , tasty-smallcheck, smallcheck
+                     , containers
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

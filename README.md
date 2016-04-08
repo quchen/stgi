@@ -26,3 +26,4 @@ To do
 - Small stuff
     - [ ] Move OverloadedStrings into other-extensions, don't enable it by
           default
+    - [ ] No `String` in types, use `Text` only
