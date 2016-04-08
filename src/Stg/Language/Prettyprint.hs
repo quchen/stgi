@@ -20,8 +20,9 @@ instance Pretty Program where
     pretty (Program binds) = pretty binds
 
 instance Pretty Binds where
-    pretty (Binds bs) = align (vsep [ pretty var <+> "=" <+> pretty lambda
-                                    | (var, lambda) <- M.toList bs ])
+    pretty (Binds bs) = (align . vsep . punctuate ";" . map prettyBinding . M.toList) bs
+      where
+        prettyBinding (var, lambda) = pretty var <+> "=" <+> pretty lambda
 
 instance Pretty LambdaForm where
     pretty (LambdaForm free upd bound body) =
@@ -67,22 +68,25 @@ instance Pretty Alts where
     pretty (Algebraic alts) = pretty alts
     pretty (Primitive alts) = pretty alts
 
+prettyAlts :: (Pretty a, Pretty b) => [a] -> b -> Doc
+prettyAlts alts def = vsep (punctuate ";" (map pretty alts ++ [pretty def]))
+
 instance Pretty AlgebraicAlts where
-    pretty (AlgebraicAlts alts def) = vsep (map pretty alts ++ [pretty def])
+    pretty (AlgebraicAlts alts def) = prettyAlts alts def
 
 instance Pretty PrimitiveAlts where
-    pretty (PrimitiveAlts alts def) = vsep (map pretty alts ++ [pretty def])
+    pretty (PrimitiveAlts alts def) = prettyAlts alts def
 
 instance Pretty AlgebraicAlt where
     pretty (AlgebraicAlt con args body) =
-        pretty con <+> pretty args <+> "->" <+> pretty body
+        pretty con <+> prettyVars args <+> "->" <+> pretty body
 
 instance Pretty PrimitiveAlt where
     pretty (PrimitiveAlt lit body) =
         pretty lit <+> "->" <+> pretty body
 
 instance Pretty DefaultAlt where
-    pretty (DefaultNotBound body) = "_" <+> "->" <+> pretty body
+    pretty (DefaultNotBound body) = "default" <+> "->" <+> pretty body
     pretty (DefaultBound var body) = pretty var <+> "->" <+> pretty body
 
 instance Pretty Literal where

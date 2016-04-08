@@ -64,14 +64,14 @@ varTok = lexeme p <?> "variable"
   where
     p = liftA2 (\x xs -> Var (T.pack (x:xs)))
                 P.lowerChar
-                (P.many (P.alphaNumChar <|> P.char '\''))
+                (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
 
 conTok :: Parser Constr
 conTok = lexeme p <?> "constructor"
   where
     p = liftA2 (\x xs -> Constr (T.pack (x:xs)))
                 P.upperChar
-                (P.many (P.alphaNumChar <|> P.char '\''))
+                (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
 
 defNotBoundTok :: Parser (Expr -> DefaultAlt)
 defNotBoundTok = symbol "default" *> pure DefaultNotBound
@@ -96,6 +96,9 @@ updateFlagTok = lexeme (P.char '\\' *> flag) <?> help
   where
     flag = C.char 'u' *> pure Update <|> C.char 'n' *> pure NoUpdate
     help = "\\u (update), \\n (no update)"
+
+signedIntegerTok :: Parser Integer
+signedIntegerTok = L.signed spaceConsumer L.integer
 
 --------------------------------------------------------------------------------
 -- Parsing
@@ -125,12 +128,12 @@ lambdaForm = LambdaForm
 expr :: Parser Expr
 expr = P.choice [let', case', appF, appC, appP, lit]
   where
-    let' = letTok
+    let' = P.try letTok
        <*> (binds <?> "list of free variables")
        <*  inTok
        <*> (expr <?> "body")
        <?> "let"
-    case' = caseTok
+    case' = P.try caseTok
         <*> (expr <?> "case scrutinee")
         <*  ofTok
         <*> alts
@@ -185,7 +188,7 @@ defaultAlt = P.try defNotBoundTok <* arrowTok <*> expr
          <?> "default alternative"
 
 literal :: Parser Literal
-literal = (Literal . fromInteger) <$> L.integer <* hashTok
+literal = (Literal . fromInteger) <$> signedIntegerTok <* hashTok
     <?> "integer literal"
 
 primOp :: Parser PrimOp

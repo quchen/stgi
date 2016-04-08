@@ -20,8 +20,10 @@ tests :: TestTree
 tests = testGroup "Prettyprinter" [inverseOfParser]
 
 inverseOfParser :: TestTree
-inverseOfParser = testProperty "inverse of parser" test
+inverseOfParser = small (testProperty "inverse of parser" test)
   where
+    small = localOption (QuickCheckMaxSize 2) -- Higher numbers sometimes let
+                                              -- the test AST *explode*
     test inputAst =
         let prettyprinted = prettyprint 80 inputAst
             parsed = parse prettyprinted

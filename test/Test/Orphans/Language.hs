@@ -53,6 +53,18 @@ extendedLetters = T.pack <$> listOf extendedLetter
     extendedLetter :: Gen Char
     extendedLetter = elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "\'_")
 
+shrinkBut1stLetter :: Text -> [Text]
+shrinkBut1stLetter text = case T.uncons text of
+    Nothing -> []
+    Just (x, xs) ->
+        let shrunkenRest = map T.pack . shrink . T.unpack
+        in map (T.singleton x <>) (shrunkenRest xs)
+
+shrinkBut1st :: Arbitrary a => [a] -> [[a]]
+shrinkBut1st [] = []
+shrinkBut1st (x:xs) = map (x:) (shrink xs)
+
+
 --------------------------------------------------------------------------------
 -- Instances
 
@@ -64,7 +76,7 @@ instance Arbitrary Binds where
     arbitrary = do
         xs <- listOf1 arbitrary
         pure (Binds (M.fromList xs))
-    shrink (Binds b) = (map (Binds . M.fromList) . genericShrink . M.toList) b
+    shrink (Binds b) = (map (Binds . M.fromList) . shrinkBut1st . M.toList) b
 
 instance Arbitrary LambdaForm where
     arbitrary = arbitrary4 LambdaForm
@@ -125,10 +137,7 @@ instance Arbitrary Var where
         x <- lowerChar
         xs <- extendedLetters
         (pure . Var) (x <> xs)
-    shrink (Var var) = case T.unpack var of
-        "" -> []
-        (x:xs) -> [ Var (T.pack (x:xs'))
-                  | xs' <- shrink xs ]
+    shrink (Var var) = map Var (shrinkBut1stLetter var)
 
 instance Arbitrary Atom where
     arbitrary = oneof [arbitrary1 AtomVar, arbitrary1 AtomLit]
@@ -139,7 +148,4 @@ instance Arbitrary Constr where
         x <- upperChar
         xs <- extendedLetters
         (pure . Constr) (x <> xs)
-    shrink (Constr constr) = case T.unpack constr of
-        "" -> []
-        (x:xs) -> [ Constr (T.pack (x:xs'))
-                  | xs' <- shrink xs ]
+    shrink (Constr constr) = map Constr (shrinkBut1stLetter constr)
