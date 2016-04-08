@@ -15,12 +15,15 @@ import           Stg.Machine.Types
 
 
 
+-- | Look up a value on the heap.
 lookup :: MemAddr -> Heap -> Maybe Closure
 lookup addr (Heap heap) = M.lookup addr heap
 
+-- | Update a value on the heap.
 update :: MemAddr -> Closure -> Heap -> Heap
 update addr cl (Heap h) = Heap (M.adjust (const cl) addr h)
 
+-- | Store a value in the heap at an unused address.
 alloc :: Closure -> Heap -> (MemAddr, Heap)
 alloc lambdaForm (Heap h) = (addr, heap')
   where
@@ -29,6 +32,8 @@ alloc lambdaForm (Heap h) = (addr, heap')
         Nothing                -> 0 )
     heap' = Heap (M.insert addr lambdaForm h)
 
+-- | Store many values in the heap at unused addresses, and return them
+-- in input order.
 allocMany :: [Closure] -> Heap -> ([MemAddr], Heap)
 allocMany [] heap = ([], heap)
 allocMany (cl:cls) heap =

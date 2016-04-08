@@ -1,11 +1,15 @@
 module Main (main) where
 
+
+
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
 import qualified Test.Language         as Language
 import qualified Test.Parser           as Parser
 import qualified Test.Stack            as Stack
+
+
 
 main :: IO ()
 main = defaultMain (options tests)

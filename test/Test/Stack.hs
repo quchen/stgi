@@ -1,13 +1,18 @@
 module Test.Stack (tests) where
 
+
+
 import           Data.Foldable
 import           Data.Maybe
 import           Data.Monoid
-import           Test.Orphans          ()
 import           Test.Tasty
 import           Test.Tasty.QuickCheck as QC
 
 import           Stack
+
+import           Test.Orphans          ()
+
+
 
 tests :: TestTree
 tests = testGroup "Stack" [test_popN, fromToList, test_mappend]

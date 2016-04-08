@@ -7,7 +7,6 @@ module Test.Parser.Parser (tests) where
 
 import           Data.Text                (Text)
 import qualified Data.Text                as T
-import           Test.Orphans             ()
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
@@ -15,6 +14,7 @@ import           Stg.Language
 import           Stg.Language.Prettyprint
 import           Stg.Parser
 
+import           Test.Orphans             ()
 
 
 tests :: TestTree

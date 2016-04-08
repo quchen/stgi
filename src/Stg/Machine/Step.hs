@@ -25,11 +25,12 @@ import           Stg.Machine.Types
 
 
 
+-- | Create a suitable initial state for an STG.
 initialState
     :: Var -- ^ Main
-    -> Binds
+    -> Program
     -> StgState
-initialState mainVar binds = StgState
+initialState mainVar (Program binds) = StgState
     { stgCode        = Eval (AppF mainVar []) mempty
     , stgArgStack    = mempty
     , stgReturnStack = mempty
