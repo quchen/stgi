@@ -23,13 +23,17 @@ library
                      , Stg.Machine.Step
                      , Stg.Machine.Types
                      , Stg.Parser.Parser
+                     , Stg.Parser.QuasiQuoter
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , megaparsec
                      , text
                      , ansi-wl-pprint
+                     , template-haskell
+                     , th-lift
   default-extensions:  OverloadedStrings
+  other-extensions:    TemplateHaskell
   default-language:    Haskell2010
 
 executable stg-exe

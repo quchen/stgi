@@ -1,13 +1,36 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | The STG language syntax tree, modeled after the decription in the 1992
 -- paper.
-module Stg.Language where
+module Stg.Language (
+    Program      (..),
+    Binds        (..),
+    LambdaForm   (..),
+    UpdateFlag   (..),
+    Rec          (..),
+    Expr         (..),
+    Alts         (..),
+    AlgebraicAlts(..),
+    PrimitiveAlts(..),
+    AlgebraicAlt (..),
+    PrimitiveAlt (..),
+    DefaultAlt   (..),
+    Literal      (..),
+    PrimOp       (..),
+    Var          (..),
+    Atom         (..),
+    Constr       (..),
+) where
 
 
 
-import           Data.Map    (Map)
+import           Data.Map                 (Map)
+import qualified Data.Map                 as M
 import           Data.Monoid
-import           Data.Text   (Text, pack, unpack)
+import           Data.Text                (Text)
+import qualified Data.Text                as T
 import           GHC.Exts
+import           Language.Haskell.TH.Lift
 
 
 
@@ -93,8 +116,8 @@ data PrimOp = Add | Sub | Mul | Div | Mod
 newtype Var = Var Text
     deriving (Eq, Ord)
 
-instance IsString Var where fromString = coerce . pack
-instance Show Var where show (Var v) = "\"" <> unpack v <> "\""
+instance IsString Var where fromString = coerce . T.pack
+instance Show Var where show (Var v) = "\"" <> T.unpack v <> "\""
 
 -- | Smallest unit of data.
 data Atom =
@@ -106,5 +129,19 @@ data Atom =
 newtype Constr = Constr Text
     deriving (Eq, Ord)
 
-instance IsString Constr where fromString = coerce . pack
-instance Show Constr where show (Constr c) = "\"" <> unpack c <> "\""
+instance IsString Constr where fromString = coerce . T.pack
+instance Show Constr where show (Constr c) = "\"" <> T.unpack c <> "\""
+
+deriveLiftMany [ ''Program, ''Literal, ''LambdaForm , ''UpdateFlag, ''Rec
+               , ''Expr, ''Alts , ''AlgebraicAlts , ''PrimitiveAlts
+               , ''AlgebraicAlt , ''PrimitiveAlt, ''DefaultAlt , ''PrimOp
+               , ''Atom ]
+
+instance Lift Binds where
+    lift (Binds binds) = [| M.fromList $(lift (M.toList binds)) |]
+
+instance Lift Constr where
+    lift (Constr con) = [| Constr (T.pack $(lift (T.unpack con))) |]
+
+instance Lift Var where
+    lift (Var var) = [| Var (T.pack $(lift (T.unpack var))) |]
