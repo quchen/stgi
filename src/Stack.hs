@@ -41,6 +41,8 @@ instance OverloadedLists.IsList (Stack a) where
     fromList = fromList
     toList = F.toList
 
+-- | Push a list of items onto the stack. The first item will be at the
+-- top of the stack.
 (<>>) :: [a] -> Stack a -> Stack a
 list <>> stack = fromList list <> stack
 
@@ -54,5 +56,6 @@ popN n (x :< xs) = case popN (n-1) xs of
     Nothing -> Nothing
     Just (pops, rest) -> Just (x:pops, rest)
 
+-- | Create a stack from a list. The first item will be the top of the stack.
 fromList :: [a] -> Stack a
 fromList = foldr (:<) Empty

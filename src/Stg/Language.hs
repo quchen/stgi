@@ -40,7 +40,10 @@ newtype Program = Program Binds
     deriving (Eq, Ord, Show, Generic)
 
 newtype Binds = Binds (Map Var LambdaForm)
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Generic)
+
+instance Show Binds where
+    show (Binds binds) = "(Binds " <> show (M.toList binds) <> ")"
 
 data LambdaForm = LambdaForm [Var] UpdateFlag [Var] Expr
     deriving (Eq, Ord, Show, Generic)
