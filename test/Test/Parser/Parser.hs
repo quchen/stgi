@@ -110,7 +110,7 @@ simpleParses = testGroup "Well-written programs"
     , shouldParseToSuccess "map, differently implemented"
          "-- Taken from the 1992 STG paper, page 22.                         \n\
          \map = () \\n (f) ->                                                \n\
-         \    letrec mf =1 (f,mf) \\n (xs) ->                                 \n\
+         \    letrec mf = (f,mf) \\n (xs) ->                                 \n\
          \        case xs () of                                              \n\
          \            Nil () -> Nil ();                                      \n\
          \            Cons (y,ys) -> let fy = (f,y) \\u () -> f (y);         \n\
@@ -140,21 +140,17 @@ simpleParses = testGroup "Well-written programs"
     ]
 
 shouldParseToSuccess :: Text -> Text -> Binds -> TestTree
-shouldParseToSuccess testName input output =
-    shouldParseTo testName input (Right (Program output))
-
-shouldParseTo :: Text -> Text -> Either Text Program -> TestTree
-shouldParseTo testName input output =
-    testCase (T.unpack testName)
-        (let actual = parse input
-             expected = output
-             pretty = case actual of
-                 Left err -> T.unlines
-                    [ "============="
-                    , "Could not parse"
-                    , (T.unlines . map (" > " <>) . T.lines) input
-                    , "Error encountered:"
-                    , err
-                    , "=============" ]
-                 Right r  -> prettyprint r
-        in assertEqual (T.unpack pretty) expected actual )
+shouldParseToSuccess testName input output = testCase (T.unpack testName) test
+  where
+    actual = parse input
+    expected = Right (Program output)
+    failMessage = case actual of
+       Left err -> T.unlines
+          [ "============="
+          , "Could not parse"
+          , (T.unlines . map (" > " <>) . T.lines) input
+          , "Error encountered:"
+          , (T.unlines . map (" > " <>) . T.lines) err
+          , "=============" ]
+       Right r  -> prettyprint r
+    test = assertEqual (T.unpack failMessage) expected actual
