@@ -13,7 +13,7 @@ import           Test.Tasty.HUnit
 
 import           Stg.Language
 import           Stg.Language.Prettyprint
-import           Stg.Parser.Parser
+import           Stg.Parser
 
 
 
@@ -152,5 +152,5 @@ shouldParseTo testName input output =
                                        , "Parse error: "
                                        , err
                                        , "=============" ]
-                 Right r  -> prettyprint 80 r
+                 Right r  -> prettyprint r
         in assertEqual (T.unpack pretty) expected actual )

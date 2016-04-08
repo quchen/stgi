@@ -13,8 +13,8 @@ import           Text.PrettyPrint.ANSI.Leijen
 
 import           Stg.Language
 
-prettyprint :: Int -> Program -> Text
-prettyprint w x = T.pack (displayS (renderPretty 0.4 w (pretty x)) "")
+prettyprint :: Pretty a => a -> Text
+prettyprint x = T.pack (displayS (renderPretty 0.4 80 (pretty x)) "")
 
 instance Pretty Program where
     pretty (Program binds) = pretty binds

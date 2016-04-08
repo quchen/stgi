@@ -9,7 +9,7 @@ import qualified Data.Text                 as T
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 
-import           Stg.Parser.Parser         (parse)
+import           Stg.Parser.Parser         (parse, program)
 
 
 
@@ -21,6 +21,6 @@ stg = QuasiQuoter
     , quoteDec  = \_ -> fail "No STG declaration quoter implemented" }
 
 stgExpQuoter :: String -> Q Exp
-stgExpQuoter stgSource = case parse (T.pack stgSource) of
+stgExpQuoter stgSource = case parse program (T.pack stgSource) of
     Left err  -> fail (T.unpack err)
     Right ast -> [| ast |]

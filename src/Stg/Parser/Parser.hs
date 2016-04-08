@@ -24,7 +24,17 @@ import           Stg.Language
 
 
 --------------------------------------------------------------------------------
--- Lexing
+-- * Convenience
+
+-- | Parse STG source using a user-specified parser. To parse a full program,
+-- use @'parse' 'program'@.
+parse :: Parser ast -> Text -> Either Text ast
+parse p = first (T.pack . show) . P.runParser p "(string)"
+
+
+
+--------------------------------------------------------------------------------
+-- * Lexing
 
 spaceConsumer :: Parser ()
 spaceConsumer = L.space (P.some P.spaceChar *> pure ())
@@ -101,13 +111,10 @@ signedIntegerTok :: Parser Integer
 signedIntegerTok = L.signed spaceConsumer L.integer
 
 --------------------------------------------------------------------------------
--- Parsing
+-- * Parsing
 
-parse :: Text -> Either Text Program
-parse = first (T.pack . show) . P.runParser stgLanguage "(string)"
-
-stgLanguage :: Parser Program
-stgLanguage = spaceConsumer *> fmap Program binds <* P.eof
+program :: Parser Program
+program = spaceConsumer *> fmap Program binds <* P.eof
 
 binds :: Parser Binds
 binds = fmap (Binds . M.fromList) (P.sepBy binding semicolonTok)
