@@ -23,7 +23,9 @@ once I'm satisfied with the code, and still curious about the STG.
 To do
 =====
 
+- Main functionality
+    - [ ] Test the stepper
+    - [ ] Auto-increment the step counter
+    - [ ] Write lots of test cases
 - Small stuff
-    - [ ] Move OverloadedStrings into other-extensions, don't enable it by
-          default
-    - [ ] No `String` in types, use `Text` only
+    - [ ] Move OverloadedStrings into other-extensions, don't enable it by default
