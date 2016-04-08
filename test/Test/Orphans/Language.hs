@@ -58,20 +58,25 @@ extendedLetters = T.pack <$> listOf extendedLetter
 
 instance Arbitrary Program where
     arbitrary = arbitrary1 Program
+    shrink = genericShrink
 
 instance Arbitrary Binds where
     arbitrary = do
         xs <- listOf1 arbitrary
         pure (Binds (M.fromList xs))
+    shrink (Binds b) = (map (Binds . M.fromList) . genericShrink . M.toList) b
 
 instance Arbitrary LambdaForm where
     arbitrary = arbitrary4 LambdaForm
+    shrink = genericShrink
 
 instance Arbitrary UpdateFlag where
     arbitrary = allEnums
+    shrink = genericShrink
 
 instance Arbitrary Rec where
     arbitrary = allEnums
+    shrink = genericShrink
 
 instance Arbitrary Expr where
     arbitrary = oneof
@@ -81,42 +86,54 @@ instance Arbitrary Expr where
         , arbitrary2 AppC
         , arbitrary3 AppP
         , arbitrary1 Lit ]
+    shrink = genericShrink
 
 instance Arbitrary Alts where
     arbitrary = oneof [arbitrary1 Algebraic, arbitrary1 Primitive]
+    shrink = genericShrink
 
 instance Arbitrary AlgebraicAlts where
     arbitrary = AlgebraicAlts <$> listOf1 arbitrary <*> arbitrary
+    shrink = genericShrink
 
 instance Arbitrary PrimitiveAlts where
     arbitrary = PrimitiveAlts <$> listOf1 arbitrary <*> arbitrary
+    shrink = genericShrink
 
 instance Arbitrary AlgebraicAlt where
     arbitrary = arbitrary3 AlgebraicAlt
+    shrink = genericShrink
 
 instance Arbitrary PrimitiveAlt where
     arbitrary = arbitrary2 PrimitiveAlt
+    shrink = genericShrink
 
 instance Arbitrary DefaultAlt where
     arbitrary = oneof [arbitrary1 DefaultNotBound, arbitrary2 DefaultBound]
+    shrink = genericShrink
 
 instance Arbitrary Literal where
     arbitrary = arbitrary1 Literal
+    shrink = genericShrink
 
 instance Arbitrary PrimOp where
     arbitrary = allEnums
+    shrink = genericShrink
 
 instance Arbitrary Var where
     arbitrary = do
         x <- lowerChar
         xs <- extendedLetters
         (pure . Var) (x <> xs)
+    shrink (Var var) = (map (Var . T.pack) . genericShrink . T.unpack) var
 
 instance Arbitrary Atom where
     arbitrary = oneof [arbitrary1 AtomVar, arbitrary1 AtomLit]
+    shrink = genericShrink
 
 instance Arbitrary Constr where
     arbitrary = do
         x <- upperChar
         xs <- extendedLetters
         (pure . Constr) (x <> xs)
+    shrink (Constr constr) = (map (Constr . T.pack) . genericShrink . T.unpack) constr
