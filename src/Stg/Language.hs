@@ -138,7 +138,7 @@ deriveLiftMany [ ''Program, ''Literal, ''LambdaForm , ''UpdateFlag, ''Rec
                , ''Atom ]
 
 instance Lift Binds where
-    lift (Binds binds) = [| M.fromList $(lift (M.toList binds)) |]
+    lift (Binds binds) = [| Binds (M.fromList $(lift (M.toList binds))) |]
 
 instance Lift Constr where
     lift (Constr con) = [| Constr (T.pack $(lift (T.unpack con))) |]

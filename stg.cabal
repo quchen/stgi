@@ -22,6 +22,7 @@ library
                      , Stg.Machine.Heap
                      , Stg.Machine.Step
                      , Stg.Machine.Types
+                     , Stg.Parser
                      , Stg.Parser.Parser
                      , Stg.Parser.QuasiQuoter
   ghc-options:         -Wall
@@ -51,6 +52,8 @@ test-suite stg-test
   main-is:             Spec.hs
   other-modules:       Test.Stack
                      , Test.Parser.Parser
+                     , Test.Parser
+                     , Test.Parser.QuasiQuoter
                      , Test.Orphans
   build-depends:       base
                      , stg

@@ -16,9 +16,9 @@ import           Stg.Parser.Parser         (parse)
 stg :: QuasiQuoter
 stg = QuasiQuoter
     { quoteExp  = stgExpQuoter
-    , quotePat  = fail "No STG pattern quoter implemented"
-    , quoteType = fail "No STG type quoter implemented"
-    , quoteDec  = fail "No STG declaration quoter implemented" }
+    , quotePat  = \_ -> fail "No STG pattern quoter implemented"
+    , quoteType = \_ -> fail "No STG type quoter implemented"
+    , quoteDec  = \_ -> fail "No STG declaration quoter implemented" }
 
 stgExpQuoter :: String -> Q Exp
 stgExpQuoter stgSource = case parse (T.pack stgSource) of

@@ -180,7 +180,7 @@ primitiveAlt = PrimitiveAlt <$> literal <* arrowTok <*> expr
     <?> "primitive alternative"
 
 defaultAlt :: Parser DefaultAlt
-defaultAlt = P.try defNotBoundTok <* arrowTok <*>expr
+defaultAlt = P.try defNotBoundTok <* arrowTok <*> expr
          <|> DefaultBound <$> varTok <* arrowTok <*> expr
          <?> "default alternative"
 

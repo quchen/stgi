@@ -4,6 +4,7 @@
 module Test.Parser.Parser (tests) where
 
 
+
 import qualified Data.Text                as T
 import           Test.Orphans             ()
 import           Test.Tasty
@@ -13,8 +14,10 @@ import           Stg.Language
 import           Stg.Language.Prettyprint
 import           Stg.Parser.Parser
 
+
+
 tests :: TestTree
-tests = testGroup "Parser" [successfulParses]
+tests = testGroup "Explicit parses" [successfulParses]
 
 successfulParses :: TestTree
 successfulParses = testGroup "Successful" [simpleParses]
@@ -31,6 +34,12 @@ simpleParses = testGroup "Well-written programs"
         (Binds [("con", LambdaForm [] NoUpdate []
                           (AppC "Maybe"
                                  [AtomVar "b" , AtomLit 1]))])
+
+    , shouldParseToSuccess "Bound pattern"
+        "id = () \\n (x) -> case x () of y -> y ()"
+        (Binds [("id", LambdaForm [] NoUpdate ["x"]
+                          (Case (AppF "x" [])
+                                (Algebraic (AlgebraicAlts [] (DefaultBound "y" (AppF "y" []))))))])
 
     , shouldParseToSuccess "Primitive function application"
         "add1 = () \\n (n) -> +# n 1#"

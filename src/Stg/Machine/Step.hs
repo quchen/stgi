@@ -324,3 +324,5 @@ stgStep StgState
     { stgCode        = x@ReturnInt{}
     , stgUpdateStack = Empty }
   = error ("(" <> show x <> ") state with empty update stack")
+
+stgStep _ = error "Invalid STG state"
