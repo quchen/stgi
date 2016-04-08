@@ -125,7 +125,10 @@ instance Arbitrary Var where
         x <- lowerChar
         xs <- extendedLetters
         (pure . Var) (x <> xs)
-    shrink (Var var) = (map (Var . T.pack) . genericShrink . T.unpack) var
+    shrink (Var var) = case T.unpack var of
+        "" -> []
+        (x:xs) -> [ Var (T.pack (x:xs'))
+                  | xs' <- shrink xs ]
 
 instance Arbitrary Atom where
     arbitrary = oneof [arbitrary1 AtomVar, arbitrary1 AtomLit]
@@ -136,4 +139,7 @@ instance Arbitrary Constr where
         x <- upperChar
         xs <- extendedLetters
         (pure . Constr) (x <> xs)
-    shrink (Constr constr) = (map (Constr . T.pack) . genericShrink . T.unpack) constr
+    shrink (Constr constr) = case T.unpack constr of
+        "" -> []
+        (x:xs) -> [ Constr (T.pack (x:xs'))
+                  | xs' <- shrink xs ]
