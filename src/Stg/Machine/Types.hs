@@ -15,12 +15,31 @@ import           Stg.Language
 -- | The internal state of an STG.
 data StgState = StgState
     { stgCode        :: Code
+        -- ^ Operation the STG should perform next
+
     , stgArgStack    :: Stack Value
+        -- ^ Argument stack, storing values given to functions and constructors
+
     , stgReturnStack :: Stack (Alts, Locals)
+        -- ^ Return stack, storing the local environment to restore and
+        --   possible alternatives to be taken once a computation reaches
+        --   a certain point.
+
     , stgUpdateStack :: Stack (Stack Value, Stack (Alts, Locals), MemAddr)
+        -- ^ Update stack, used to store the environment an updateable closure
+        --   was called in, so that it can be updated in memory when it has
+        --   been reduced.
+
     , stgHeap        :: Heap
+        -- ^ The heap stores values allocated at the top level or in @let(rec)@
+        --   expressions.
+
     , stgGlobals     :: Globals
-    , stgTicks       :: Integer }
+        -- ^ The environment consisting of the top-level definitions.
+
+    , stgTicks       :: Integer
+        -- ^ A counter, used to generte fresh variable names from.
+    }
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int

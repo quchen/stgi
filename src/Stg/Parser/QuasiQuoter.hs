@@ -16,7 +16,7 @@ import           Stg.Parser.Parser         (parse, program)
 
 -- | Quasiquoter for entering STG programs more conveniently.
 --
--- >>> [stg| id = () \\n (x) -> x () |]
+-- >>> [stg| id = () \n (x) -> x () |]
 -- Program (Binds [("id",LambdaForm [] NoUpdate ["x"] (AppF "x" []))])
 stg :: QuasiQuoter
 stg = QuasiQuoter

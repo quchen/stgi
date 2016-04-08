@@ -27,5 +27,14 @@ To do
     - [ ] Test the stepper
     - [ ] Auto-increment the step counter
     - [ ] Write lots of test cases
+- Nice to have
+    - [ ] Annotate syntax tree
+    - [ ] Separate tokenizer and parser
+    - [ ] `newtype` for update frames, making the update stack a
+          `Stack UpdateFrame`
+    - [ ] `newtype` for return frames, making the update stack a
+          `Stack ReturnFrame`
+    - [ ] Highlight error location in input
 - Small stuff
-    - [ ] Move OverloadedStrings into other-extensions, don't enable it by default
+    - [ ] Move OverloadedStrings into other-extensions, don't enable it by
+          default

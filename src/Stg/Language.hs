@@ -1,8 +1,32 @@
 {-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE TemplateHaskell #-}
 
--- | The STG language syntax tree, modeled after the decription in the 1992
--- paper.
+-- | The STG language syntax tree, modeled after the description in the
+-- 1992 paper
+-- <http://research.microsoft.com/apps/pubs/default.aspx?id=67083 (link)>.
+--
+-- A 'Program' is typically created using functionality provided by the
+-- "Stg.Parser" module, as opposed to manually combining the data types given
+-- in this module.
+--
+-- For example, the STG program
+--
+-- @
+-- fix = () \\n (f) ->
+--     letrec x = (f, x) \\u () -> f (x)
+--     in x ()
+-- @
+--
+-- is represented by
+--
+-- @
+-- 'Binds'
+--     [("fix", 'LambdaForm' [] 'NoUpdate' ["f"]
+--         ('Let' 'Recursive'
+--             ('Binds' [("x", 'LambdaForm' ["f","x"] 'Update' []
+--                 ('AppF' "f" ['AtomVar' "x"]))])
+--             ('AppF' "x" [])))]
+-- @
 module Stg.Language (
     Program      (..),
     Binds        (..),
@@ -36,38 +60,47 @@ import           Language.Haskell.TH.Lift
 
 
 
+-- | An STG program consists of bindings.
 newtype Program = Program Binds
     deriving (Eq, Ord, Show, Generic)
 
+-- | Bindings are collections of lambda forms, indexed over variables.
 newtype Binds = Binds (Map Var LambdaForm)
     deriving (Eq, Ord, Generic)
 
 instance Show Binds where
     show (Binds binds) = "(Binds " <> show (M.toList binds) <> ")"
 
+-- | A lambda form unifies free and bound variables associated with a function
+-- body.
 data LambdaForm = LambdaForm [Var] UpdateFlag [Var] Expr
     deriving (Eq, Ord, Show, Generic)
 
+-- | The update flag distinguishes updateable from non-updateable lambda forms.
+--
+-- The former will be overwritten in-place when it is evaluated, allowing
+-- the calculation of a thunk to be shared among multiple uses of the
+-- same value.
 data UpdateFlag = Update | NoUpdate
     deriving (Eq, Ord, Show, Generic, Enum, Bounded)
 
--- | Distinguish @let@ from @letrec@
+-- | Distinguishes @let@ from @letrec@.
 data Rec = NonRecursive | Recursive
     deriving (Eq, Ord, Show, Generic, Enum, Bounded)
 
 -- | An expression in the STG language.
 data Expr =
-      Let Rec Binds Expr    -- ^ let(rec) ... in ...
-    | Case Expr Alts        -- ^ case ... of ... x -> y
-    | AppF Var [Atom]       -- ^ Function application
-    | AppC Constr [Atom]    -- ^ Constructor application
-    | AppP PrimOp Atom Atom -- ^ Primitive function application
-    | Lit Literal           -- ^ Literal expression
+      Let Rec Binds Expr    -- ^ Let expression @let(rec) ... in ...@
+    | Case Expr Alts        -- ^ Case expression @case ... of ... x -> y@
+    | AppF Var [Atom]       -- ^ Function application @f (x,y,z)@
+    | AppC Constr [Atom]    -- ^ Constructor application @Maybe (a)@
+    | AppP PrimOp Atom Atom -- ^ Primitive function application @+# 1# 2#@
+    | Lit Literal           -- ^ Literal expression @1#@
     deriving (Eq, Ord, Show, Generic)
 
 -- | List of possible alternatives in a 'Case' expression.
 data Alts =
-      Algebraic AlgebraicAlts -- ^ as in True | False
+      Algebraic AlgebraicAlts -- ^ as in @True | False@
     | Primitive PrimitiveAlts -- ^ like 1, 2, 3
     deriving (Eq, Ord, Show, Generic)
 
@@ -113,7 +146,7 @@ instance Num Literal where
 
     fromInteger = Literal . fromInteger
 
--- | Primitive operations on 'Literal's.
+-- | Primitive operations.
 data PrimOp = Add | Sub | Mul | Div | Mod
     deriving (Eq, Ord, Show, Generic, Bounded, Enum)
 

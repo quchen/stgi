@@ -5,6 +5,7 @@ module Test.Parser.Parser (tests) where
 
 
 
+import           Data.Monoid
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           Test.Tasty
@@ -109,7 +110,7 @@ simpleParses = testGroup "Well-written programs"
     , shouldParseToSuccess "map, differently implemented"
          "-- Taken from the 1992 STG paper, page 22.                         \n\
          \map = () \\n (f) ->                                                \n\
-         \    letrec mf = (f,mf) \\n (xs) ->                                 \n\
+         \    letrec mf =1 (f,mf) \\n (xs) ->                                 \n\
          \        case xs () of                                              \n\
          \            Nil () -> Nil ();                                      \n\
          \            Cons (y,ys) -> let fy = (f,y) \\u () -> f (y);         \n\
@@ -148,9 +149,12 @@ shouldParseTo testName input output =
         (let actual = parse input
              expected = output
              pretty = case actual of
-                 Left err -> T.unlines [ "============="
-                                       , "Parse error: "
-                                       , err
-                                       , "=============" ]
+                 Left err -> T.unlines
+                    [ "============="
+                    , "Could not parse"
+                    , (T.unlines . map (" > " <>) . T.lines) input
+                    , "Error encountered:"
+                    , err
+                    , "=============" ]
                  Right r  -> prettyprint r
         in assertEqual (T.unpack pretty) expected actual )

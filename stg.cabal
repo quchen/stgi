@@ -18,6 +18,7 @@ library
   exposed-modules:     Stack
                      , Stg.Language
                      , Stg.Language.Prettyprint
+                     , Stg.Machine
                      , Stg.Machine.Env
                      , Stg.Machine.Heap
                      , Stg.Machine.Step
@@ -33,7 +34,10 @@ library
                      , ansi-wl-pprint
                      , template-haskell
                      , th-lift
-  default-extensions:  OverloadedStrings
+  default-extensions:  LambdaCase
+                     , TupleSections
+                     , BangPatterns
+                     , MultiWayIf
   other-extensions:    TemplateHaskell
                      , DeriveGeneric
   default-language:    Haskell2010
@@ -51,15 +55,15 @@ test-suite stg-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
-  other-modules:       Test.Stack
-                     , Test.Parser.Parser
-                     , Test.Parser
+  other-modules:       Test.Language
                      , Test.Language.Prettyprint
-                     , Test.Language
-                     , Test.Parser.QuasiQuoter
                      , Test.Orphans
-                     , Test.Orphans.Stack
                      , Test.Orphans.Language
+                     , Test.Orphans.Stack
+                     , Test.Parser
+                     , Test.Parser.Parser
+                     , Test.Parser.QuasiQuoter
+                     , Test.Stack
   build-depends:       base
                      , stg
                      , text
