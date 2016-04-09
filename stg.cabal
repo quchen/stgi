@@ -18,6 +18,9 @@ library
   exposed-modules:     Stack
                      , Stg.Language
                      , Stg.Language.Prettyprint
+                     , Stg.Language.Prettyprint.Module
+                     , Stg.Language.Prettyprint.ParserInverse
+                     , Stg.Language.Prettyprint.ParserInverseAnsi
                      , Stg.Machine
                      , Stg.Machine.Env
                      , Stg.Machine.Heap
@@ -28,11 +31,11 @@ library
                      , Stg.Parser.QuasiQuoter
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
+                     , ansi-wl-pprint
                      , containers
                      , megaparsec
-                     , text
-                     , ansi-wl-pprint
                      , template-haskell
+                     , text
                      , th-lift
   default-extensions:  LambdaCase
                      , TupleSections
@@ -40,6 +43,7 @@ library
                      , MultiWayIf
   other-extensions:    TemplateHaskell
                      , DeriveGeneric
+                     , OverloadedStrings
   default-language:    Haskell2010
 
 executable stg-exe
@@ -64,6 +68,7 @@ test-suite stg-test
                      , Test.Parser.Parser
                      , Test.Parser.QuasiQuoter
                      , Test.Stack
+                     , Test.Util
   build-depends:       base
                      , stg
                      , text

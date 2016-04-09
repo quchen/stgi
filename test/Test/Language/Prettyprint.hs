@@ -12,7 +12,7 @@ import           Test.Tasty.QuickCheck
 import           Text.Megaparsec.Text
 import           Text.PrettyPrint.ANSI.Leijen
 
-import           Stg.Language.Prettyprint
+import qualified Stg.Language.Prettyprint     as Prettyprint
 import qualified Stg.Parser.Parser            as Parse
 
 import           Test.Orphans                 ()
@@ -21,31 +21,32 @@ import           Test.Orphans                 ()
 
 tests :: TestTree
 tests = testGroup "Prettyprinter is inverse of parser"
-    [ inverseOfParser "Full program"           Parse.program
-    , inverseOfParser "Bindings"               Parse.binds
-    , inverseOfParser "Lambda form"            Parse.lambdaForm
-    , inverseOfParser "Expression"             Parse.expr
-    , inverseOfParser "Case alternatives"      Parse.alts
-    , inverseOfParser "Algebraic alternatives" Parse.algebraicAlts
-    , inverseOfParser "Primitive alternatives" Parse.primitiveAlts
-    , inverseOfParser "Algebraic alternative"  Parse.algebraicAlt
-    , inverseOfParser "Primitive alternative"  Parse.primitiveAlt
-    , inverseOfParser "Default alternative"    Parse.defaultAlt
-    , inverseOfParser "Literal"                Parse.literal
-    , inverseOfParser "Primop"                 Parse.primOp
-    , inverseOfParser "Atom"                   Parse.atom ]
+    [ inverseOfParser "Full program"           Prettyprint.pprProgram       Parse.program
+    , inverseOfParser "Bindings"               Prettyprint.pprBinds         Parse.binds
+    , inverseOfParser "Lambda form"            Prettyprint.pprLambdaForm    Parse.lambdaForm
+    , inverseOfParser "Expression"             Prettyprint.pprExpr          Parse.expr
+    , inverseOfParser "Case alternatives"      Prettyprint.pprAlts          Parse.alts
+    , inverseOfParser "Algebraic alternatives" Prettyprint.pprAlgebraicAlts Parse.algebraicAlts
+    , inverseOfParser "Primitive alternatives" Prettyprint.pprPrimitiveAlts Parse.primitiveAlts
+    , inverseOfParser "Algebraic alternative"  Prettyprint.pprAlgebraicAlt  Parse.algebraicAlt
+    , inverseOfParser "Primitive alternative"  Prettyprint.pprPrimitiveAlt  Parse.primitiveAlt
+    , inverseOfParser "Default alternative"    Prettyprint.pprDefaultAlt    Parse.defaultAlt
+    , inverseOfParser "Literal"                Prettyprint.pprLiteral       Parse.literal
+    , inverseOfParser "Primop"                 Prettyprint.pprPrimOp        Parse.primOp
+    , inverseOfParser "Atom"                   Prettyprint.pprAtom          Parse.atom ]
 
 inverseOfParser
-    :: (Arbitrary ast, Pretty ast, Show ast, Eq ast)
+    :: (Arbitrary ast, Show ast, Eq ast)
     => Text
+    -> (Prettyprint.PrettyprinterDict Doc -> ast -> Doc)
     -> Parser ast
     -> TestTree
-inverseOfParser testName parser = small (testProperty (T.unpack testName) test)
+inverseOfParser testName prettyprinter parser = small (testProperty (T.unpack testName) test)
   where
     small = localOption (QuickCheckMaxSize 2) -- Higher numbers sometimes let
                                               -- the test AST *explode*
     test inputAst =
-        let prettyprinted = prettyprint inputAst
+        let prettyprinted = Prettyprint.parserInverse prettyprinter inputAst
             parsed = Parse.parse parser prettyprinted
         in case parsed of
             Left err ->
@@ -57,12 +58,12 @@ inverseOfParser testName parser = small (testProperty (T.unpack testName) test)
 
     prettySuccess inputAst parsedAst =
         T.unlines [ "Input AST:"
-                  , prettyprint inputAst
+                  , Prettyprint.parserInverse prettyprinter inputAst
                   , "Parsed AST:"
-                  , prettyprint parsedAst ]
+                  , Prettyprint.parserInverse prettyprinter parsedAst ]
 
     prettyFailure inputAst err =
         T.unlines [ "Input AST:"
-                  , prettyprint inputAst
+                  , Prettyprint.parserInverse prettyprinter inputAst
                   , "Parse error:"
                   , err ]

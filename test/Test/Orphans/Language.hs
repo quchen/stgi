@@ -6,11 +6,16 @@ module Test.Orphans.Language () where
 
 import qualified Data.Map              as M
 import           Data.Monoid
+import           Data.Ratio
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import           Test.Tasty.QuickCheck
 
 import           Stg.Language
+
+import           Test.Util
+
+
 
 --------------------------------------------------------------------------------
 -- Helper functions
@@ -42,13 +47,13 @@ arbitrary4
 arbitrary4 f = f <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 lowerChar :: Gen Text
-lowerChar = T.singleton <$> elements ['a'..'z']
+lowerChar = resize 3 (T.singleton <$> elements ['a'..'z'])
 
 upperChar :: Gen Text
-upperChar = T.singleton <$> elements ['A'..'Z']
+upperChar = resize 3 (T.singleton <$> elements ['A'..'Z'])
 
 extendedLetters :: Gen Text
-extendedLetters = T.pack <$> listOf extendedLetter
+extendedLetters = resize 3 (T.pack <$> listOf extendedLetter)
   where
     extendedLetter :: Gen Char
     extendedLetter = elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "\'_")
@@ -74,7 +79,7 @@ instance Arbitrary Program where
 
 instance Arbitrary Binds where
     arbitrary = do
-        xs <- listOf1 arbitrary
+        xs <- listOf1 (scaled (2%3) arbitrary)
         pure (Binds (M.fromList xs))
     shrink (Binds b) = (map (Binds . M.fromList) . shrinkBut1st . M.toList) b
 
@@ -105,11 +110,11 @@ instance Arbitrary Alts where
     shrink = genericShrink
 
 instance Arbitrary AlgebraicAlts where
-    arbitrary = AlgebraicAlts <$> listOf1 arbitrary <*> arbitrary
+    arbitrary = AlgebraicAlts <$> listOf1 (scaled (2%3) arbitrary) <*> arbitrary
     shrink = genericShrink
 
 instance Arbitrary PrimitiveAlts where
-    arbitrary = PrimitiveAlts <$> listOf1 arbitrary <*> arbitrary
+    arbitrary = PrimitiveAlts <$> listOf1 (scaled (2%3) arbitrary) <*> arbitrary
     shrink = genericShrink
 
 instance Arbitrary AlgebraicAlt where

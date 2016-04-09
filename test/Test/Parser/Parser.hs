@@ -12,7 +12,7 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Stg.Language
-import           Stg.Language.Prettyprint
+import qualified Stg.Language.Prettyprint as Prettyprint
 import           Stg.Parser
 
 import           Test.Orphans             ()
@@ -20,6 +20,30 @@ import           Test.Orphans             ()
 
 tests :: TestTree
 tests = testGroup "Explicit parses" [simpleParses]
+
+
+
+shouldParseToSuccess
+    :: Text -- ^ Test name
+    -> Text -- ^ Parser input
+    -> Binds -- ^ STG bindings
+    -> TestTree
+shouldParseToSuccess testName input output = testCase (T.unpack testName) test
+  where
+    actual = parse input
+    expected = Right (Program output)
+    failMessage = case actual of
+       Left err -> T.unlines
+          [ "============="
+          , "Could not parse"
+          , (T.unlines . map (" > " <>) . T.lines) input
+          , "Error encountered:"
+          , (T.unlines . map (" > " <>) . T.lines) err
+          , "=============" ]
+       Right r -> Prettyprint.parserInverse Prettyprint.pprProgram r
+    test = assertEqual (T.unpack failMessage) expected actual
+
+
 
 simpleParses :: TestTree
 simpleParses = testGroup "Well-written programs"
@@ -138,19 +162,3 @@ simpleParses = testGroup "Well-written programs"
                                     (DefaultNotBound (AppF "badListError" [])) ))))])
                       (AppF "mf" [])))])
     ]
-
-shouldParseToSuccess :: Text -> Text -> Binds -> TestTree
-shouldParseToSuccess testName input output = testCase (T.unpack testName) test
-  where
-    actual = parse input
-    expected = Right (Program output)
-    failMessage = case actual of
-       Left err -> T.unlines
-          [ "============="
-          , "Could not parse"
-          , (T.unlines . map (" > " <>) . T.lines) input
-          , "Error encountered:"
-          , (T.unlines . map (" > " <>) . T.lines) err
-          , "=============" ]
-       Right r  -> prettyprint r
-    test = assertEqual (T.unpack failMessage) expected actual

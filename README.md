@@ -35,6 +35,5 @@ To do
     - [ ] `newtype` for return frames, making the update stack a
           `Stack ReturnFrame`
     - [ ] Highlight error location in input
+    - [ ] Coloured/HTML prettyprinter
 - Small stuff
-    - [ ] Move OverloadedStrings into other-extensions, don't enable it by
-          default
