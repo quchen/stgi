@@ -110,10 +110,14 @@ instance Arbitrary Alts where
     shrink = genericShrink
 
 instance Arbitrary AlgebraicAlts where
+    -- TODO: This does not consider default-only 'case' blocks, because those
+    --       are ambiguous between algebraic/primitive.
     arbitrary = AlgebraicAlts <$> listOf1 (scaled (2%3) arbitrary) <*> arbitrary
     shrink = genericShrink
 
 instance Arbitrary PrimitiveAlts where
+    -- TODO: This does not consider default-only 'case' blocks, because those
+    --       are ambiguous between algebraic/primitive.
     arbitrary = PrimitiveAlts <$> listOf1 (scaled (2%3) arbitrary) <*> arbitrary
     shrink = genericShrink
 

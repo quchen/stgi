@@ -37,11 +37,9 @@ library
                      , template-haskell
                      , text
                      , th-lift
-  default-extensions:  LambdaCase
-                     , TupleSections
-                     , BangPatterns
-                     , MultiWayIf
-  other-extensions:    TemplateHaskell
+  default-extensions:
+  other-extensions:    LambdaCase
+                     , TemplateHaskell
                      , DeriveGeneric
                      , OverloadedStrings
   default-language:    Haskell2010

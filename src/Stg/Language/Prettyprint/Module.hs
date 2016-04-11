@@ -1,6 +1,3 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | Defines a dictionary to build prettyprinters with.
 module Stg.Language.Prettyprint.Module (
     makePrettyprinter,
