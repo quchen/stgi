@@ -131,9 +131,7 @@ data DefaultAlt =
 
 -- | Literals are the basis of primitive operations.
 newtype Literal = Literal Int
-    deriving (Eq, Ord, Generic)
-
-instance Show Literal where show (Literal i) = show i
+    deriving (Eq, Ord, Show, Generic)
 
 instance Num Literal where
     Literal x + Literal y = Literal (x + y)
@@ -152,10 +150,9 @@ data PrimOp = Add | Sub | Mul | Div | Mod
 
 -- | Variable.
 newtype Var = Var Text
-    deriving (Eq, Ord, Generic)
+    deriving (Eq, Ord, Show, Generic)
 
 instance IsString Var where fromString = coerce . T.pack
-instance Show Var where show (Var v) = "\"" <> T.unpack v <> "\""
 
 -- | Smallest unit of data.
 data Atom =
@@ -165,10 +162,9 @@ data Atom =
 
 -- | Constructors of algebraic data types.
 newtype Constr = Constr Text
-    deriving (Eq, Ord, Generic)
+    deriving (Eq, Ord, Show, Generic)
 
 instance IsString Constr where fromString = coerce . T.pack
-instance Show Constr where show (Constr c) = "\"" <> T.unpack c <> "\""
 
 
 

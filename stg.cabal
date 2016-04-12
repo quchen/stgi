@@ -50,6 +50,7 @@ executable stg-exe
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , stg
+                     , text
   default-extensions:  OverloadedStrings
   default-language:    Haskell2010
 

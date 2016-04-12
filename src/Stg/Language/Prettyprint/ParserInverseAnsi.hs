@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Stg.Language.Prettyprint.ParserInverseAnsi (
-    parserInverseColouredModule
+    parserInverseAnsiModule,
 ) where
 
 
@@ -16,64 +16,68 @@ import           Stg.Language.Prettyprint.Module
 import           Stg.Language.Prettyprint.ParserInverse
 
 
+
 --------------------------------------------------------------------------------
 -- Style definitions
 
+-- | Keyword style
 keywordC :: Doc -> Doc
-keywordC = red
+keywordC = dullred
 
+-- | Primitive style, for literals and functions
 primC :: Doc -> Doc
-primC = green
+primC = dullgreen
 
+-- | Name style, for variables and constructors
 nameC :: Doc -> Doc
-nameC = yellow
+nameC = dullyellow
 
 
 
 -- | 'parserInverseModule', but with colours.
-parserInverseColouredModule :: PrettyprinterModule Doc
-parserInverseColouredModule = modifyModule parserInverseModule (\m ->
-    m { pprExpr       = pprExpr'       m
-      , pprDefaultAlt = pprDefaultAlt' m
-      , pprLiteral    = pprLiteral'    m
-      , pprPrimOp     = pprPrimOp'     m
-      , pprVar        = pprVar'        m
-      , pprConstr     = pprConstr'     m
-      })
+parserInverseAnsiModule :: PrettyprinterModule Doc
+parserInverseAnsiModule = modifyModule parserInverseModule (\dict ->
+    dict { pprExpr       = pprExpr'       dict
+         , pprDefaultAlt = pprDefaultAlt' dict
+         , pprLiteral    = pprLiteral'
+         , pprPrimOp     = pprPrimOp'
+         , pprVar        = pprVar'
+         , pprConstr     = pprConstr'
+         })
 
 pprExpr' :: PrettyprinterDict Doc -> Expr -> Doc
-pprExpr' ppr = \case
+pprExpr' dict = \case
     Let rec binds expr -> align (
-        keywordC  "let" <> pprRec ppr rec <+> pprBinds ppr binds
+        keywordC  "let" <> pprRec dict rec <+> pprBinds dict binds
         <$>
-        keywordC "in" <+> pprExpr ppr expr )
+        keywordC "in" <+> pprExpr dict expr )
     Case expr alts ->
-        keywordC "case" <+> pprExpr ppr expr <+> keywordC "of"
+        keywordC "case" <+> pprExpr dict expr <+> keywordC "of"
         <$>
-        indent 4 (pprAlts ppr alts)
-    AppF var args -> pprVar ppr var <+> pprAtoms ppr args
-    AppC con args -> pprConstr ppr con <+> pprAtoms ppr args
-    AppP op arg1 arg2 -> pprPrimOp ppr op <+> pprAtom ppr arg1 <+> pprAtom ppr arg2
-    Lit lit -> pprLiteral ppr lit
+        indent 4 (pprAlts dict alts)
+    AppF var args -> pprVar dict var <+> pprAtoms dict args
+    AppC con args -> pprConstr dict con <+> pprAtoms dict args
+    AppP op arg1 arg2 -> pprPrimOp dict op <+> pprAtom dict arg1 <+> pprAtom dict arg2
+    Lit lit -> pprLiteral dict lit
 
 pprDefaultAlt' :: PrettyprinterDict Doc -> DefaultAlt -> Doc
-pprDefaultAlt' ppr = \case
-    DefaultNotBound body  -> keywordC "default" <+> "->" <+> pprExpr ppr body
-    DefaultBound var body -> pprVar ppr var <+> "->" <+> pprExpr ppr body
+pprDefaultAlt' dict = \case
+    DefaultNotBound expr  -> keywordC "default" <+> "->" <+> pprExpr dict expr
+    DefaultBound var expr -> pprVar dict var    <+> "->" <+> pprExpr dict expr
 
-pprLiteral' :: ppr -> Literal -> Doc
-pprLiteral' _ppr (Literal i) = primC (int i <> "#")
+pprLiteral' :: Literal -> Doc
+pprLiteral' (Literal i) = primC (int i <> "#")
 
-pprPrimOp' :: ppr -> PrimOp -> Doc
-pprPrimOp' _ppr op = primC (case op of
+pprPrimOp' :: PrimOp -> Doc
+pprPrimOp' op = primC (case op of
     Add -> "+#"
     Sub -> "-#"
     Mul -> "*#"
     Div -> "/#"
     Mod -> "%#" )
 
-pprVar' :: ppr -> Var -> Doc
-pprVar' _ppr (Var name) = nameC (string (T.unpack name))
+pprVar' :: Var -> Doc
+pprVar' (Var name) = nameC (string (T.unpack name))
 
-pprConstr' :: ppr -> Constr -> Doc
-pprConstr' _ppr (Constr name) = nameC (string (T.unpack name))
+pprConstr' :: Constr -> Doc
+pprConstr' (Constr name) = nameC (string (T.unpack name))

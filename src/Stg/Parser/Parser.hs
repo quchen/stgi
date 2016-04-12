@@ -144,6 +144,8 @@ updateFlagTok = lexeme (P.char '\\' *> flag) <?> help
 signedIntegerTok :: Parser Integer
 signedIntegerTok = L.signed spaceConsumer L.integer
 
+
+
 --------------------------------------------------------------------------------
 -- * Parsing
 
@@ -291,14 +293,16 @@ literal = (Literal . fromInteger) <$> signedIntegerTok <* hashTok
 -- +#
 -- @
 primOp :: Parser PrimOp
-primOp = P.try (P.choice choices <* hashTok)
+primOp = P.try (P.choice ops <* hashTok)
     <?> "primitive function"
   where
-    choices = [ P.char '+' *> pure Add
-              , P.char '-' *> pure Sub
-              , P.char '*' *> pure Mul
-              , P.char '/' *> pure Div
-              , P.char '%' *> pure Mod ]
+    (~>) :: Char -> PrimOp -> Parser PrimOp
+    c ~> val = P.char c *> pure val
+    ops = [ '+' ~> Add
+          , '-' ~> Sub
+          , '*' ~> Mul
+          , '/' ~> Div
+          , '%' ~> Mod ]
 
 -- | Parse a number of variables. enclosed in parentheses, and separated by
 -- commas. Used in lambda forms.

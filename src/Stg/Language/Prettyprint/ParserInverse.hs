@@ -19,121 +19,121 @@ import           Stg.Language.Prettyprint.Module
 
 -- | Prettyprinter, defined as being compatible with the "Stg.Parser.Parser".
 parserInverseModule :: PrettyprinterModule Doc
-parserInverseModule = PrettyprinterModule (\rec -> PrettyprinterDict
-    { pprProgram       = pprProgram'       rec
-    , pprBinds         = pprBinds'         rec
-    , pprLambdaForm    = pprLambdaForm'    rec
-    , pprUpdateFlag    = pprUpdateFlag'    rec
-    , pprRec           = pprRec'           rec
-    , pprExpr          = pprExpr'          rec
-    , pprAlts          = pprAlts'          rec
-    , pprAlgebraicAlts = pprAlgebraicAlts' rec
-    , pprPrimitiveAlts = pprPrimitiveAlts' rec
-    , pprAlgebraicAlt  = pprAlgebraicAlt'  rec
-    , pprPrimitiveAlt  = pprPrimitiveAlt'  rec
-    , pprDefaultAlt    = pprDefaultAlt'    rec
-    , pprLiteral       = pprLiteral'       rec
-    , pprPrimOp        = pprPrimOp'        rec
-    , pprVar           = pprVar'           rec
-    , pprVars          = pprVars'          rec
-    , pprAtom          = pprAtom'          rec
-    , pprAtoms         = pprAtoms'         rec
-    , pprConstr        = pprConstr'        rec
+parserInverseModule = makeModule (\dict -> PrettyprinterDict
+    { pprProgram       = pprProgram'       dict
+    , pprBinds         = pprBinds'         dict
+    , pprLambdaForm    = pprLambdaForm'    dict
+    , pprUpdateFlag    = pprUpdateFlag'
+    , pprRec           = pprRec'
+    , pprExpr          = pprExpr'          dict
+    , pprAlts          = pprAlts'          dict
+    , pprAlgebraicAlts = pprAlgebraicAlts' dict
+    , pprPrimitiveAlts = pprPrimitiveAlts' dict
+    , pprAlgebraicAlt  = pprAlgebraicAlt'  dict
+    , pprPrimitiveAlt  = pprPrimitiveAlt'  dict
+    , pprDefaultAlt    = pprDefaultAlt'    dict
+    , pprLiteral       = pprLiteral'
+    , pprPrimOp        = pprPrimOp'
+    , pprVar           = pprVar'
+    , pprVars          = pprVars'          dict
+    , pprAtom          = pprAtom'          dict
+    , pprAtoms         = pprAtoms'         dict
+    , pprConstr        = pprConstr'
     })
 
 pprProgram' :: PrettyprinterDict Doc -> Program -> Doc
-pprProgram' ppr (Program binds) = pprBinds ppr binds
+pprProgram' dict (Program binds) = pprBinds dict binds
 
 pprBinds' :: PrettyprinterDict Doc -> Binds -> Doc
-pprBinds' ppr (Binds bs) =
+pprBinds' dict (Binds bs) =
     (align . vsep . punctuate ";" . map prettyBinding . M.toList) bs
   where
     prettyBinding (var, lambda) =
-        pprVar ppr var <+> "=" <+> pprLambdaForm ppr lambda
+        pprVar dict var <+> "=" <+> pprLambdaForm dict lambda
 
 pprLambdaForm' :: PrettyprinterDict Doc -> LambdaForm -> Doc
-pprLambdaForm' ppr (LambdaForm free upd bound body) =
-        hsep [ pprVars ppr free
-             , pprUpdateFlag ppr upd
-             , pprVars ppr bound
+pprLambdaForm' dict (LambdaForm free upd bound expr) =
+        hsep [ pprVars dict free
+             , pprUpdateFlag dict upd
+             , pprVars dict bound
              , "->"
-             , pprExpr ppr body ]
+             , pprExpr dict expr ]
 
-pprUpdateFlag' :: ppr -> UpdateFlag -> Doc
-pprUpdateFlag' _ppr = \case
+pprUpdateFlag' :: UpdateFlag -> Doc
+pprUpdateFlag' = \case
     Update   -> "\\u"
     NoUpdate -> "\\n"
 
-pprRec' :: ppr -> Rec -> Doc
-pprRec' _ppr = \case
+pprRec' :: Rec -> Doc
+pprRec' = \case
     NonRecursive -> ""
     Recursive    -> "rec"
 
 pprExpr' :: PrettyprinterDict Doc -> Expr -> Doc
-pprExpr' ppr = \case
+pprExpr' dict = \case
     Let rec binds expr -> align (
-        "let" <> pprRec ppr rec <+> pprBinds ppr binds
+        "let" <> pprRec dict rec <+> pprBinds dict binds
         <$>
-        "in" <+> pprExpr ppr expr )
+        "in" <+> pprExpr dict expr )
     Case expr alts ->
-        "case" <+> pprExpr ppr expr <+> "of"
+        "case" <+> pprExpr dict expr <+> "of"
         <$>
-        indent 4 (pprAlts ppr alts)
-    AppF var args -> pprVar ppr var <+> pprAtoms ppr args
-    AppC con args -> pprConstr ppr con <+> pprAtoms ppr args
-    AppP op arg1 arg2 -> pprPrimOp ppr op <+> pprAtom ppr arg1 <+> pprAtom ppr arg2
-    Lit lit -> pprLiteral ppr lit
+        indent 4 (pprAlts dict alts)
+    AppF var args -> pprVar dict var <+> pprAtoms dict args
+    AppC con args -> pprConstr dict con <+> pprAtoms dict args
+    AppP op arg1 arg2 -> pprPrimOp dict op <+> pprAtom dict arg1 <+> pprAtom dict arg2
+    Lit lit -> pprLiteral dict lit
 
 pprAlts' :: PrettyprinterDict Doc -> Alts -> Doc
-pprAlts' ppr = \case
-    Algebraic alts -> pprAlgebraicAlts ppr alts
-    Primitive alts -> pprPrimitiveAlts ppr alts
+pprAlts' dict = \case
+    Algebraic alts -> pprAlgebraicAlts dict alts
+    Primitive alts -> pprPrimitiveAlts dict alts
 
 pprAlgebraicAlts' :: PrettyprinterDict Doc -> AlgebraicAlts -> Doc
-pprAlgebraicAlts' ppr (AlgebraicAlts alts def) =
-    vsep (punctuate ";" (map (pprAlgebraicAlt ppr) alts ++ [pprDefaultAlt ppr def]))
+pprAlgebraicAlts' dict (AlgebraicAlts alts def) =
+    vsep (punctuate ";" (map (pprAlgebraicAlt dict) alts ++ [pprDefaultAlt dict def]))
 
 pprPrimitiveAlts' :: PrettyprinterDict Doc -> PrimitiveAlts -> Doc
-pprPrimitiveAlts' ppr (PrimitiveAlts alts def) =
-    vsep (punctuate ";" (map (pprPrimitiveAlt ppr) alts ++ [pprDefaultAlt ppr def]))
+pprPrimitiveAlts' dict (PrimitiveAlts alts def) =
+    vsep (punctuate ";" (map (pprPrimitiveAlt dict) alts ++ [pprDefaultAlt dict def]))
 
 pprAlgebraicAlt' :: PrettyprinterDict Doc -> AlgebraicAlt -> Doc
-pprAlgebraicAlt' ppr (AlgebraicAlt con args body) =
-    pprConstr ppr con <+> pprVars ppr args <+> "->" <+> pprExpr ppr body
+pprAlgebraicAlt' dict (AlgebraicAlt con args expr) =
+    pprConstr dict con <+> pprVars dict args <+> "->" <+> pprExpr dict expr
 
 pprPrimitiveAlt' :: PrettyprinterDict Doc -> PrimitiveAlt -> Doc
-pprPrimitiveAlt' ppr (PrimitiveAlt lit body) =
-    pprLiteral ppr lit <+> "->" <+> pprExpr ppr body
+pprPrimitiveAlt' dict (PrimitiveAlt lit expr) =
+    pprLiteral dict lit <+> "->" <+> pprExpr dict expr
 
 pprDefaultAlt' :: PrettyprinterDict Doc -> DefaultAlt -> Doc
-pprDefaultAlt' ppr = \case
-    DefaultNotBound body  -> "default" <+> "->" <+> pprExpr ppr body
-    DefaultBound var body -> pprVar ppr var <+> "->" <+> pprExpr ppr body
+pprDefaultAlt' dict = \case
+    DefaultNotBound expr  -> "default" <+> "->" <+> pprExpr dict expr
+    DefaultBound var expr -> pprVar dict var <+> "->" <+> pprExpr dict expr
 
-pprLiteral' :: ppr -> Literal -> Doc
-pprLiteral' _ppr (Literal i) = int i <> "#"
+pprLiteral' :: Literal -> Doc
+pprLiteral' (Literal i) = int i <> "#"
 
-pprPrimOp' :: ppr -> PrimOp -> Doc
-pprPrimOp' _ppr = \case
+pprPrimOp' :: PrimOp -> Doc
+pprPrimOp' = \case
     Add -> "+#"
     Sub -> "-#"
     Mul -> "*#"
     Div -> "/#"
     Mod -> "%#"
 
-pprVar' :: ppr -> Var -> Doc
-pprVar' _ppr (Var name) = string (T.unpack name)
+pprVar' :: Var -> Doc
+pprVar' (Var name) = string (T.unpack name)
 
 pprVars' :: PrettyprinterDict Doc -> [Var] -> Doc
-pprVars' ppr  = parens . align . hcat . punctuate ", " . map (pprVar ppr)
+pprVars' dict  = parens . align . hcat . punctuate "," . map (pprVar dict)
 
 pprAtom' :: PrettyprinterDict Doc -> Atom -> Doc
-pprAtom' ppr = \case
-    AtomVar var -> pprVar     ppr var
-    AtomLit lit -> pprLiteral ppr lit
+pprAtom' dict = \case
+    AtomVar var -> pprVar     dict var
+    AtomLit lit -> pprLiteral dict lit
 
 pprAtoms' :: PrettyprinterDict Doc -> [Atom] -> Doc
-pprAtoms' ppr = parens . align . hcat . punctuate ", " . map (pprAtom ppr)
+pprAtoms' dict = parens . align . hcat . punctuate "," . map (pprAtom dict)
 
-pprConstr' :: ppr -> Constr -> Doc
-pprConstr' _ppr (Constr name) = string (T.unpack name)
+pprConstr' :: Constr -> Doc
+pprConstr' (Constr name) = string (T.unpack name)

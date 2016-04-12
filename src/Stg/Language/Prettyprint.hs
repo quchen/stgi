@@ -31,12 +31,16 @@ parserInverse
     -> Text
 parserInverse = makeDocPrettyprinter parserInverseModule
 
+
+
 -- | ANSI terminal coloured version of 'parserInverse'.
 parserInverseAnsi
     :: (PrettyprinterDict Doc -> input -> Doc)
     -> input
     -> Text
-parserInverseAnsi = makeDocPrettyprinter parserInverseColouredModule
+parserInverseAnsi = makeDocPrettyprinter parserInverseAnsiModule
+
+
 
 -- | Create a prettyprinter given a 'PrettyprinterModule' and an accessor
 -- to the contained prettyprinter.
