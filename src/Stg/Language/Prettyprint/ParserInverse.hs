@@ -73,11 +73,11 @@ instance PrettyParserInverse Alts where
 
 instance PrettyParserInverse AlgebraicAlts where
     pprPI (AlgebraicAlts alts def) =
-        vsep (punctuate ";" (map (pprPI) alts ++ [pprPI def]))
+        vsep (punctuate ";" (map pprPI alts ++ [pprPI def]))
 
 instance PrettyParserInverse PrimitiveAlts where
     pprPI (PrimitiveAlts alts def) =
-        vsep (punctuate ";" (map (pprPI) alts ++ [pprPI def]))
+        vsep (punctuate ";" (map pprPI alts ++ [pprPI def]))
 
 instance PrettyParserInverse AlgebraicAlt where
     pprPI (AlgebraicAlt con args expr) =

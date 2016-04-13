@@ -10,6 +10,7 @@ import           Test.Tasty.QuickCheck
 import           Test.Tasty.Runners
 
 import qualified Test.Language         as Language
+import qualified Test.Machine          as Machine
 import qualified Test.Parser           as Parser
 import qualified Test.Stack            as Stack
 
@@ -42,4 +43,5 @@ tests :: TestTree
 tests = testGroup "STG"
     [ Stack.tests
     , Parser.tests
+    , Machine.tests
     , Language.tests ]

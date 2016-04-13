@@ -9,8 +9,10 @@ import           Test.Tasty.QuickCheck as QC
 
 import           Stack                 (Stack)
 
+import           Test.Util
+
 
 
 instance Arbitrary a => Arbitrary (Stack a) where
-    arbitrary = fmap fromList arbitrary
+    arbitrary = arbitrary1 fromList
     shrink = map fromList . shrink . toList

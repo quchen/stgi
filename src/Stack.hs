@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 -- | A simple stack type. Very similar to an ordinary list, but with a more
 -- specialized API.
@@ -11,9 +12,10 @@ module Stack (
 
 
 
-import           Data.Foldable as F
+import           Data.Foldable                as F
 import           Data.Monoid
-import qualified GHC.Exts      as OverloadedLists
+import qualified GHC.Exts                     as OverloadedLists
+import           Text.PrettyPrint.ANSI.Leijen hiding (list, (<>))
 
 
 
@@ -22,6 +24,9 @@ data Stack a = Empty | a :< Stack a
 
 instance Show a => Show (Stack a) where
     show = show . toList
+
+instance Pretty a => Pretty (Stack a) where
+    pretty = prettyList . toList
 
 instance Functor Stack where
     fmap _ Empty = Empty

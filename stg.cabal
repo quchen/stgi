@@ -59,8 +59,13 @@ test-suite stg-test
   main-is:             Spec.hs
   other-modules:       Test.Language
                      , Test.Language.Prettyprint
+                     , Test.Language.Prettyprint.ParserInverse
+                     , Test.Language.Prettyprint.ParserInverseAnsi
+                     , Test.Machine
+                     , Test.Machine.Heap
                      , Test.Orphans
                      , Test.Orphans.Language
+                     , Test.Orphans.Machine
                      , Test.Orphans.Stack
                      , Test.Parser
                      , Test.Parser.Parser

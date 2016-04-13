@@ -19,32 +19,6 @@ import           Test.Util
 
 --------------------------------------------------------------------------------
 -- Helper functions
-allEnums :: (Enum a, Bounded a) => Gen a
-allEnums = elements [minBound ..]
-
-arbitrary1
-    :: Arbitrary a
-    => (a -> g)
-    -> Gen g
-arbitrary1 f = f <$> arbitrary
-
-arbitrary2
-    :: (Arbitrary a, Arbitrary b)
-    => (a -> b -> g)
-    -> Gen g
-arbitrary2 f = f <$> arbitrary <*> arbitrary
-
-arbitrary3
-    :: (Arbitrary a, Arbitrary b, Arbitrary c)
-    => (a -> b -> c -> g)
-    -> Gen g
-arbitrary3 f = f <$> arbitrary <*> arbitrary <*> arbitrary
-
-arbitrary4
-    :: (Arbitrary a, Arbitrary b, Arbitrary c, Arbitrary d)
-    => (a -> b -> c -> d -> g)
-    -> Gen g
-arbitrary4 f = f <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 lowerChar :: Gen Text
 lowerChar = resize 3 (T.singleton <$> elements ['a'..'z'])
