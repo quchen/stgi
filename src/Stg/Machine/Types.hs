@@ -1,11 +1,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 -- | Types used in the execution of the STG machine.
 module Stg.Machine.Types where
 
 
 
-import           Data.Map     (Map)
+import           Data.Map                     (Map)
+import           Numeric
+import           Text.PrettyPrint.ANSI.Leijen
 
 import           Stack
 import           Stg.Language
@@ -41,13 +45,41 @@ data StgState = StgState
         -- ^ A counter, used to generte fresh variable names from.
     }
 
+instance Pretty StgState where
+    pretty (StgState
+        { stgCode        = code
+        , stgArgStack    = argStack
+        , stgReturnStack = returnStack
+        , stgUpdateStack = updateStack
+        , stgHeap        = heap
+        , stgGlobals     = globals
+        , stgTicks       = ticks })
+      = "STG state"
+        <> pretty code
+        <> pretty argStack
+        <> pretty returnStack
+        <> pretty updateStack
+        <> pretty heap
+        <> pretty globals
+        <> pretty ticks
+
+
+
 -- | A memory address.
 newtype MemAddr = MemAddr Int
     deriving (Eq, Ord, Show)
 
+instance Pretty MemAddr where
+    pretty (MemAddr addr) = (text . ($ "") . showHex) addr
+
 -- | A value of the STG machine.
 data Value = Addr MemAddr | PrimInt Int
     deriving (Eq, Ord, Show)
+
+instance Pretty Value where
+    pretty = \case
+        Addr addr -> pretty addr
+        PrimInt i -> pretty i
 
 -- | The different code states the STG can be in.
 data Code = Eval Expr Locals
