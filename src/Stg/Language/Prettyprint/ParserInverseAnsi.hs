@@ -74,15 +74,9 @@ instance PrettyParserInverseAnsi LambdaForm where
         <+> "->"
         <+> pprAnsi expr
 
-instance PrettyParserInverseAnsi UpdateFlag where
-    pprAnsi = \case
-        Update   -> "\\u"
-        NoUpdate -> "\\n"
+instance PrettyParserInverseAnsi UpdateFlag
 
-instance PrettyParserInverseAnsi Rec where
-    pprAnsi = \case
-        NonRecursive -> ""
-        Recursive    -> "rec"
+instance PrettyParserInverseAnsi Rec
 
 instance PrettyParserInverseAnsi Expr where
     pprAnsi = \case

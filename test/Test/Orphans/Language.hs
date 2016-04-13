@@ -65,6 +65,8 @@ shrinkBut1stLetter text = case T.uncons text of
         let shrunkenRest = map T.pack . shrink . T.unpack
         in map (T.singleton x <>) (shrunkenRest xs)
 
+-- | Shrink all but the first element. Useful for e.g. bindings, because there
+-- has to be at least one of them, so we don't want to shrink them all away.
 shrinkBut1st :: Arbitrary a => [a] -> [[a]]
 shrinkBut1st [] = []
 shrinkBut1st (x:xs) = map (x:) (shrink xs)

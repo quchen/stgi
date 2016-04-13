@@ -96,8 +96,8 @@ varTok :: Parser Var
 varTok = lexeme p <?> "variable"
   where
     p = liftA2 (\x xs -> Var (T.pack (x:xs)))
-                P.lowerChar
-                (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
+               P.lowerChar
+               (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
 
 -- | Parse a constructor name. Constructors follow the same naming conventions
 -- as variables, but start with an upper-case character instead.
