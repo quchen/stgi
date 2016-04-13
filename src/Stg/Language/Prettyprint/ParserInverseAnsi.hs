@@ -2,82 +2,149 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Stg.Language.Prettyprint.ParserInverseAnsi (
-    parserInverseAnsiModule,
+    PrettyParserInverseAnsi(..),
 ) where
 
 
 
+import qualified Data.Map                               as M
 import qualified Data.Text                              as T
 import           Prelude                                hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
 import           Stg.Language
-import           Stg.Language.Prettyprint.Module
 import           Stg.Language.Prettyprint.ParserInverse
 
 
 
---------------------------------------------------------------------------------
--- Style definitions
-
 -- | Keyword style
-keywordC :: Doc -> Doc
-keywordC = dullred
+keyword :: Doc -> Doc
+keyword = dullred
 
 -- | Primitive style, for literals and functions
-primC :: Doc -> Doc
-primC = dullgreen
+prim :: Doc -> Doc
+prim = dullgreen
 
 -- | Name style, for variables and constructors
-nameC :: Doc -> Doc
-nameC = dullyellow
+name :: Doc -> Doc
+name = dullyellow
+
+-- | Head of a lambda form
+lambdaHead :: Doc -> Doc
+lambdaHead = dullblue
+
+-- | Semicolons separating lists of bindings and alternatives
+semicolon :: Doc -> Doc
+semicolon = dullwhite
 
 
 
--- | 'parserInverseModule', but with colours.
-parserInverseAnsiModule :: PrettyprinterModule Doc
-parserInverseAnsiModule = modifyModule parserInverseModule (\dict ->
-    dict { pprExpr       = pprExpr'       dict
-         , pprDefaultAlt = pprDefaultAlt' dict
-         , pprLiteral    = pprLiteral'
-         , pprPrimOp     = pprPrimOp'
-         , pprVar        = pprVar'
-         , pprConstr     = pprConstr'
-         })
+-- | Prettyprinter, defined as being compatible with the "Stg.Parser.Parser",
+-- but with ANSI terminal syntax highlighting.
+--
+-- The 'plain'ed version of 'ppr' should match the uncoloured one.
+--
+-- @
+-- 'plain' . 'pprAnsi'  ≡ 'pprPI'
+-- 'plain' . 'pprsAnsi' ≡ 'pprsPI'
+-- @
+class PrettyParserInverse a => PrettyParserInverseAnsi a where
+    pprAnsi  :: a -> Doc
+    pprAnsi = pprPI
+    pprsAnsi :: [a] -> Doc
+    pprsAnsi = pprsPI
 
-pprExpr' :: PrettyprinterDict Doc -> Expr -> Doc
-pprExpr' dict = \case
-    Let rec binds expr -> align (
-        keywordC  "let" <> pprRec dict rec <+> pprBinds dict binds
-        <$>
-        keywordC "in" <+> pprExpr dict expr )
-    Case expr alts ->
-        keywordC "case" <+> pprExpr dict expr <+> keywordC "of"
-        <$>
-        indent 4 (pprAlts dict alts)
-    AppF var args -> pprVar dict var <+> pprAtoms dict args
-    AppC con args -> pprConstr dict con <+> pprAtoms dict args
-    AppP op arg1 arg2 -> pprPrimOp dict op <+> pprAtom dict arg1 <+> pprAtom dict arg2
-    Lit lit -> pprLiteral dict lit
 
-pprDefaultAlt' :: PrettyprinterDict Doc -> DefaultAlt -> Doc
-pprDefaultAlt' dict = \case
-    DefaultNotBound expr  -> keywordC "default" <+> "->" <+> pprExpr dict expr
-    DefaultBound var expr -> pprVar dict var    <+> "->" <+> pprExpr dict expr
 
-pprLiteral' :: Literal -> Doc
-pprLiteral' (Literal i) = primC (int i <> "#")
+instance PrettyParserInverseAnsi Program where
+    pprAnsi (Program binds) = pprAnsi binds
 
-pprPrimOp' :: PrimOp -> Doc
-pprPrimOp' op = primC (case op of
-    Add -> "+#"
-    Sub -> "-#"
-    Mul -> "*#"
-    Div -> "/#"
-    Mod -> "%#" )
+instance PrettyParserInverseAnsi Binds where
+    pprAnsi (Binds bs) =
+        (align . vsep . punctuate (semicolon ";") . map prettyBinding . M.toList) bs
+      where
+        prettyBinding (var, lambda) =
+            pprAnsi var <+> "=" <+> pprAnsi lambda
 
-pprVar' :: Var -> Doc
-pprVar' (Var name) = nameC (string (T.unpack name))
+instance PrettyParserInverseAnsi LambdaForm where
+    pprAnsi (LambdaForm free upd bound expr) =
+        lambdaHead (pprsAnsi free
+             <+> pprAnsi upd
+             <+> pprsAnsi bound)
+        <+> "->"
+        <+> pprAnsi expr
 
-pprConstr' :: Constr -> Doc
-pprConstr' (Constr name) = nameC (string (T.unpack name))
+instance PrettyParserInverseAnsi UpdateFlag where
+    pprAnsi = \case
+        Update   -> "\\u"
+        NoUpdate -> "\\n"
+
+instance PrettyParserInverseAnsi Rec where
+    pprAnsi = \case
+        NonRecursive -> ""
+        Recursive    -> "rec"
+
+instance PrettyParserInverseAnsi Expr where
+    pprAnsi = \case
+        Let rec binds expr -> align (
+            keyword "let" <> pprAnsi rec <+> pprAnsi binds
+            <$>
+            keyword "in" <+> pprAnsi expr )
+        Case expr alts ->
+            keyword "case" <+> pprAnsi expr <+> keyword "of"
+            <$>
+            indent 4 (pprAnsi alts)
+        AppF var args -> pprAnsi var <+> pprsAnsi args
+        AppC con args -> pprAnsi con <+> pprsAnsi args
+        AppP op arg1 arg2 -> pprAnsi op <+> pprAnsi arg1 <+> pprAnsi arg2
+        Lit lit -> pprAnsi lit
+
+instance PrettyParserInverseAnsi Alts where
+    pprAnsi = \case
+        Algebraic alts -> pprAnsi alts
+        Primitive alts -> pprAnsi alts
+
+instance PrettyParserInverseAnsi AlgebraicAlts where
+    pprAnsi (AlgebraicAlts alts def) =
+        vsep (punctuate (semicolon ";") (map pprAnsi alts ++ [pprAnsi def]))
+
+instance PrettyParserInverseAnsi PrimitiveAlts where
+    pprAnsi (PrimitiveAlts alts def) =
+        vsep (punctuate (semicolon ";") (map pprAnsi alts ++ [pprAnsi def]))
+
+instance PrettyParserInverseAnsi AlgebraicAlt where
+    pprAnsi (AlgebraicAlt con args expr) =
+        pprAnsi con <+> pprsAnsi args <+> "->" <+> pprAnsi expr
+
+instance PrettyParserInverseAnsi PrimitiveAlt where
+    pprAnsi (PrimitiveAlt lit expr) =
+        pprAnsi lit <+> "->" <+> pprAnsi expr
+
+instance PrettyParserInverseAnsi DefaultAlt where
+    pprAnsi = \case
+        DefaultNotBound expr  -> keyword "default" <+> "->" <+> pprAnsi expr
+        DefaultBound var expr -> pprAnsi var <+> "->" <+> pprAnsi expr
+
+instance PrettyParserInverseAnsi Literal where
+    pprAnsi (Literal i) = prim (int i <> "#")
+
+instance PrettyParserInverseAnsi PrimOp where
+    pprAnsi op = prim (case op of
+        Add -> "+#"
+        Sub -> "-#"
+        Mul -> "*#"
+        Div -> "/#"
+        Mod -> "%#" )
+
+instance PrettyParserInverseAnsi Var where
+    pprAnsi (Var var) = name (string (T.unpack var))
+    pprsAnsi = parens . align . hcat . punctuate "," . map pprAnsi
+
+instance PrettyParserInverseAnsi Atom where
+    pprAnsi = \case
+        AtomVar var -> pprAnsi     var
+        AtomLit lit -> pprAnsi lit
+    pprsAnsi = parens . align . hcat . punctuate "," . map pprAnsi
+
+instance PrettyParserInverseAnsi Constr where
+    pprAnsi (Constr con) = name (string (T.unpack con))

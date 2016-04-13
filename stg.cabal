@@ -18,7 +18,6 @@ library
   exposed-modules:     Stack
                      , Stg.Language
                      , Stg.Language.Prettyprint
-                     , Stg.Language.Prettyprint.Module
                      , Stg.Language.Prettyprint.ParserInverse
                      , Stg.Language.Prettyprint.ParserInverseAnsi
                      , Stg.Machine

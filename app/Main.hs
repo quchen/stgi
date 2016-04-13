@@ -57,5 +57,4 @@ main = do
                     of v -> Unit ()
                 of v -> Unit ()
         |]
-    putStrLn (show prog)
-    T.putStrLn (parserInverseAnsi pprProgram prog)
+    T.putStrLn (prettyParserInverseAnsi prog)

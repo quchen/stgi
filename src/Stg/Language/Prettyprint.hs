@@ -2,9 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Stg.Language.Prettyprint (
-    parserInverse,
-    parserInverseAnsi,
-    PrettyprinterDict(..),
+    -- * Inverse-of-parser prettyprinter
+    prettyParserInverse,
+    PrettyParserInverse,
+
+    -- * ANSI terminal styled
+    prettyParserInverseAnsi,
+    PrettyParserInverseAnsi,
+
 ) where
 
 
@@ -14,48 +19,14 @@ import qualified Data.Text                                  as T
 import           Prelude                                    hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
-import           Stg.Language.Prettyprint.Module
 import           Stg.Language.Prettyprint.ParserInverse
 import           Stg.Language.Prettyprint.ParserInverseAnsi
 
 
+prettyParserInverse :: PrettyParserInverse a => a -> Text
+prettyParserInverse input =
+    T.pack (displayS (renderPretty 0.4 80 (pprPI input)) "")
 
--- |
--- >>> let prog = [stg| fix = () \n (f) -> letrec x = (f,x) \n () -> f (x) in x ()|]
--- >>> parserInverse pprProgram prog
--- fix = () \n (f) -> letrec x = (f, x) \n () -> f (x)
---                    in x ()
-parserInverse
-    :: (PrettyprinterDict Doc -> input -> Doc)
-    -> input
-    -> Text
-parserInverse = makeDocPrettyprinter parserInverseModule
-
-
-
--- | ANSI terminal coloured version of 'parserInverse'.
-parserInverseAnsi
-    :: (PrettyprinterDict Doc -> input -> Doc)
-    -> input
-    -> Text
-parserInverseAnsi = makeDocPrettyprinter parserInverseAnsiModule
-
-
-
--- | Create a prettyprinter given a 'PrettyprinterModule' and an accessor
--- to the contained prettyprinter.
-makeDocPrettyprinter
-    :: PrettyprinterModule out
-        -- ^ Prettyprinter module, containing a description of how to build a
-        --   prettyprinter
-    -> (PrettyprinterDict out -> input -> Doc)
-        -- ^ Projection function to get a prettyprinting function for a
-        --   specific type out of a 'PrettyprinterDict'
-
-    -> input
-        -- ^ Input to prettyprint
-
-    -> Text
-makeDocPrettyprinter pprModule getter input =
-    let ppr = getter (makePrettyprinter pprModule)
-    in T.pack (displayS (renderPretty 0.4 80 (ppr input)) "")
+prettyParserInverseAnsi :: PrettyParserInverseAnsi a => a -> Text
+prettyParserInverseAnsi input =
+    T.pack (displayS (renderPretty 0.4 80 (pprAnsi input)) "")

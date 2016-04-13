@@ -36,7 +36,7 @@ testOptions = do
     quickcheckOptions =
         mconcat [ option (QuickCheckShowReplay False)
                 , option (QuickCheckTests 1000)
-                , option (QuickCheckMaxSize 10) ]
+                , option (QuickCheckMaxSize 5) ]
 
 tests :: TestTree
 tests = testGroup "STG"

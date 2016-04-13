@@ -12,7 +12,7 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Stg.Language
-import qualified Stg.Language.Prettyprint as Prettyprint
+import           Stg.Language.Prettyprint
 import           Stg.Parser
 
 import           Test.Orphans             ()
@@ -40,7 +40,7 @@ shouldParseToSuccess testName input output = testCase (T.unpack testName) test
           , "Error encountered:"
           , (T.unlines . map (" > " <>) . T.lines) err
           , "=============" ]
-       Right r -> Prettyprint.parserInverse Prettyprint.pprProgram r
+       Right r -> prettyParserInverse r
     test = assertEqual (T.unpack failMessage) expected actual
 
 

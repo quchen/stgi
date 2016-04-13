@@ -2,138 +2,116 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Stg.Language.Prettyprint.ParserInverse (
-    parserInverseModule
+    PrettyParserInverse(..),
 ) where
 
 
 
-import qualified Data.Map                        as M
-import qualified Data.Text                       as T
-import           Prelude                         hiding ((<$>))
+import qualified Data.Map                     as M
+import qualified Data.Text                    as T
+import           Prelude                      hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
 import           Stg.Language
-import           Stg.Language.Prettyprint.Module
 
 
 
 -- | Prettyprinter, defined as being compatible with the "Stg.Parser.Parser".
-parserInverseModule :: PrettyprinterModule Doc
-parserInverseModule = makeModule (\dict -> PrettyprinterDict
-    { pprProgram       = pprProgram'       dict
-    , pprBinds         = pprBinds'         dict
-    , pprLambdaForm    = pprLambdaForm'    dict
-    , pprUpdateFlag    = pprUpdateFlag'
-    , pprRec           = pprRec'
-    , pprExpr          = pprExpr'          dict
-    , pprAlts          = pprAlts'          dict
-    , pprAlgebraicAlts = pprAlgebraicAlts' dict
-    , pprPrimitiveAlts = pprPrimitiveAlts' dict
-    , pprAlgebraicAlt  = pprAlgebraicAlt'  dict
-    , pprPrimitiveAlt  = pprPrimitiveAlt'  dict
-    , pprDefaultAlt    = pprDefaultAlt'    dict
-    , pprLiteral       = pprLiteral'
-    , pprPrimOp        = pprPrimOp'
-    , pprVar           = pprVar'
-    , pprVars          = pprVars'          dict
-    , pprAtom          = pprAtom'          dict
-    , pprAtoms         = pprAtoms'         dict
-    , pprConstr        = pprConstr'
-    })
+class PrettyParserInverse a where
+    pprPI  ::  a  -> Doc
+    pprsPI :: [a] -> Doc
+    pprsPI = encloseSep "[" "]" "," . map pprPI
+    {-# MINIMAL pprPI #-}
 
-pprProgram' :: PrettyprinterDict Doc -> Program -> Doc
-pprProgram' dict (Program binds) = pprBinds dict binds
+instance PrettyParserInverse Program where
+    pprPI (Program binds) = pprPI binds
 
-pprBinds' :: PrettyprinterDict Doc -> Binds -> Doc
-pprBinds' dict (Binds bs) =
-    (align . vsep . punctuate ";" . map prettyBinding . M.toList) bs
-  where
-    prettyBinding (var, lambda) =
-        pprVar dict var <+> "=" <+> pprLambdaForm dict lambda
+instance PrettyParserInverse Binds where
+    pprPI (Binds bs) =
+        (align . vsep . punctuate ";" . map prettyBinding . M.toList) bs
+      where
+        prettyBinding (var, lambda) =
+            pprPI var <+> "=" <+> pprPI lambda
 
-pprLambdaForm' :: PrettyprinterDict Doc -> LambdaForm -> Doc
-pprLambdaForm' dict (LambdaForm free upd bound expr) =
-        hsep [ pprVars dict free
-             , pprUpdateFlag dict upd
-             , pprVars dict bound
+instance PrettyParserInverse LambdaForm where
+    pprPI (LambdaForm free upd bound expr) =
+        hsep [ pprsPI free
+             , pprPI upd
+             , pprsPI bound
              , "->"
-             , pprExpr dict expr ]
+             , pprPI expr ]
 
-pprUpdateFlag' :: UpdateFlag -> Doc
-pprUpdateFlag' = \case
-    Update   -> "\\u"
-    NoUpdate -> "\\n"
+instance PrettyParserInverse UpdateFlag where
+    pprPI = \case
+        Update   -> "\\u"
+        NoUpdate -> "\\n"
 
-pprRec' :: Rec -> Doc
-pprRec' = \case
-    NonRecursive -> ""
-    Recursive    -> "rec"
+instance PrettyParserInverse Rec where
+    pprPI = \case
+        NonRecursive -> ""
+        Recursive    -> "rec"
 
-pprExpr' :: PrettyprinterDict Doc -> Expr -> Doc
-pprExpr' dict = \case
-    Let rec binds expr -> align (
-        "let" <> pprRec dict rec <+> pprBinds dict binds
-        <$>
-        "in" <+> pprExpr dict expr )
-    Case expr alts ->
-        "case" <+> pprExpr dict expr <+> "of"
-        <$>
-        indent 4 (pprAlts dict alts)
-    AppF var args -> pprVar dict var <+> pprAtoms dict args
-    AppC con args -> pprConstr dict con <+> pprAtoms dict args
-    AppP op arg1 arg2 -> pprPrimOp dict op <+> pprAtom dict arg1 <+> pprAtom dict arg2
-    Lit lit -> pprLiteral dict lit
+instance PrettyParserInverse Expr where
+    pprPI = \case
+        Let rec binds expr -> align (
+            "let" <> pprPI rec <+> pprPI binds
+            <$>
+            "in" <+> pprPI expr )
+        Case expr alts ->
+            "case" <+> pprPI expr <+> "of"
+            <$>
+            indent 4 (pprPI alts)
+        AppF var args -> pprPI var <+> pprsPI args
+        AppC con args -> pprPI con <+> pprsPI args
+        AppP op arg1 arg2 -> pprPI op <+> pprPI arg1 <+> pprPI arg2
+        Lit lit -> pprPI lit
 
-pprAlts' :: PrettyprinterDict Doc -> Alts -> Doc
-pprAlts' dict = \case
-    Algebraic alts -> pprAlgebraicAlts dict alts
-    Primitive alts -> pprPrimitiveAlts dict alts
+instance PrettyParserInverse Alts where
+    pprPI = \case
+        Algebraic alts -> pprPI alts
+        Primitive alts -> pprPI alts
 
-pprAlgebraicAlts' :: PrettyprinterDict Doc -> AlgebraicAlts -> Doc
-pprAlgebraicAlts' dict (AlgebraicAlts alts def) =
-    vsep (punctuate ";" (map (pprAlgebraicAlt dict) alts ++ [pprDefaultAlt dict def]))
+instance PrettyParserInverse AlgebraicAlts where
+    pprPI (AlgebraicAlts alts def) =
+        vsep (punctuate ";" (map (pprPI) alts ++ [pprPI def]))
 
-pprPrimitiveAlts' :: PrettyprinterDict Doc -> PrimitiveAlts -> Doc
-pprPrimitiveAlts' dict (PrimitiveAlts alts def) =
-    vsep (punctuate ";" (map (pprPrimitiveAlt dict) alts ++ [pprDefaultAlt dict def]))
+instance PrettyParserInverse PrimitiveAlts where
+    pprPI (PrimitiveAlts alts def) =
+        vsep (punctuate ";" (map (pprPI) alts ++ [pprPI def]))
 
-pprAlgebraicAlt' :: PrettyprinterDict Doc -> AlgebraicAlt -> Doc
-pprAlgebraicAlt' dict (AlgebraicAlt con args expr) =
-    pprConstr dict con <+> pprVars dict args <+> "->" <+> pprExpr dict expr
+instance PrettyParserInverse AlgebraicAlt where
+    pprPI (AlgebraicAlt con args expr) =
+        pprPI con <+> pprsPI args <+> "->" <+> pprPI expr
 
-pprPrimitiveAlt' :: PrettyprinterDict Doc -> PrimitiveAlt -> Doc
-pprPrimitiveAlt' dict (PrimitiveAlt lit expr) =
-    pprLiteral dict lit <+> "->" <+> pprExpr dict expr
+instance PrettyParserInverse PrimitiveAlt where
+    pprPI (PrimitiveAlt lit expr) =
+        pprPI lit <+> "->" <+> pprPI expr
 
-pprDefaultAlt' :: PrettyprinterDict Doc -> DefaultAlt -> Doc
-pprDefaultAlt' dict = \case
-    DefaultNotBound expr  -> "default" <+> "->" <+> pprExpr dict expr
-    DefaultBound var expr -> pprVar dict var <+> "->" <+> pprExpr dict expr
+instance PrettyParserInverse DefaultAlt where
+    pprPI = \case
+        DefaultNotBound expr  -> "default" <+> "->" <+> pprPI expr
+        DefaultBound var expr -> pprPI var <+> "->" <+> pprPI expr
 
-pprLiteral' :: Literal -> Doc
-pprLiteral' (Literal i) = int i <> "#"
+instance PrettyParserInverse Literal where
+    pprPI (Literal i) = int i <> "#"
 
-pprPrimOp' :: PrimOp -> Doc
-pprPrimOp' = \case
-    Add -> "+#"
-    Sub -> "-#"
-    Mul -> "*#"
-    Div -> "/#"
-    Mod -> "%#"
+instance PrettyParserInverse PrimOp where
+    pprPI = \case
+        Add -> "+#"
+        Sub -> "-#"
+        Mul -> "*#"
+        Div -> "/#"
+        Mod -> "%#"
 
-pprVar' :: Var -> Doc
-pprVar' (Var name) = string (T.unpack name)
+instance PrettyParserInverse Var where
+    pprPI (Var name) = string (T.unpack name)
+    pprsPI = parens . align . hcat . punctuate "," . map pprPI
 
-pprVars' :: PrettyprinterDict Doc -> [Var] -> Doc
-pprVars' dict  = parens . align . hcat . punctuate "," . map (pprVar dict)
+instance PrettyParserInverse Atom where
+    pprPI = \case
+        AtomVar var -> pprPI     var
+        AtomLit lit -> pprPI lit
+    pprsPI = parens . align . hcat . punctuate "," . map pprPI
 
-pprAtom' :: PrettyprinterDict Doc -> Atom -> Doc
-pprAtom' dict = \case
-    AtomVar var -> pprVar     dict var
-    AtomLit lit -> pprLiteral dict lit
-
-pprAtoms' :: PrettyprinterDict Doc -> [Atom] -> Doc
-pprAtoms' dict = parens . align . hcat . punctuate "," . map (pprAtom dict)
-
-pprConstr' :: Constr -> Doc
-pprConstr' (Constr name) = string (T.unpack name)
+instance PrettyParserInverse Constr where
+    pprPI (Constr name) = string (T.unpack name)
