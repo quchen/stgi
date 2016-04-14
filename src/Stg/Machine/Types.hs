@@ -9,8 +9,9 @@ module Stg.Machine.Types where
 
 import           Data.Map                     (Map)
 import qualified Data.Map                     as M
+import           Data.Monoid
 import           Numeric
-import           Text.PrettyPrint.ANSI.Leijen
+import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
 import           Stack
 import           Stg.Language
@@ -56,21 +57,16 @@ instance Pretty StgState where
         , stgGlobals     = globals
         , stgTicks       = ticks })
       = nest 4 (vsep ["STG state", align (vsep
-            [ "Code:"           <+> prettyCode
-            , "Argument stack:" <+> prettyArgStack
-            , "Return stack:"   <+> prettyReturnStack
-            , "Update stack:"   <+> prettyUpdateStack
-            , "Heap:"           <+> prettyHeap
-            , "Globals: "       <+> prettyGlobals
-            , "Ticks:"          <+> prettyTicks ])])
-      where
-        prettyCode        = pretty code
-        prettyArgStack    = pretty argStack
-        prettyReturnStack = pretty returnStack
-        prettyUpdateStack = pretty updateStack
-        prettyHeap        = pretty heap
-        prettyGlobals     = pretty globals
-        prettyTicks       = pretty ticks
+            [ "Code:"           <+> pretty code
+            , nest 4 (vsep
+                ["Stacks:"
+                , align (vsep
+                    [ "Arg:" <+> pretty argStack
+                    , "Ret:" <+> pretty returnStack
+                    , "Upd:" <+> pretty updateStack ])])
+            , "Heap:" <+> pretty heap
+            , "Globals:" <+> pretty globals
+            , "Steps:" <+> pretty ticks ])])
 
 
 
@@ -79,7 +75,7 @@ newtype MemAddr = MemAddr Int
     deriving (Eq, Ord, Show)
 
 instance Pretty MemAddr where
-    pretty (MemAddr addr) = (text . ($ "") . showHex) addr
+    pretty (MemAddr addr) = (text . ("0x" <>) . ($ "") . showHex) addr
 
 -- | A value of the STG machine.
 data Value = Addr MemAddr | PrimInt Int
@@ -99,7 +95,8 @@ data Code = Eval Expr Locals
 
 instance Pretty Code where
     pretty = \case
-        Eval expr locals -> "Eval" <+> pretty expr <+> pretty locals
+        Eval expr locals -> "Eval" <+> align (vsep [ pretty expr
+                                                   , "Locals:" <+> pretty locals ])
         Enter addr -> "Enter" <+> pretty addr
         ReturnCon constr args -> "ReturnCon" <+> pretty constr <+> pretty args
         ReturnInt i -> "ReturnInt" <+> pretty i
@@ -137,4 +134,4 @@ newtype Heap = Heap (Map MemAddr Closure)
     deriving (Eq, Ord, Show, Monoid)
 
 instance Pretty Heap where
-    pretty (Heap heap) = "Heap:" <+> prettyMap heap
+    pretty (Heap heap) = prettyMap heap
