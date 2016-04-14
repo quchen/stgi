@@ -4,7 +4,7 @@
 module Stg.Language.Prettyprint (
 
     -- * Inverse-of-parser prettyprinter
-    Pretty,
+    Pretty(..),
     prettyprint,
 
     -- * Inverse-of-parser prettyprinter

@@ -1,5 +1,6 @@
 -- | The STG heap maps memory addresses to closures.
 module Stg.Machine.Heap (
+    size,
     lookup,
     update,
     alloc,
@@ -13,7 +14,8 @@ import           Prelude           hiding (lookup)
 
 import           Stg.Machine.Types
 
-
+size :: Heap -> Int
+size (Heap heap) = M.size heap
 
 -- | Look up a value on the heap.
 lookup :: MemAddr -> Heap -> Maybe Closure

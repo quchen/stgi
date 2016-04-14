@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Various testing utilities.
 module Test.Util (
     scaled,
@@ -6,11 +8,14 @@ module Test.Util (
     arbitrary2,
     arbitrary3,
     arbitrary4,
+
+    (==*==),
 ) where
 
 
 
 import           Data.Ratio
+import           Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 
 import           Test.QuickCheck
 
@@ -50,3 +55,9 @@ arbitrary4
     => (a -> b -> c -> d -> g)
     -> Gen g
 arbitrary4 f = f <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+infix 4 ==*==
+(==*==) :: (Eq a, Pretty a) => a -> a -> Property
+x ==*== y = counterexample example (x == y)
+  where
+    example = (show . align . vsep) [pretty x, "is not equal to", pretty y]
