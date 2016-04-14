@@ -1,5 +1,7 @@
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 -- | The STG language syntax tree, modeled after the description in the
 -- 1992 paper
@@ -28,35 +30,36 @@
 --             ('AppF' "x" [])))]
 -- @
 module Stg.Language (
-    Program      (..),
-    Binds        (..),
-    LambdaForm   (..),
-    UpdateFlag   (..),
-    Rec          (..),
-    Expr         (..),
-    Alts         (..),
-    AlgebraicAlts(..),
-    PrimitiveAlts(..),
-    AlgebraicAlt (..),
-    PrimitiveAlt (..),
-    DefaultAlt   (..),
-    Literal      (..),
-    PrimOp       (..),
-    Var          (..),
-    Atom         (..),
-    Constr       (..),
+    Program       (..),
+    Binds         (..),
+    LambdaForm    (..),
+    UpdateFlag    (..),
+    Rec           (..),
+    Expr          (..),
+    Alts          (..),
+    AlgebraicAlts (..),
+    PrimitiveAlts (..),
+    AlgebraicAlt  (..),
+    PrimitiveAlt  (..),
+    DefaultAlt    (..),
+    Literal       (..),
+    PrimOp        (..),
+    Var           (..),
+    Atom          (..),
+    Constr        (..),
 ) where
 
 
 
-import           Data.Map                 (Map)
-import qualified Data.Map                 as M
+import           Data.Map                     (Map)
+import qualified Data.Map                     as M
 import           Data.Monoid
-import           Data.Text                (Text)
-import qualified Data.Text                as T
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
 import           GHC.Exts
 import           GHC.Generics
 import           Language.Haskell.TH.Lift
+import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
 
 
@@ -183,3 +186,99 @@ instance Lift Constr where
 
 instance Lift Var where
     lift (Var var) = [| Var (T.pack $(lift (T.unpack var))) |]
+
+
+
+--------------------------------------------------------------------------------
+-- Pretty instances
+
+instance Pretty Program where
+    pretty (Program binds) = pretty binds
+
+instance Pretty Binds where
+    pretty (Binds bs) =
+        (align . vsep . punctuate ";" . map prettyBinding . M.toList) bs
+      where
+        prettyBinding (var, lambda) =
+            pretty var <+> "=" <+> pretty lambda
+
+instance Pretty LambdaForm where
+    pretty (LambdaForm free upd bound expr) =
+        hsep [ prettyList free
+             , pretty upd
+             , prettyList bound
+             , "->"
+             , pretty expr ]
+
+instance Pretty UpdateFlag where
+    pretty = \case
+        Update   -> "\\u"
+        NoUpdate -> "\\n"
+
+instance Pretty Rec where
+    pretty = \case
+        NonRecursive -> ""
+        Recursive    -> "rec"
+
+instance Pretty Expr where
+    pretty = \case
+        Let rec binds expr -> align (
+            vsep [ "let" <> pretty rec <+> pretty binds
+                 , "in" <+> pretty expr ])
+        Case expr alts ->
+            vsep ["case" <+> pretty expr <+> "of"
+                 , indent 4 (pretty alts) ]
+        AppF var args -> pretty var <+> prettyList args
+        AppC con args -> pretty con <+> prettyList args
+        AppP op arg1 arg2 -> pretty op <+> pretty arg1 <+> pretty arg2
+        Lit lit -> pretty lit
+
+instance Pretty Alts where
+    pretty = \case
+        Algebraic alts -> pretty alts
+        Primitive alts -> pretty alts
+
+instance Pretty AlgebraicAlts where
+    pretty (AlgebraicAlts alts def) =
+        vsep (punctuate ";" (map pretty alts ++ [pretty def]))
+
+instance Pretty PrimitiveAlts where
+    pretty (PrimitiveAlts alts def) =
+        vsep (punctuate ";" (map pretty alts ++ [pretty def]))
+
+instance Pretty AlgebraicAlt where
+    pretty (AlgebraicAlt con args expr) =
+        pretty con <+> prettyList args <+> "->" <+> pretty expr
+
+instance Pretty PrimitiveAlt where
+    pretty (PrimitiveAlt lit expr) =
+        pretty lit <+> "->" <+> pretty expr
+
+instance Pretty DefaultAlt where
+    pretty = \case
+        DefaultNotBound expr  -> "default" <+> "->" <+> pretty expr
+        DefaultBound var expr -> pretty var <+> "->" <+> pretty expr
+
+instance Pretty Literal where
+    pretty (Literal i) = int i <> "#"
+
+instance Pretty PrimOp where
+    pretty = \case
+        Add -> "+#"
+        Sub -> "-#"
+        Mul -> "*#"
+        Div -> "/#"
+        Mod -> "%#"
+
+instance Pretty Var where
+    pretty (Var name) = string (T.unpack name)
+    prettyList = parens . align . hcat . punctuate "," . map pretty
+
+instance Pretty Atom where
+    pretty = \case
+        AtomVar var -> pretty     var
+        AtomLit lit -> pretty lit
+    prettyList = parens . align . hcat . punctuate "," . map pretty
+
+instance Pretty Constr where
+    pretty (Constr name) = string (T.unpack name)

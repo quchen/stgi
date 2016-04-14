@@ -110,7 +110,7 @@ instance Arbitrary DefaultAlt where
     shrink = genericShrink
 
 instance Arbitrary Literal where
-    arbitrary = arbitrary1 Literal
+    arbitrary = fmap Literal (resize 128 arbitrary)
     shrink = genericShrink
 
 instance Arbitrary PrimOp where

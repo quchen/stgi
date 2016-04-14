@@ -2,6 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Stg.Language.Prettyprint (
+
+    -- * Inverse-of-parser prettyprinter
+    Pretty,
+    prettyprint,
+
     -- * Inverse-of-parser prettyprinter
     prettyParserInverse,
     PrettyParserInverse,
@@ -23,10 +28,16 @@ import           Stg.Language.Prettyprint.ParserInverse
 import           Stg.Language.Prettyprint.ParserInverseAnsi
 
 
+
+prettyprint :: Pretty a => a -> Text
+prettyprint = asText pretty
+
 prettyParserInverse :: PrettyParserInverse a => a -> Text
-prettyParserInverse input =
-    T.pack (displayS (renderPretty 0.4 80 (pprPI input)) "")
+prettyParserInverse = asText pprPI
 
 prettyParserInverseAnsi :: PrettyParserInverseAnsi a => a -> Text
-prettyParserInverseAnsi input =
-    T.pack (displayS (renderPretty 0.4 80 (pprAnsi input)) "")
+prettyParserInverseAnsi = asText pprAnsi
+
+asText :: (a -> Doc) -> a -> Text
+asText prettyprinter input =
+    T.pack (displayS (renderPretty 0.4 80 (prettyprinter input)) "")

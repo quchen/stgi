@@ -7,13 +7,12 @@ module Stg.Language.Prettyprint.ParserInverseAnsi (
 
 
 
-import qualified Data.Map                               as M
-import qualified Data.Text                              as T
-import           Prelude                                hiding ((<$>))
+import qualified Data.Map                     as M
+import qualified Data.Text                    as T
+import           Prelude                      hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
 import           Stg.Language
-import           Stg.Language.Prettyprint.ParserInverse
 
 
 
@@ -45,14 +44,14 @@ semicolon = dullwhite
 -- The 'plain'ed version of 'ppr' should match the uncoloured one.
 --
 -- @
--- 'plain' . 'pprAnsi'  ≡ 'pprPI'
--- 'plain' . 'pprsAnsi' ≡ 'pprsPI'
+-- 'plain' . 'pprAnsi'  ≡ 'pretty'
+-- 'plain' . 'pprsAnsi' ≡ 'prettyList'
 -- @
-class PrettyParserInverse a => PrettyParserInverseAnsi a where
+class Pretty a => PrettyParserInverseAnsi a where
     pprAnsi  :: a -> Doc
-    pprAnsi = pprPI
+    pprAnsi = pretty
     pprsAnsi :: [a] -> Doc
-    pprsAnsi = pprsPI
+    pprsAnsi = prettyList
 
 
 

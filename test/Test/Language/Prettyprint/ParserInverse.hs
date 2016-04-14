@@ -12,7 +12,7 @@ import           Test.Tasty.QuickCheck
 import           Text.Megaparsec.Text
 
 import           Stg.Language.Prettyprint
-import           Stg.Parser.Parser
+import           Stg.Parser.Parser        as Parser
 
 import           Test.Orphans             ()
 
@@ -20,19 +20,19 @@ import           Test.Orphans             ()
 
 tests :: TestTree
 tests = testGroup "Inverse of parser"
-    [ inverseOfParser "Full program"           program
-    , inverseOfParser "Bindings"               binds
-    , inverseOfParser "Lambda form"            lambdaForm
-    , inverseOfParser "Expression"             expr
-    , inverseOfParser "Case alternatives"      alts
-    , inverseOfParser "Algebraic alternatives" algebraicAlts
-    , inverseOfParser "Primitive alternatives" primitiveAlts
-    , inverseOfParser "Algebraic alternative"  algebraicAlt
-    , inverseOfParser "Primitive alternative"  primitiveAlt
-    , inverseOfParser "Default alternative"    defaultAlt
-    , inverseOfParser "Literal"                literal
-    , inverseOfParser "Primop"                 primOp
-    , inverseOfParser "Atom"                   atom ]
+    [ inverseOfParser "Full program"           Parser.program
+    , inverseOfParser "Bindings"               Parser.binds
+    , inverseOfParser "Lambda form"            Parser.lambdaForm
+    , inverseOfParser "Expression"             Parser.expr
+    , inverseOfParser "Case alternatives"      Parser.alts
+    , inverseOfParser "Algebraic alternatives" Parser.algebraicAlts
+    , inverseOfParser "Primitive alternatives" Parser.primitiveAlts
+    , inverseOfParser "Algebraic alternative"  Parser.algebraicAlt
+    , inverseOfParser "Primitive alternative"  Parser.primitiveAlt
+    , inverseOfParser "Default alternative"    Parser.defaultAlt
+    , inverseOfParser "Literal"                Parser.literal
+    , inverseOfParser "Primop"                 Parser.primOp
+    , inverseOfParser "Atom"                   Parser.atom ]
 
 inverseOfParser
     :: (Arbitrary ast, Show ast, Eq ast, PrettyParserInverse ast)

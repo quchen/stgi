@@ -8,6 +8,7 @@ module Stg.Machine.Types where
 
 
 import           Data.Map                     (Map)
+import qualified Data.Map                     as M
 import           Numeric
 import           Text.PrettyPrint.ANSI.Leijen
 
@@ -54,14 +55,22 @@ instance Pretty StgState where
         , stgHeap        = heap
         , stgGlobals     = globals
         , stgTicks       = ticks })
-      = "STG state"
-        <> pretty code
-        <> pretty argStack
-        <> pretty returnStack
-        <> pretty updateStack
-        <> pretty heap
-        <> pretty globals
-        <> pretty ticks
+      = nest 4 (vsep ["STG state", align (vsep
+            [ "Code:"           <+> prettyCode
+            , "Argument stack:" <+> prettyArgStack
+            , "Return stack:"   <+> prettyReturnStack
+            , "Update stack:"   <+> prettyUpdateStack
+            , "Heap:"           <+> prettyHeap
+            , "Globals: "       <+> prettyGlobals
+            , "Ticks:"          <+> prettyTicks ])])
+      where
+        prettyCode        = pretty code
+        prettyArgStack    = pretty argStack
+        prettyReturnStack = pretty returnStack
+        prettyUpdateStack = pretty updateStack
+        prettyHeap        = pretty heap
+        prettyGlobals     = pretty globals
+        prettyTicks       = pretty ticks
 
 
 
@@ -88,20 +97,44 @@ data Code = Eval Expr Locals
           | ReturnInt Int
     deriving (Eq, Ord, Show)
 
+instance Pretty Code where
+    pretty = \case
+        Eval expr locals -> "Eval" <+> pretty expr <+> pretty locals
+        Enter addr -> "Enter" <+> pretty addr
+        ReturnCon constr args -> "ReturnCon" <+> pretty constr <+> pretty args
+        ReturnInt i -> "ReturnInt" <+> pretty i
+
+prettyMap :: (Pretty k, Pretty v) => Map k v -> Doc
+prettyMap m = (align . vsep)
+    [ pretty k <+> "->" <+> pretty v
+    | (k,v) <- M.toList m ]
+
 -- | The global environment consists of the mapping from top-level definitions
 -- to their respective values.
 newtype Globals = Globals (Map Var Value)
     deriving (Eq, Ord, Show, Monoid)
+
+instance Pretty Globals where
+    pretty (Globals globals) = prettyMap globals
 
 -- | The global environment consists if the mapping from local definitions
 -- to their respective values.
 newtype Locals = Locals (Map Var Value)
     deriving (Eq, Ord, Show, Monoid)
 
+instance Pretty Locals where
+    pretty (Locals locals) = prettyMap locals
+
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]
     deriving (Eq, Ord, Show)
 
+instance Pretty Closure where
+    pretty (Closure lambdaForm free) = braces (pretty lambdaForm) <+> pretty free
+
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr Closure)
     deriving (Eq, Ord, Show, Monoid)
+
+instance Pretty Heap where
+    pretty (Heap heap) = "Heap:" <+> prettyMap heap

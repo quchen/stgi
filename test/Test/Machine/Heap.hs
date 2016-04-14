@@ -5,7 +5,6 @@ module Test.Machine.Heap (tests) where
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import           Stg.Machine.Heap
 
 
 tests :: TestTree
