@@ -17,8 +17,11 @@ import           Stg.Parser
 main :: IO ()
 main = do
     let prog = [stg|
-        main = () \u () -> let two = () \u () -> +# 1# 1#
-                           in two ()
+        one = () \n () -> 1#;
+        add = () \n (x, y) -> +# x y;
+        -- INVALID: three = () \u () -> +# 1# 2#;
+        -- ... because only variables may be on the RHS ..?
+        main = () \u () -> add (one, one)
         |]
         initial = initialState "main" prog
         steps = iterate stgStep initial

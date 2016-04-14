@@ -22,6 +22,7 @@ import           Stg.Machine.Env
 import qualified Stg.Machine.Heap  as H
 import           Stg.Machine.Types
 
+import           Debug.Trace
 
 
 -- | Look up an algebraic constructor among the given alternatives, and return
@@ -213,8 +214,8 @@ stgEvalStep s@StgState
 -- TODO: Test (14)
 stgEvalStep s@StgState
     { stgCode = Eval (AppP op (AtomVar x) (AtomVar y)) locals }
-    | Just (PrimInt xVal) <- localVal locals x
-    , Just (PrimInt yVal) <- localVal locals y
+    | Just (PrimInt xVal) <- localVal locals (traceShowId x)
+    , Just (PrimInt yVal) <- localVal locals (traceShowId y)
 
   = let apply = \case
             Add -> (+)
