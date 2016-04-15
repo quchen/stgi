@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase  #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module Main (main) where
@@ -7,6 +8,8 @@ module Main (main) where
 import           Data.Foldable
 import qualified Data.Text                as T
 import qualified Data.Text.IO             as T
+import           System.Console.ANSI      (hSupportsANSI)
+import           System.IO                (stdout)
 
 import           Stg.Language.Prettyprint
 import           Stg.Machine
@@ -30,6 +33,9 @@ main = do
         |]
         initial = initialState "main" prog
         steps = iterate stgStep initial
+    ppr <- hSupportsANSI stdout >>= \case
+        True  -> pure prettyprintAnsi
+        False -> pure prettyprint
     for_ steps (\state -> do
-        T.putStrLn (prettyprintAnsi state)
+        T.putStrLn (ppr state)
         T.putStrLn (T.replicate 80 "=") )

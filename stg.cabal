@@ -50,6 +50,7 @@ executable stg-exe
   build-depends:       base
                      , stg
                      , text
+                     , ansi-terminal
   default-extensions:  OverloadedStrings
   default-language:    Haskell2010
 
