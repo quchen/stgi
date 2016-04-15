@@ -22,7 +22,6 @@ import           Stg.Machine.Env
 import qualified Stg.Machine.Heap  as H
 import           Stg.Machine.Types
 
-import           Debug.Trace
 
 
 -- | Look up an algebraic constructor among the given alternatives, and return
@@ -43,42 +42,45 @@ show' = T.pack . show
 
 -- | Perform a single STG machine evaluation step.
 stgStep :: StgState -> StgState
-stgStep state = let state' = stgEvalStep state
+stgStep state = let state' = stgRule state
                 in state' { stgTicks = stgTicks state' + 1 }
 
-stgEvalStep :: StgState -> StgState
+-- | Apply a single STG evaluation rule, as specified in the 1992 paper.
+stgRule :: StgState -> StgState
 
 -- (1)
 -- TODO: Test (1)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode     = Eval (AppF f xs) locals
     , stgArgStack = argS
     , stgGlobals  = globals }
     | Just (Addr a) <- val locals globals (AtomVar f)
 
   = let xsVals = unsafeVals locals globals xs
-        argS' = xsVals <>> argS
+        argS' = map ArgumentFrame xsVals <>> argS
 
     in s { stgCode     = Enter a
          , stgArgStack = argS' }
 
 -- (2)
 -- TODO: Test (2)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode     = Enter a
     , stgArgStack = argS
     , stgHeap     = heap }
     | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- H.lookup a heap
     , Just (args, argS') <- S.popN (length bound) argS
 
-  = let locals = makeLocals (zip free freeVals <> zip bound args)
+  = let locals = makeLocals (freeLocals <> boundLocals)
+        freeLocals = zip free freeVals
+        boundLocals = zipWith (\b (ArgumentFrame v) -> (b, v)) bound args
 
     in s { stgCode     = Eval body locals
          , stgArgStack = argS' }
 
 -- (3)
 -- TODO: Test (3)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode = Eval (Let rec (Binds binds) expr) locals
     , stgHeap = heap }
 
@@ -107,18 +109,18 @@ stgEvalStep s@StgState
 
 -- (4)
 -- TODO: Test (4)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = (Eval (Case expr alts) locals)
     , stgReturnStack = retS }
 
-  = let retS' = (alts, locals) :< retS
+  = let retS' = ReturnFrame alts locals :< retS
 
     in s { stgCode        = Eval expr locals
          , stgReturnStack = retS'  }
 
 -- (5)
 -- TODO: Test (5)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode    = Eval (AppC con xs) locals
     , stgGlobals = globals }
 
@@ -128,9 +130,9 @@ stgEvalStep s@StgState
 
 -- (6)
 -- TODO: Test (6)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = ReturnCon con ws
-    , stgReturnStack = (Algebraic alts, locals) :< retS' }
+    , stgReturnStack = ReturnFrame (Algebraic alts) locals :< retS' }
     | Right (AlgebraicAlt _con vars expr) <- lookupAlgebraicAlts alts con
 
   = let locals' = addLocals (zip vars ws) locals
@@ -140,9 +142,9 @@ stgEvalStep s@StgState
 
 -- (7)
 -- TODO: Test (7)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = ReturnCon con _ws
-    , stgReturnStack = (Algebraic alts, locals) :< retS' }
+    , stgReturnStack = ReturnFrame (Algebraic alts) locals :< retS' }
     | Left (DefaultNotBound expr) <- lookupAlgebraicAlts alts con
 
   = s { stgCode        = Eval expr locals
@@ -150,9 +152,9 @@ stgEvalStep s@StgState
 
 -- (8)
 -- TODO: Test (8)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = ReturnCon con ws
-    , stgReturnStack = (Algebraic alts, locals) :< retS'
+    , stgReturnStack = ReturnFrame (Algebraic alts) locals :< retS'
     , stgHeap        = heap
     , stgTicks       = ticks }
     | Left (DefaultBound v expr) <- lookupAlgebraicAlts alts con
@@ -169,30 +171,30 @@ stgEvalStep s@StgState
 
 -- (9)
 -- TODO: Test (9)
-stgEvalStep s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
+stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = s { stgCode = ReturnInt k }
 
 -- (10)
 -- TODO: Test (10)
-stgEvalStep s@StgState { stgCode = Eval (AppF f []) locals }
+stgRule s@StgState { stgCode = Eval (AppF f []) locals }
     | Just (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k }
 
 -- (11)
 -- TODO: Test (11)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (Primitive alts, locals) :< retS' }
+    , stgReturnStack = ReturnFrame (Primitive alts) locals :< retS' }
     | Right (PrimitiveAlt _k expr) <- lookupPrimitiveAlts alts (Literal k)
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
 
 -- (12)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (Primitive alts, locals) :< retS' }
+    , stgReturnStack = ReturnFrame (Primitive alts) locals :< retS' }
     | Left (DefaultBound v expr) <- lookupPrimitiveAlts alts (Literal k)
 
   = let locals' = addLocals [(v, PrimInt k)] locals
@@ -202,9 +204,9 @@ stgEvalStep s@StgState
 
 -- (13)
 -- TODO: Test (13)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = ReturnInt k
-    , stgReturnStack = (Primitive alts, locals) :< retS' }
+    , stgReturnStack = ReturnFrame (Primitive alts) locals :< retS' }
     | Left (DefaultNotBound expr) <- lookupPrimitiveAlts alts (Literal k)
 
   = s { stgCode        = Eval expr locals
@@ -212,10 +214,10 @@ stgEvalStep s@StgState
 
 -- (14)
 -- TODO: Test (14)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode = Eval (AppP op (AtomVar x) (AtomVar y)) locals }
-    | Just (PrimInt xVal) <- localVal locals (traceShowId x)
-    , Just (PrimInt yVal) <- localVal locals (traceShowId y)
+    | Just (PrimInt xVal) <- localVal locals x
+    , Just (PrimInt yVal) <- localVal locals y
 
   = let apply = \case
             Add -> (+)
@@ -227,7 +229,7 @@ stgEvalStep s@StgState
     in s { stgCode = ReturnInt (apply op xVal yVal) }
 
 -- (15)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
     , stgReturnStack = retS
@@ -236,7 +238,7 @@ stgEvalStep s@StgState
     | Just (Closure (LambdaForm free Update [] body) freeVals) <- H.lookup addr heap
         -- TODO: Is the closure removed from the heap?
 
-  = let updS' = (argS, retS, addr) :< updS
+  = let updS' = UpdateFrame argS retS addr :< updS
         locals = makeLocals (zip free freeVals)
 
     in s { stgCode        = Eval body locals
@@ -246,11 +248,11 @@ stgEvalStep s@StgState
 
 -- (16)
 -- TODO: Test (16)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = ReturnCon con ws
     , stgArgStack    = Empty
     , stgReturnStack = Empty
-    , stgUpdateStack = (argSU, retSU, addrU) :< updS'
+    , stgUpdateStack = UpdateFrame argSU retSU addrU :< updS'
     , stgHeap        = heap
     , stgTicks       = ticks }
 
@@ -267,11 +269,11 @@ stgEvalStep s@StgState
 
 -- (17a)
 -- TODO: Test (17a)
-stgEvalStep s@StgState
+stgRule s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
     , stgReturnStack = Empty
-    , stgUpdateStack = (argSU, retSU, addrU) :< updS'
+    , stgUpdateStack = UpdateFrame argSU retSU addrU :< updS'
     , stgHeap        = heap
     , stgTicks       = ticks }
     | Just (Closure (LambdaForm _vs NoUpdate xs body) _wsf) <- H.lookup addr heap
@@ -281,7 +283,7 @@ stgEvalStep s@StgState
         (xs1, xs2) = splitAt (F.length argS) xs
         f = Var ("Var/Upd2:tick " <> show' ticks)
         moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate xs2 body)
-                                  (Addr addr : F.toList argS)
+                                  (Addr addr : F.foldMap (\(ArgumentFrame v) -> [v]) argS)
         heap' = H.update addrU moreArgsClosure heap
 
     in s { stgCode        = Enter addr
@@ -291,9 +293,9 @@ stgEvalStep s@StgState
          , stgHeap        = heap'
          , stgTicks       = ticks+1}
 
-stgEvalStep StgState
+stgRule StgState
     { stgCode        = x@ReturnInt{}
     , stgUpdateStack = Empty }
   = error ("(" <> show x <> ") state with empty update stack")
 
-stgEvalStep _ = error "Invalid STG state"
+stgRule _ = error "Invalid STG state"

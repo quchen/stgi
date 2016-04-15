@@ -8,35 +8,35 @@ module Stg.Language.Prettyprint (
     prettyprint,
 
     -- * Inverse-of-parser prettyprinter
-    prettyParserInverse,
+    prettyprintParserInverse,
     PrettyParserInverse,
 
     -- * ANSI terminal styled
-    prettyParserInverseAnsi,
-    PrettyParserInverseAnsi,
+    prettyprintAnsi,
+    PrettyAnsi,
 
 ) where
 
 
 
-import           Data.Text                                  (Text)
-import qualified Data.Text                                  as T
-import           Prelude                                    hiding ((<$>))
+import           Data.Text                              (Text)
+import qualified Data.Text                              as T
+import           Prelude                                hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
+import           Stg.Language.Prettyprint.Ansi
 import           Stg.Language.Prettyprint.ParserInverse
-import           Stg.Language.Prettyprint.ParserInverseAnsi
 
 
 
 prettyprint :: Pretty a => a -> Text
 prettyprint = asText pretty
 
-prettyParserInverse :: PrettyParserInverse a => a -> Text
-prettyParserInverse = asText pprPI
+prettyprintParserInverse :: PrettyParserInverse a => a -> Text
+prettyprintParserInverse = asText pprPI
 
-prettyParserInverseAnsi :: PrettyParserInverseAnsi a => a -> Text
-prettyParserInverseAnsi = asText pprAnsi
+prettyprintAnsi :: PrettyAnsi a => a -> Text
+prettyprintAnsi = asText prettyAnsi
 
 asText :: (a -> Doc) -> a -> Text
 asText prettyprinter input =

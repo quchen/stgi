@@ -29,7 +29,8 @@ initialState mainVar (Program binds) = StgState
     , stgUpdateStack = mempty
     , stgHeap        = heap
     , stgGlobals     = globals
-    , stgTicks       = 0 }
+    , stgTicks       = 0
+    , stgInfo        = Info () }
   where
     globalVars :: [Var]
     globalVals :: [LambdaForm]

@@ -24,16 +24,13 @@ To do
 =====
 
 - Main functionality
-    - [ ] Test the stepper
-    - [ ] Auto-increment the step counter
-    - [ ] Write lots of test cases
+    - Test the stepper
+    - Write lots of test cases
 - Nice to have
-    - [ ] Annotate syntax tree
-    - [ ] Separate tokenizer and parser
-    - [ ] `newtype` for update frames, making the update stack a
-          `Stack UpdateFrame`
-    - [ ] `newtype` for return frames, making the update stack a
-          `Stack ReturnFrame`
-    - [ ] Highlight error location in input
-    - [ ] Coloured/HTML prettyprinter
+    - Garbage collector
+    - Explain steps
+    - Annotate syntax tree
+    - Separate tokenizer and parser
+    - Highlight error location in input
+    - HTML prettyprinter
 - Small stuff

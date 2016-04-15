@@ -17,14 +17,19 @@ import           Stg.Parser
 main :: IO ()
 main = do
     let prog = [stg|
-        one = () \n () -> 1#;
-        add = () \n (x, y) -> +# x y;
-        -- INVALID: three = () \u () -> +# 1# 2#;
-        -- ... because only variables may be on the RHS ..?
-        main = () \u () -> add (one, one)
+        -- one = () \n () -> 1#;
+        -- add = () \n (x, y) -> +# x y;
+        -- -- INVALID: three = () \u () -> +# 1# 2#;
+        -- -- ... because only variables may be on the RHS ..?
+        -- main = () \u () -> add (2#, 1#)
+
+        main = () \u () -> case Just () of
+            Just () -> Yes ();
+            Nothing () -> Maybe ();
+            default -> No ()
         |]
         initial = initialState "main" prog
         steps = iterate stgStep initial
     for_ steps (\state -> do
-        T.putStrLn (prettyprint state)
+        T.putStrLn (prettyprintAnsi state)
         T.putStrLn (T.replicate 80 "=") )

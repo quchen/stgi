@@ -23,9 +23,19 @@ instance Arbitrary StgState where
             <*> arbitrary
             <*> arbitrary
             <*> arbitrary
+            <*> arbitrary
 
 instance Arbitrary MemAddr where
     arbitrary = arbitrary1 MemAddr
+
+instance Arbitrary ArgumentFrame where
+    arbitrary = arbitrary1 ArgumentFrame
+
+instance Arbitrary ReturnFrame where
+    arbitrary = arbitrary2 ReturnFrame
+
+instance Arbitrary UpdateFrame where
+    arbitrary = arbitrary3 UpdateFrame
 
 instance Arbitrary Value where
     arbitrary = oneof [ arbitrary1 Addr
@@ -48,3 +58,7 @@ instance Arbitrary Closure where
 
 instance Arbitrary Heap where
     arbitrary = arbitrary1 (Heap . M.fromList)
+
+
+instance Arbitrary Info where
+    arbitrary = pure (Info ())

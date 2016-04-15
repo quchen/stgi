@@ -42,7 +42,7 @@ inverseOfParser
 inverseOfParser testName parser = testProperty (T.unpack testName) test
   where
     test inputAst =
-        let prettyprinted = prettyParserInverse inputAst
+        let prettyprinted = prettyprintParserInverse inputAst
             parsed = parse parser prettyprinted
         in case parsed of
             Left err ->
@@ -54,12 +54,12 @@ inverseOfParser testName parser = testProperty (T.unpack testName) test
 
     prettySuccess inputAst parsedAst =
         T.unlines [ "Input AST:"
-                  , prettyParserInverse inputAst
+                  , prettyprintParserInverse inputAst
                   , "Parsed AST:"
-                  , prettyParserInverse parsedAst ]
+                  , prettyprintParserInverse parsedAst ]
 
     prettyFailure inputAst err =
         T.unlines [ "Input AST:"
-                  , prettyParserInverse inputAst
+                  , prettyprintParserInverse inputAst
                   , "Parse error:"
                   , err ]

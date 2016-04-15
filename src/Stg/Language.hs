@@ -133,7 +133,7 @@ data DefaultAlt =
     deriving (Eq, Ord, Show, Generic)
 
 -- | Literals are the basis of primitive operations.
-newtype Literal = Literal Int
+newtype Literal = Literal Integer
     deriving (Eq, Ord, Show, Generic)
 
 instance Num Literal where
@@ -226,8 +226,9 @@ instance Pretty Expr where
             vsep [ "let" <> pretty rec <+> pretty binds
                  , "in" <+> pretty expr ])
         Case expr alts ->
-            vsep ["case" <+> pretty expr <+> "of"
-                 , indent 4 (pretty alts) ]
+            (hang 4 . vsep)
+                [ "case" <+> pretty expr <+> "of"
+                , pretty alts ]
         AppF var args -> pretty var <+> prettyList args
         AppC con args -> pretty con <+> prettyList args
         AppP op arg1 arg2 -> pretty op <+> pretty arg1 <+> pretty arg2
@@ -240,11 +241,11 @@ instance Pretty Alts where
 
 instance Pretty AlgebraicAlts where
     pretty (AlgebraicAlts alts def) =
-        vsep (punctuate ";" (map pretty alts ++ [pretty def]))
+        (align . vsep . punctuate ";") (map pretty alts ++ [pretty def])
 
 instance Pretty PrimitiveAlts where
     pretty (PrimitiveAlts alts def) =
-        vsep (punctuate ";" (map pretty alts ++ [pretty def]))
+        (align . vsep . punctuate ";") (map pretty alts ++ [pretty def])
 
 instance Pretty AlgebraicAlt where
     pretty (AlgebraicAlt con args expr) =
@@ -260,7 +261,7 @@ instance Pretty DefaultAlt where
         DefaultBound var expr -> pretty var <+> "->" <+> pretty expr
 
 instance Pretty Literal where
-    pretty (Literal i) = int i <> "#"
+    pretty (Literal i) = integer i <> "#"
 
 instance Pretty PrimOp where
     pretty = \case

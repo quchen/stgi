@@ -18,6 +18,7 @@ import           Stg.Parser
 import           Test.Orphans             ()
 
 
+
 tests :: TestTree
 tests = testGroup "Explicit parses" [simpleParses]
 
@@ -40,7 +41,7 @@ shouldParseToSuccess testName input output = testCase (T.unpack testName) test
           , "Error encountered:"
           , (T.unlines . map (" > " <>) . T.lines) err
           , "=============" ]
-       Right r -> prettyParserInverse r
+       Right r -> prettyprintParserInverse r
     test = assertEqual (T.unpack failMessage) expected actual
 
 
