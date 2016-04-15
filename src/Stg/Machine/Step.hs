@@ -48,8 +48,7 @@ stgStep state = let state' = stgRule state
 -- | Apply a single STG evaluation rule, as specified in the 1992 paper.
 stgRule :: StgState -> StgState
 
--- (1)
--- TODO: Test (1)
+-- (1) Function application
 stgRule s@StgState
     { stgCode     = Eval (AppF f xs) locals
     , stgArgStack = argS
@@ -62,8 +61,7 @@ stgRule s@StgState
     in s { stgCode     = Enter a
          , stgArgStack = argS' }
 
--- (2)
--- TODO: Test (2)
+-- (2) Entering non-updatable closures
 stgRule s@StgState
     { stgCode     = Enter a
     , stgArgStack = argS
@@ -78,8 +76,7 @@ stgRule s@StgState
     in s { stgCode     = Eval body locals
          , stgArgStack = argS' }
 
--- (3)
--- TODO: Test (3)
+-- (3) let(rec)
 stgRule s@StgState
     { stgCode = Eval (Let rec (Binds binds) expr) locals
     , stgHeap = heap }
@@ -104,11 +101,7 @@ stgRule s@StgState
     in s { stgCode = Eval expr locals'
          , stgHeap = heap' }
 
-
-
-
--- (4)
--- TODO: Test (4)
+-- (4) Case evaluation
 stgRule s@StgState
     { stgCode        = (Eval (Case expr alts) locals)
     , stgReturnStack = retS }
@@ -118,8 +111,7 @@ stgRule s@StgState
     in s { stgCode        = Eval expr locals
          , stgReturnStack = retS'  }
 
--- (5)
--- TODO: Test (5)
+-- (5) Constructor application
 stgRule s@StgState
     { stgCode    = Eval (AppC con xs) locals
     , stgGlobals = globals }
@@ -128,8 +120,7 @@ stgRule s@StgState
 
     in s { stgCode = ReturnCon con valsXs }
 
--- (6)
--- TODO: Test (6)
+-- (6) Algebraic constructor return, standard match found
 stgRule s@StgState
     { stgCode        = ReturnCon con ws
     , stgReturnStack = ReturnFrame (Algebraic alts) locals :< retS' }
@@ -140,8 +131,7 @@ stgRule s@StgState
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS' }
 
--- (7)
--- TODO: Test (7)
+-- (7) Algebraic constructor return, unbound default match
 stgRule s@StgState
     { stgCode        = ReturnCon con _ws
     , stgReturnStack = ReturnFrame (Algebraic alts) locals :< retS' }
@@ -150,8 +140,7 @@ stgRule s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
 
--- (8)
--- TODO: Test (8)
+-- (8) Algebraic constructor return, bound default match
 stgRule s@StgState
     { stgCode        = ReturnCon con ws
     , stgReturnStack = ReturnFrame (Algebraic alts) locals :< retS'
@@ -169,20 +158,17 @@ stgRule s@StgState
          , stgHeap        = heap'
          , stgTicks       = ticks+1 }
 
--- (9)
--- TODO: Test (9)
+-- (9) Literal evaluation
 stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = s { stgCode = ReturnInt k }
 
--- (10)
--- TODO: Test (10)
+-- (10) Literal application
 stgRule s@StgState { stgCode = Eval (AppF f []) locals }
     | Just (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k }
 
--- (11)
--- TODO: Test (11)
+-- (11) Primitive constructor return, standard match found
 stgRule s@StgState
     { stgCode        = ReturnInt k
     , stgReturnStack = ReturnFrame (Primitive alts) locals :< retS' }
@@ -191,7 +177,7 @@ stgRule s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
 
--- (12)
+-- (12) Primitive constructor return, bound default match
 stgRule s@StgState
     { stgCode        = ReturnInt k
     , stgReturnStack = ReturnFrame (Primitive alts) locals :< retS' }
@@ -202,8 +188,7 @@ stgRule s@StgState
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS' }
 
--- (13)
--- TODO: Test (13)
+-- (13) Primitive constructor return, unbound default match
 stgRule s@StgState
     { stgCode        = ReturnInt k
     , stgReturnStack = ReturnFrame (Primitive alts) locals :< retS' }
@@ -212,8 +197,7 @@ stgRule s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS' }
 
--- (14)
--- TODO: Test (14)
+-- (14) Primitive function application
 stgRule s@StgState
     { stgCode = Eval (AppP op (AtomVar x) (AtomVar y)) locals }
     | Just (PrimInt xVal) <- localVal locals x
@@ -228,7 +212,7 @@ stgRule s@StgState
 
     in s { stgCode = ReturnInt (apply op xVal yVal) }
 
--- (15)
+-- (15) Entering updatable closures
 stgRule s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
@@ -246,8 +230,7 @@ stgRule s@StgState
          , stgReturnStack = Empty
          , stgUpdateStack = updS' }
 
--- (16)
--- TODO: Test (16)
+-- (16) Algebraic constructor return, argument stack empty
 stgRule s@StgState
     { stgCode        = ReturnCon con ws
     , stgArgStack    = Empty
@@ -267,8 +250,7 @@ stgRule s@StgState
          , stgUpdateStack = updS'
          , stgHeap        = heap' }
 
--- (17a)
--- TODO: Test (17a)
+-- (17a) Entering partially applied closures
 stgRule s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
