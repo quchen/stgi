@@ -84,9 +84,10 @@ stgRule s@StgState
         argS' = map ArgumentFrame xsVals <>> argS
 
     in s { stgCode     = Enter a
-         , stgArgStack = argS' }
+         , stgArgStack = argS'
+         , stgInfo     = Info "Function application" }
 
--- (2) Entering non-updatable closures
+-- (2) Entering non-updatable closure
 stgRule s@StgState
     { stgCode     = Enter a
     , stgArgStack = argS
@@ -99,7 +100,8 @@ stgRule s@StgState
         boundLocals = zipWith (\b (ArgumentFrame v) -> (b, v)) bound args
 
     in s { stgCode     = Eval body locals
-         , stgArgStack = argS' }
+         , stgArgStack = argS'
+         , stgInfo     = Info "Entering non-updatable closure" }
 
 -- (3) let(rec)
 stgRule s@StgState
@@ -123,8 +125,13 @@ stgRule s@StgState
             NonRecursive -> locals
             Recursive    -> locals'
 
+        infotext = case rec of
+            NonRecursive -> "let"
+            Recursive    -> "letrec"
+
     in s { stgCode = Eval expr locals'
-         , stgHeap = heap' }
+         , stgHeap = heap'
+         , stgInfo = Info infotext }
 
 -- (4) Case evaluation
 stgRule s@StgState
@@ -143,7 +150,8 @@ stgRule s@StgState
 
   = let valsXs = unsafeVals locals globals xs
 
-    in s { stgCode = ReturnCon con valsXs }
+    in s { stgCode = ReturnCon con valsXs
+         , stgInfo = Info "Constructor application" }
 
 -- (6) Algebraic constructor return, standard match found
 stgRule s@StgState
@@ -154,7 +162,8 @@ stgRule s@StgState
   = let locals' = addLocals (zip vars ws) locals
 
     in s { stgCode        = Eval expr locals'
-         , stgReturnStack = retS' }
+         , stgReturnStack = retS'
+         , stgInfo        = Info "Algebraic constructor return, standard match" }
 
 -- (7) Algebraic constructor return, unbound default match
 stgRule s@StgState
@@ -163,7 +172,8 @@ stgRule s@StgState
     | Left (DefaultNotBound expr) <- lookupAlgebraicAlts alts con
 
   = s { stgCode        = Eval expr locals
-      , stgReturnStack = retS' }
+      , stgReturnStack = retS'
+      , stgInfo        = Info "Algebraic constructor return, unbound default match" }
 
 -- (8) Algebraic constructor return, bound default match
 stgRule s@StgState
@@ -181,17 +191,19 @@ stgRule s@StgState
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
          , stgHeap        = heap'
-         , stgTicks       = ticks+1 }
+         , stgInfo        = Info "Algebraic constructor return, bound default match" }
 
 -- (9) Literal evaluation
 stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
-  = s { stgCode = ReturnInt k }
+  = s { stgCode = ReturnInt k
+      , stgInfo = Info "Literal evaluation" }
 
 -- (10) Literal application
 stgRule s@StgState { stgCode = Eval (AppF f []) locals }
     | Just (PrimInt k) <- val locals mempty (AtomVar f)
 
-  = s { stgCode = ReturnInt k }
+  = s { stgCode = ReturnInt k
+      , stgInfo = Info "Literal application" }
 
 -- (11) Primitive constructor return, standard match found
 stgRule s@StgState
@@ -200,7 +212,8 @@ stgRule s@StgState
     | Right (PrimitiveAlt _k expr) <- lookupPrimitiveAlts alts (Literal k)
 
   = s { stgCode        = Eval expr locals
-      , stgReturnStack = retS' }
+      , stgReturnStack = retS'
+      , stgInfo        = Info "Primitive constructor return, standard match found" }
 
 -- (12) Primitive constructor return, bound default match
 stgRule s@StgState
@@ -211,7 +224,8 @@ stgRule s@StgState
   = let locals' = addLocals [(v, PrimInt k)] locals
 
     in s { stgCode        = Eval expr locals'
-         , stgReturnStack = retS' }
+         , stgReturnStack = retS'
+         , stgInfo        = Info "Primitive constructor return, bound default match" }
 
 -- (13) Primitive constructor return, unbound default match
 stgRule s@StgState
@@ -220,7 +234,8 @@ stgRule s@StgState
     | Left (DefaultNotBound expr) <- lookupPrimitiveAlts alts (Literal k)
 
   = s { stgCode        = Eval expr locals
-      , stgReturnStack = retS' }
+      , stgReturnStack = retS'
+      , stgInfo        = Info "Primitive constructor return, unbound default match" }
 
 -- (14) Primitive function application
 stgRule s@StgState
@@ -235,7 +250,8 @@ stgRule s@StgState
             Div -> quot
             Mod -> rem
 
-    in s { stgCode = ReturnInt (apply op xVal yVal) }
+    in s { stgCode = ReturnInt (apply op xVal yVal)
+         , stgInfo = Info "Primitive function application"}
 
 -- (15) Entering updatable closures
 stgRule s@StgState
@@ -253,7 +269,8 @@ stgRule s@StgState
     in s { stgCode        = Eval body locals
          , stgArgStack    = Empty
          , stgReturnStack = Empty
-         , stgUpdateStack = updS' }
+         , stgUpdateStack = updS'
+         , stgInfo        = Info "Entering updatable closure" }
 
 -- (16) Algebraic constructor return, argument stack empty
 stgRule s@StgState
@@ -273,9 +290,10 @@ stgRule s@StgState
          , stgArgStack    = argSU
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
-         , stgHeap        = heap' }
+         , stgHeap        = heap'
+         , stgInfo        = Info "Algebraic constructor return, argument stack empty" }
 
--- (17a) Entering partially applied closures
+-- (17a) Entering partially applied closure
 stgRule s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
@@ -298,7 +316,7 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgTicks       = ticks+1}
+         , stgInfo        = Info "Entering partially applied closure" }
 
 stgRule StgState
     { stgCode        = x@ReturnInt{}

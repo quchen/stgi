@@ -31,10 +31,12 @@ main = do
         --     Nothing () -> Maybe ();
         --     default -> No ()
 
-                main = () \u () -> tuple (fst, snd);
-                fst = () \n () -> Fst ();
-                snd = () \n () -> Snd ();
-                tuple = () \n (x,y) -> Tuple (x,y)
+        main = () \u () -> case tuple (fst, snd) of
+            default -> Tuple (fst, snd);
+
+        fst = () \n () -> Fst ();
+        snd = () \n () -> Snd ();
+        tuple = () \n (x,y) -> Tuple (x,y)
         |]
         initial = initialState "main" prog
         steps = iterate evalStep initial

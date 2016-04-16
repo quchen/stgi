@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | User-facing API to work with STG programs.
 module Stg.Machine (
     initialState,
@@ -32,7 +34,7 @@ initialState mainVar (Program binds) = StgState
     , stgHeap        = heap
     , stgGlobals     = globals
     , stgTicks       = 0
-    , stgInfo        = Info () }
+    , stgInfo        = Info "Initial state" }
   where
     globalVars :: [Var]
     globalVals :: [LambdaForm]

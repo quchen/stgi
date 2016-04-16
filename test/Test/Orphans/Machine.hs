@@ -5,6 +5,7 @@ module Test.Orphans.Machine () where
 
 
 import qualified Data.Map              as M
+import qualified Data.Text             as T
 import           Test.Tasty.QuickCheck
 
 import           Stg.Machine.Types
@@ -59,6 +60,5 @@ instance Arbitrary Closure where
 instance Arbitrary Heap where
     arbitrary = arbitrary1 (Heap . M.fromList)
 
-
 instance Arbitrary Info where
-    arbitrary = pure (Info ())
+    arbitrary = arbitrary1 (Info . T.pack)

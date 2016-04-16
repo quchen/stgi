@@ -142,7 +142,9 @@ funcapp_simple = closureReductionTest ClosureReductionSpec
     { testName = "Simple function application"
     , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Tuple (x,y) |]
     , source = [stg|
-        main = () \u () -> tuple (fst, snd);
+        main = () \u () -> case tuple (fst, snd) of
+            default -> Tuple (fst, snd);
+
         fst = () \n () -> Fst ();
         snd = () \n () -> Snd ();
         tuple = () \n (x,y) -> Tuple (x,y)

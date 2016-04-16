@@ -61,6 +61,8 @@ instance PrettyAnsi Integer where
 instance PrettyAnsi () where
     prettyAnsi = text . show
 
+instance PrettyAnsi Char
+
 instance (PrettyAnsi a, PrettyAnsi b) => PrettyAnsi (a,b) where
     prettyAnsi (x,y) = (parens . vsep . punctuate comma)
         [prettyAnsi x, prettyAnsi y]

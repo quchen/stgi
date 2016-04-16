@@ -12,6 +12,8 @@ import           Data.Foldable
 import           Data.Map                      (Map)
 import qualified Data.Map                      as M
 import           Data.Monoid
+import           Data.Text                     (Text)
+import qualified Data.Text                     as T
 import           Numeric
 import           Text.PrettyPrint.ANSI.Leijen  hiding ((<>))
 
@@ -119,10 +121,12 @@ data ReturnFrame = ReturnFrame Alts Locals
     deriving (Eq, Ord, Show)
 
 instance Pretty ReturnFrame where
-    pretty (ReturnFrame alts locals) = pretty (alts, locals)
+    pretty (ReturnFrame alts locals) =
+        hsep [ pretty alts, "Locals:" <+> pretty locals ]
 
 instance PrettyAnsi ReturnFrame where
-    prettyAnsi (ReturnFrame alts locals) = prettyAnsi (alts, locals)
+    prettyAnsi (ReturnFrame alts locals) =
+        hsep [ prettyAnsi alts, "Locals:" <+> prettyAnsi locals ]
 
 -- | Update frames store information about the machine's state before an
 -- updateable closure was entered, so that they can help update it once it is
@@ -161,11 +165,13 @@ instance Pretty Value where
     pretty = \case
         Addr addr -> pretty addr
         PrimInt i -> pretty i
+    prettyList = parens . hsep . punctuate "," . map pretty
 
 instance PrettyAnsi Value where
     prettyAnsi = \case
         Addr addr -> prettyAnsi addr
         PrimInt i -> prettyAnsi i
+    prettyAnsiList = parens . hsep . punctuate "," . map prettyAnsi
 
 -- | The different code states the STG can be in.
 data Code = Eval Expr Locals
@@ -225,14 +231,14 @@ instance Pretty Locals where
 instance PrettyAnsi Locals where
     prettyAnsi (Locals locals) = prettyAnsiMap locals
 
-data Info = Info ()
+data Info = Info Text
     deriving (Eq, Ord, Show)
 
 instance Pretty Info where
-    pretty (Info x) = pretty x
+    pretty (Info x) = pretty (T.unpack x)
 
 instance PrettyAnsi Info where
-    prettyAnsi (Info x) = prettyAnsi x
+    prettyAnsi (Info x) = prettyAnsiList (T.unpack x)
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]
