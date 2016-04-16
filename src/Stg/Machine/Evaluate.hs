@@ -57,19 +57,20 @@ evalUntil'
     -> StgState           -- ^ Final state
 evalUntil' p = until p evalStep
 
--- | Evaluate the STG until a predicate holds, failing if the maximum number of
+-- | Evaluate the STG until a predicate holds, aborting if the maximum number of
 -- steps are exceeded.
 --
 -- Use 'evalUntil\'' if you do not want a step limit.
 evalUntil
-    :: Integer            -- ^ Maximum number of steps allowed
-    -> (StgState -> Bool) -- ^ Halting decision function
-    -> StgState           -- ^ Initial state
-    -> Maybe StgState     -- ^ Final state. 'Nothing' if the maximum
-                          --   number of steps are exceeded.
+    :: Integer                  -- ^ Maximum number of steps allowed
+    -> (StgState -> Bool)       -- ^ Halting decision function
+    -> StgState                 -- ^ Initial state
+    -> Either StgState StgState -- ^ Final state. 'Left' if the maximum
+                                --   number of steps are exceeded.
 evalUntil maxSteps p state
-    | stgTicks state > maxSteps = Nothing
-    | otherwise = evalUntil maxSteps p (evalStep state)
+    | stgTicks state > maxSteps = Left state
+    | p state                   = Right state
+    | otherwise                 = evalUntil maxSteps p (evalStep state)
 
 
 
