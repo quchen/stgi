@@ -176,7 +176,7 @@ stgRule s@StgState
   = let locals' = addLocals [(v, Addr addr)] locals
         (addr, heap') = H.alloc closure heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
-        vs = let newVar _old i = Var ("Var/Def:tick" <> show' ticks <> "#" <> show' i)
+        vs = let newVar _old i = Var ("alg8_" <> show' ticks <> "#" <> show' i)
              in zipWith newVar ws [0::Integer ..]
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
@@ -264,7 +264,7 @@ stgRule s@StgState
     , stgHeap        = heap
     , stgTicks       = ticks }
 
-  = let vs = let newVar _old i = Var ("Var/Upd1:tick " <> show' ticks <> "#" <> show' i)
+  = let vs = let newVar _old i = Var ("upd16_" <> show' ticks <> "_" <> show' i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = H.update addrU (Closure lf ws) heap
@@ -288,7 +288,7 @@ stgRule s@StgState
 
   = let argS' = argS <> argSU
         (xs1, xs2) = splitAt (F.length argS) xs
-        f = Var ("Var/Upd2:tick " <> show' ticks)
+        f = Var ("upd17a_ " <> show' ticks)
         moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate xs2 body)
                                   (Addr addr : F.foldMap (\(ArgumentFrame v) -> [v]) argS)
         heap' = H.update addrU moreArgsClosure heap

@@ -70,9 +70,9 @@ instance Pretty StgState where
         , nest 4 (vsep
             [ "Stacks"
             , align (vsep
-                [ "Argument:" <+> pretty (stgArgStack state)
-                , "Return:  " <+> pretty (stgReturnStack state)
-                , "Update:  " <+> pretty (stgUpdateStack state) ])])
+                [ "Argument:" <+> prettyStack (align . vsep) (stgArgStack state)
+                , "Return:  " <+> prettyStack (align . vsep) (stgReturnStack state)
+                , "Update:  " <+> prettyStack (align . vsep) (stgUpdateStack state) ])])
         , nest 4 (vsep [ "Heap", pretty (stgHeap state)])
         , nest 4 (vsep [ "Globals", pretty (stgGlobals state)])
         , nest 4 (vsep
@@ -94,8 +94,12 @@ instance PrettyAnsi StgState where
             [ headline colours "Info" <+> prettyAnsi (stgInfo state)
             , headline colours "Steps:" <+> prettyAnsi (stgTicks state) ])])])
 
+prettyStack :: Pretty a => ([Doc] -> Doc) -> Stack a -> Doc
+prettyStack _ Empty = "(empty)"
+prettyStack separator s = separator [pretty x | x <- toList s]
+
 prettyStackAnsi :: PrettyAnsi a => ([Doc] -> Doc) -> Stack a -> Doc
-prettyStackAnsi _ Empty = "[]"
+prettyStackAnsi _ Empty = "(empty)"
 prettyStackAnsi separator s = separator [prettyAnsi x | x <- toList s]
 
 -- | Argument frames store values on the argument stack, so that they can
@@ -127,7 +131,10 @@ data UpdateFrame = UpdateFrame (Stack ArgumentFrame) (Stack ReturnFrame) MemAddr
     deriving (Eq, Ord, Show)
 
 instance Pretty UpdateFrame where
-    pretty (UpdateFrame upd ret addr) = pretty (upd, ret, addr)
+    pretty (UpdateFrame upd ret addr) =
+        hsep [ prettyStack hsep upd
+             , prettyStack hsep ret
+             , pretty addr ]
 
 instance PrettyAnsi UpdateFrame where
     prettyAnsi (UpdateFrame upd ret addr) =
@@ -169,16 +176,18 @@ data Code = Eval Expr Locals
 
 instance Pretty Code where
     pretty = \case
-        Eval expr locals -> "Eval" <+> align (vsep [ pretty expr
-                                                   , "Locals:" <+> pretty locals ])
+        Eval expr locals -> (align . vsep)
+            [ "Eval" <+> pretty expr
+            , "Locals:" <+> pretty locals ]
         Enter addr -> "Enter" <+> pretty addr
         ReturnCon constr args -> "ReturnCon" <+> pretty constr <+> prettyList args
         ReturnInt i -> "ReturnInt" <+> pretty i
 
 instance PrettyAnsi Code where
     prettyAnsi = \case
-        Eval expr locals -> "Eval" <+> align (vsep [ prettyAnsi expr
-                                                   , "Locals:" <+> prettyAnsi locals ])
+        Eval expr locals -> (align . vsep)
+            [ "Eval" <+> prettyAnsi expr
+            , "Locals:" <+> prettyAnsi locals ]
         Enter addr -> "Enter" <+> prettyAnsi addr
         ReturnCon constr args -> "ReturnCon" <+> prettyAnsi constr <+> prettyAnsiList args
         ReturnInt i -> "ReturnInt" <+> prettyAnsi i
@@ -230,12 +239,16 @@ data Closure = Closure LambdaForm [Value]
     deriving (Eq, Ord, Show)
 
 instance Pretty Closure where
-    pretty (Closure lambdaForm free) =
-        align (vsep [pretty lambdaForm, pretty free])
+    pretty (Closure lambdaForm []) = pretty lambdaForm
+    pretty (Closure lambdaForm free) = (align . vsep)
+        [ pretty lambdaForm
+        , "where" <+> prettyList free ]
 
 instance PrettyAnsi Closure where
-    prettyAnsi (Closure lambdaForm free) =
-        align (vsep [prettyAnsi lambdaForm, prettyAnsiList free])
+    prettyAnsi (Closure lambdaForm []) = prettyAnsi lambdaForm
+    prettyAnsi (Closure lambdaForm free) = (align . vsep)
+        [ prettyAnsi lambdaForm
+        , "where" <+> prettyAnsiList free ]
 
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr Closure)
