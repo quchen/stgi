@@ -14,8 +14,6 @@ import qualified Data.List         as L
 import qualified Data.Map          as M
 import           Data.Maybe
 import           Data.Monoid
-import           Data.Text         (Text)
-import qualified Data.Text         as T
 
 import           Stack             (Stack (..), (<>>))
 import qualified Stack             as S
@@ -23,6 +21,7 @@ import           Stg.Language
 import           Stg.Machine.Env
 import qualified Stg.Machine.Heap  as H
 import           Stg.Machine.Types
+import           Stg.Util
 
 
 
@@ -38,9 +37,6 @@ lookupPrimitiveAlts :: PrimitiveAlts -> Literal -> Either DefaultAlt PrimitiveAl
 lookupPrimitiveAlts (PrimitiveAlts alts def) lit
     | Just alt <- L.find (\(PrimitiveAlt lit' _) -> lit' == lit) alts = Right alt
     | otherwise = Left def
-
-show' :: Show a => a -> Text
-show' = T.pack . show
 
 -- | Perform a single STG machine evaluation step.
 evalStep :: StgState -> StgState

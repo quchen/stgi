@@ -28,6 +28,7 @@ library
                      , Stg.Parser
                      , Stg.Parser.Parser
                      , Stg.Parser.QuasiQuoter
+                     , Stg.Util
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
                      , ansi-wl-pprint
