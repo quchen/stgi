@@ -22,8 +22,8 @@ library
                      , Stg.Language.Prettyprint.ParserInverse
                      , Stg.Machine
                      , Stg.Machine.Env
+                     , Stg.Machine.Evaluate
                      , Stg.Machine.Heap
-                     , Stg.Machine.Step
                      , Stg.Machine.Types
                      , Stg.Parser
                      , Stg.Parser.Parser

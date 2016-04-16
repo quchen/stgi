@@ -1,8 +1,10 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Stg.Machine.Step (
-    stgStep,
+module Stg.Machine.Evaluate (
+    evalStep,
+    evalUntil,
+    evalUntil',
 ) where
 
 
@@ -41,9 +43,35 @@ show' :: Show a => a -> Text
 show' = T.pack . show
 
 -- | Perform a single STG machine evaluation step.
-stgStep :: StgState -> StgState
-stgStep state = let state' = stgRule state
-                in state' { stgTicks = stgTicks state' + 1 }
+evalStep :: StgState -> StgState
+evalStep state = let state' = stgRule state
+                 in state' { stgTicks = stgTicks state' + 1 }
+
+-- | Evaluate the STG until a predicate holds.
+--
+-- A safer version of this is 'evalUntil', which aborts if a certain
+-- maximum number of steps is exceeded.
+evalUntil'
+    :: (StgState -> Bool) -- ^ Halting decision function
+    -> StgState           -- ^ Initial state
+    -> StgState           -- ^ Final state
+evalUntil' p = until p evalStep
+
+-- | Evaluate the STG until a predicate holds, failing if the maximum number of
+-- steps are exceeded.
+--
+-- Use 'evalUntil\'' if you do not want a step limit.
+evalUntil
+    :: Integer            -- ^ Maximum number of steps allowed
+    -> (StgState -> Bool) -- ^ Halting decision function
+    -> StgState           -- ^ Initial state
+    -> Maybe StgState     -- ^ Final state. 'Nothing' if the maximum
+                          --   number of steps are exceeded.
+evalUntil maxSteps p state
+    | stgTicks state > maxSteps = Nothing
+    | otherwise = evalUntil maxSteps p (evalStep state)
+
+
 
 -- | Apply a single STG evaluation rule, as specified in the 1992 paper.
 stgRule :: StgState -> StgState

@@ -1,18 +1,20 @@
 -- | User-facing API to work with STG programs.
 module Stg.Machine (
     initialState,
-    stgStep,
+    evalStep,
+    evalUntil,
+    evalUntil',
 ) where
 
 
 
-import qualified Data.Map          as M
+import qualified Data.Map             as M
 import           Data.Maybe
 
 import           Stg.Language
 import           Stg.Machine.Env
-import qualified Stg.Machine.Heap  as H
-import           Stg.Machine.Step
+import           Stg.Machine.Evaluate
+import qualified Stg.Machine.Heap     as H
 import           Stg.Machine.Types
 
 

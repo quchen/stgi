@@ -32,7 +32,7 @@ main = do
             default -> No ()
         |]
         initial = initialState "main" prog
-        steps = iterate stgStep initial
+        steps = iterate evalStep initial
     ppr <- hSupportsANSI stdout >>= \case
         True  -> pure prettyprintAnsi
         False -> pure prettyprint
