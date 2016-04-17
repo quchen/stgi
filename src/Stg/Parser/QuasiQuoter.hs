@@ -2,10 +2,12 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Stg.Parser.QuasiQuoter (
-    -- * Program quasiquoter
+
+    -- * Heuristic quasiquoter
     stg,
 
-    -- * Syntax element quasiquoters
+    -- * Soecific syntax element quasiquoters
+    stgProgram,
     stgBinds,
     stgLambdaForm,
     stgExpr,
@@ -24,6 +26,8 @@ module Stg.Parser.QuasiQuoter (
 
 
 
+import           Data.Either
+import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
@@ -35,30 +39,77 @@ import           Text.Megaparsec.Text
 import           Stg.Parser.Parser
 
 
-
-stgExpQuoter :: Lift ast => Parser ast -> Text -> Q Exp
-stgExpQuoter parser stgSource = case parse parser stgSource of
-    Left err  -> fail ("Invalid STG program:\n" <> T.unpack err)
-    Right ast -> [| ast |]
-
--- | Build a quasiquoter from a 'Parser'.
-stgQQ :: Lift ast => Parser ast -> QuasiQuoter
-stgQQ parser = QuasiQuoter
-    { quoteExp  = stgExpQuoter (spaceConsumer *> parser) . T.pack
+defaultQuoter :: QuasiQuoter
+defaultQuoter = QuasiQuoter
+    { quoteExp  = \_ -> fail "No STG expression quoter implemented"
     , quotePat  = \_ -> fail "No STG pattern quoter implemented"
     , quoteType = \_ -> fail "No STG type quoter implemented"
     , quoteDec  = \_ -> fail "No STG declaration quoter implemented" }
 
--- | Quasiquoter for 'Program's.
+-- | Heuristic quasiquoter for STG language elements.
+-- Tries a number of parsers, and will use the first successful one.
+--
+-- To gain more fine-grained control over what the input should be parsed to,
+-- use one of the non-heuristic quoters, such as 'stgProgram' or
+-- 'stgLambdaForm'.
 --
 -- >>> [stg| id = () \n (x) -> x () |]
 -- Program (Binds [("id",LambdaForm [] NoUpdate ["x"] (AppF "x" []))])
+--
+-- >>> [stg | () \n (x) -> x () |]
+-- LambdaForm [] NoUpdate ["x"] (AppF "x" [])
+--
+-- >>> [stg | x () |]
+-- AppF "x" []
 stg :: QuasiQuoter
-stg = stgQQ program
+stg = defaultQuoter { quoteExp  = expQuoter }
+  where
+    expQuoter input =
+        let inputText = T.pack input
+            parses =
+                [ quoteAs program       inputText
+                , quoteAs lambdaForm    inputText
+                , quoteAs expr          inputText
+                , quoteAs alts          inputText
+                , quoteAs algebraicAlts inputText
+                , quoteAs primitiveAlts inputText
+                , quoteAs algebraicAlt  inputText
+                , quoteAs primitiveAlt  inputText
+                , quoteAs defaultAlt    inputText
+                , quoteAs literal       inputText
+                , quoteAs primOp        inputText
+                , quoteAs vars          inputText
+                , quoteAs atoms         inputText
+                , quoteAs atom          inputText
+                , quoteAs varTok        inputText
+                , quoteAs conTok        inputText ]
+        in case firstRight parses of
+            Just ast -> ast
+            Nothing  -> fail "No parse succeeded; try using a type-specific \
+                             \parser, such as 'stgProgram'."
 
+    firstRight :: [Either l r] -> Maybe r
+    firstRight = listToMaybe . rights
 
+    -- | Attempt to parse an input using a certain parser, and return the
+    -- generated expression on success.
+    quoteAs :: Lift ast => Parser ast -> Text -> Either Text (Q Exp)
+    quoteAs p inputText = fmap lift (parse (spaceConsumer *> p) inputText)
 
+-- | Build a quasiquoter from a 'Parser'.
+stgQQ :: Lift ast => Parser ast -> QuasiQuoter
+stgQQ parser = defaultQuoter { quoteExp  = expQuoter }
+    where
+    expQuoter input = case parse (spaceConsumer *> parser) (T.pack input) of
+        Left err  -> fail ("Invalid STG program:\n" <> T.unpack err)
+        Right ast -> [| ast |]
 
+-- | Quasiquoter for 'Program's.
+--
+-- >>> [stgProgram| id = () \n (x) -> x () |]
+-- Program (Binds [("id",LambdaForm [] NoUpdate ["x"] (AppF "x" []))])
+stgProgram :: QuasiQuoter
+stgProgram = stgQQ program
 
 stgBinds :: QuasiQuoter
 stgBinds = stgQQ binds
@@ -70,6 +121,10 @@ stgBinds = stgQQ binds
 stgLambdaForm :: QuasiQuoter
 stgLambdaForm = stgQQ lambdaForm
 
+-- | Quasiquoter for 'Expr'essions.
+--
+-- >>> [stgProgram| f (a,b,c) |]
+-- AppF "x" [Var "a", Var "b", Var "c"]
 stgExpr :: QuasiQuoter
 stgExpr = stgQQ expr
 

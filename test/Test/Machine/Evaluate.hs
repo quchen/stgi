@@ -19,7 +19,6 @@ import           Stg.Machine.Env
 import           Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 import           Stg.Parser
-import           Stg.Parser.QuasiQuoter
 import           Stg.Util
 
 import           Test.Orphans.Machine     ()
@@ -50,7 +49,7 @@ tests = testGroup "Evaluate"
 algebraicCase_normalMatch :: TestTree
 algebraicCase_normalMatch = closureReductionTest ClosureReductionSpec
     { testName = "Successful"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Success () |]
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case Nothing () of
             Nothing () -> Success ();
@@ -60,7 +59,7 @@ algebraicCase_normalMatch = closureReductionTest ClosureReductionSpec
 algebraicCase_defaultUnboundMatch :: TestTree
 algebraicCase_defaultUnboundMatch = closureReductionTest ClosureReductionSpec
     { testName = "Unbound default"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Success () |]
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case Nothing () of
             Just (x) -> Fail ();
@@ -70,7 +69,7 @@ algebraicCase_defaultUnboundMatch = closureReductionTest ClosureReductionSpec
 algebraicCase_defaultBoundMatch :: TestTree
 algebraicCase_defaultBoundMatch = closureReductionTest ClosureReductionSpec
     { testName = "Bound default"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Nothing () |]
+    , successPredicate = "main" ==> [stg| () \n () -> Nothing () |]
     , source = [stg|
         main = () \u () -> case Nothing () of
             Just (x) -> Fail ();
@@ -81,7 +80,7 @@ algebraicCase_defaultBoundMatch = closureReductionTest ClosureReductionSpec
 primitiveCase_normalMatch :: TestTree
 primitiveCase_normalMatch = closureReductionTest ClosureReductionSpec
     { testName = "Successful"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Success () |]
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case 1# of
             1#      -> Success ();
@@ -91,7 +90,7 @@ primitiveCase_normalMatch = closureReductionTest ClosureReductionSpec
 primitiveCase_defaultUnboundMatch :: TestTree
 primitiveCase_defaultUnboundMatch = closureReductionTest ClosureReductionSpec
     { testName = "Unbound default"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Success () |]
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case 1# of
             0#      -> Fail ();
@@ -102,7 +101,7 @@ primitiveCase_defaultUnboundMatch = closureReductionTest ClosureReductionSpec
 primitiveCase_defaultBoundMatch :: TestTree
 primitiveCase_defaultBoundMatch = closureReductionTest ClosureReductionSpec
     { testName = "Bound default"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> 1# () |]
+    , successPredicate = "main" ==> [stg| () \n () -> 1# () |]
     , source = [stg|
         main = () \u () -> case 1# of
             0#   -> Fail ();
@@ -113,7 +112,7 @@ primitiveCase_defaultBoundMatch = closureReductionTest ClosureReductionSpec
 letBinding :: TestTree
 letBinding = closureReductionTest ClosureReductionSpec
     { testName = "Let binding"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Success () |]
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> let x = () \n () -> Success ()
                            in x ()
@@ -122,7 +121,7 @@ letBinding = closureReductionTest ClosureReductionSpec
 letrecBinding :: TestTree
 letrecBinding = closureReductionTest ClosureReductionSpec
     { testName = "Let binding"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Success () |]
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> letrec x = () \n () -> Success ()
                            in x ()
@@ -131,7 +130,7 @@ letrecBinding = closureReductionTest ClosureReductionSpec
 addition :: TestTree
 addition = closureReductionTest ClosureReductionSpec
     { testName = "Adding numbers"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> 3# |]
+    , successPredicate = "main" ==> [stg| () \n () -> 3# |]
     , source = [stg|
         add = () \n (x, y) -> +# x y;
         main = () \u () -> add (1#, 2#)
@@ -140,7 +139,7 @@ addition = closureReductionTest ClosureReductionSpec
 funcapp_simple :: TestTree
 funcapp_simple = closureReductionTest ClosureReductionSpec
     { testName = "Simple function application"
-    , successPredicate = "main" ==> [stgLambdaForm| () \n () -> Tuple (x,y) |]
+    , successPredicate = "main" ==> [stg| () \n () -> Tuple (x,y) |]
     , source = [stg|
         main = () \u () -> case tuple (fst, snd) of
             default -> Tuple (fst, snd);
