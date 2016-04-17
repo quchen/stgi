@@ -1,14 +1,15 @@
 name:                stg
 version:             0.1.0.0
-synopsis:            Initial project template from stack
-description:         Please see README.md
+synopsis:            Educational implementation of the STG (Spineless Gagless
+                     G-machine)
+description:         See README.md
 homepage:            http://github.com/githubuser/stg#readme
 license:             BSD3
-license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2016 Author name here
-category:            Web
+license-file:        LICENSE.md
+author:              David Luposchainsky <dluposchainsky (λ) gmail (dot) com>
+maintainer:          David Luposchainsky <dluposchainsky (λ) gmail (dot) com>
+copyright:           David Luposchainsky <dluposchainsky (λ) gmail (dot) com>
+category:            Development
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
