@@ -25,6 +25,9 @@ import           Text.Megaparsec.Text
 
 import           Stg.Language
 
+-- $setup
+-- >>> :set -XOverloadedStrings
+
 
 
 --------------------------------------------------------------------------------
@@ -33,8 +36,8 @@ import           Stg.Language
 -- | Parse STG source using a user-specified parser. To parse a full program,
 -- use @'parse' 'program'@.
 --
--- >>> 'parse' 'program' "id = () \\n (x) -> x ()"
--- Right (Program (Binds [("id",LambdaForm [] NoUpdate ["x"] (AppF "x" []))]))
+-- >>> parse program "id = () \\n (x) -> x ()"
+-- Right (Program (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))]))
 parse :: Parser ast -> Text -> Either Text ast
 parse p = first (T.pack . show) . P.runParser p "(string)"
 

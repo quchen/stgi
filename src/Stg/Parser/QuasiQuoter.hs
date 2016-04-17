@@ -1,12 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
+-- | Quasiquoters for easier generation of STG syntax trees.
+-- The 'stg' quoter is most convenient, I suggest you use it unless you have a
+-- reason not to.
 module Stg.Parser.QuasiQuoter (
 
     -- * Heuristic quasiquoter
     stg,
 
-    -- * Soecific syntax element quasiquoters
+    -- * Specific syntax element quasiquoters
     stgProgram,
     stgBinds,
     stgLambdaForm,
@@ -34,9 +37,14 @@ import qualified Data.Text                 as T
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Lift
 import           Language.Haskell.TH.Quote
+import qualified Text.Megaparsec           as P
 import           Text.Megaparsec.Text
 
 import           Stg.Parser.Parser
+
+-- $setup
+-- >>> :set -XTemplateHaskell
+-- >>> :set -XQuasiQuotes
 
 
 defaultQuoter :: QuasiQuoter
@@ -54,13 +62,13 @@ defaultQuoter = QuasiQuoter
 -- 'stgLambdaForm'.
 --
 -- >>> [stg| id = () \n (x) -> x () |]
--- Program (Binds [("id",LambdaForm [] NoUpdate ["x"] (AppF "x" []))])
+-- Program (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))])
 --
--- >>> [stg | () \n (x) -> x () |]
--- LambdaForm [] NoUpdate ["x"] (AppF "x" [])
+-- >>> [stg| () \n (x) -> x () |]
+-- LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") [])
 --
--- >>> [stg | x () |]
--- AppF "x" []
+-- >>> [stg| x () |]
+-- AppF (Var "x") []
 stg :: QuasiQuoter
 stg = defaultQuoter { quoteExp  = expQuoter }
   where
@@ -94,69 +102,127 @@ stg = defaultQuoter { quoteExp  = expQuoter }
     -- | Attempt to parse an input using a certain parser, and return the
     -- generated expression on success.
     quoteAs :: Lift ast => Parser ast -> Text -> Either Text (Q Exp)
-    quoteAs p inputText = fmap lift (parse (spaceConsumer *> p) inputText)
+    quoteAs p inputText = fmap lift (parse (spaceConsumer *> p <* P.eof) inputText)
 
 -- | Build a quasiquoter from a 'Parser'.
-stgQQ :: Lift ast => Parser ast -> QuasiQuoter
-stgQQ parser = defaultQuoter { quoteExp  = expQuoter }
+stgQQ
+    :: Lift ast
+    => Parser ast -- ^ Parser to use
+    -> Text       -- ^ Name of the parsed syntax element (for error reporting)
+    -> QuasiQuoter
+stgQQ parser elementName = defaultQuoter { quoteExp  = expQuoter }
     where
     expQuoter input = case parse (spaceConsumer *> parser) (T.pack input) of
-        Left err  -> fail ("Invalid STG program:\n" <> T.unpack err)
+        Left err  -> fail (T.unpack ("Invalid STG " <> elementName <> ":\n" <> err))
         Right ast -> [| ast |]
 
--- | Quasiquoter for 'Program's.
+-- | Quasiquoter for 'Stg.Language.Program's.
 --
 -- >>> [stgProgram| id = () \n (x) -> x () |]
--- Program (Binds [("id",LambdaForm [] NoUpdate ["x"] (AppF "x" []))])
+-- Program (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))])
 stgProgram :: QuasiQuoter
-stgProgram = stgQQ program
+stgProgram = stgQQ program "program"
 
+-- | Quasiquoter for 'Stg.Language.Binds'.
+--
+-- >>> [stgBinds| id = () \n (x) -> x () |]
+-- (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))])
 stgBinds :: QuasiQuoter
-stgBinds = stgQQ binds
+stgBinds = stgQQ binds "binds"
 
--- | Quasiquoter for 'LambdaForm's.
+-- | Quasiquoter for 'Stg.Language.LambdaForm's.
 --
--- >>> [stgLambdaForm | () \n (x) -> x () |]
--- LambdaForm [] NoUpdate ["x"] (AppF "x" [])
+-- >>> [stgLambdaForm| () \n (x) -> x () |]
+-- LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") [])
 stgLambdaForm :: QuasiQuoter
-stgLambdaForm = stgQQ lambdaForm
+stgLambdaForm = stgQQ lambdaForm "lambda form"
 
--- | Quasiquoter for 'Expr'essions.
+-- | Quasiquoter for 'Stg.Language.Expr'essions.
 --
--- >>> [stgProgram| f (a,b,c) |]
--- AppF "x" [Var "a", Var "b", Var "c"]
+-- >>> [stgExpr| f (x,y,z) |]
+-- AppF (Var "f") [AtomVar (Var "x"),AtomVar (Var "y"),AtomVar (Var "z")]
 stgExpr :: QuasiQuoter
-stgExpr = stgQQ expr
+stgExpr = stgQQ expr "expression"
 
+-- | Quasiquoter for 'Stg.Language.Alts'.
+--
+-- >>> [stgAlts| Just (x) -> 1#; default -> 0# |]
+-- Algebraic (AlgebraicAlts [AlgebraicAlt (Constr "Just") [Var "x"] (Lit (Literal 1))] (DefaultNotBound (Lit (Literal 0))))
+--
+-- >>> [stgAlts| 0# -> 1#; default -> 0# |]
+-- Primitive (PrimitiveAlts [PrimitiveAlt (Literal 0) (Lit (Literal 1))] (DefaultNotBound (Lit (Literal 0))))
 stgAlts :: QuasiQuoter
-stgAlts = stgQQ alts
+stgAlts = stgQQ alts "alternatives"
 
+-- | Quasiquoter for 'Stg.Language.AlgebraicAlts'.
+--
+-- >>>[stgAlgebraicAlts| Just (x) -> 1#; default -> 0# |]
+-- AlgebraicAlts [AlgebraicAlt (Constr "Just") [Var "x"] (Lit (Literal 1))] (DefaultNotBound (Lit (Literal 0)))
 stgAlgebraicAlts :: QuasiQuoter
-stgAlgebraicAlts = stgQQ algebraicAlts
+stgAlgebraicAlts = stgQQ algebraicAlts "algebraic alternatives"
 
+-- | Quasiquoter for 'Stg.Language.PrimitiveAlts'.
+--
+-- >>> [stgPrimitiveAlts| 0# -> 1#; default -> 0# |]
+-- PrimitiveAlts [PrimitiveAlt (Literal 0) (Lit (Literal 1))] (DefaultNotBound (Lit (Literal 0)))
 stgPrimitiveAlts :: QuasiQuoter
-stgPrimitiveAlts = stgQQ primitiveAlts
+stgPrimitiveAlts = stgQQ primitiveAlts "primtive alternatives"
 
+-- | Quasiquoter for 'Stg.Language.AlgebraicAlt's.
+--
+-- >>> [stgAlgebraicAlt| Just (x) -> x () |]
+-- AlgebraicAlt (Constr "Just") [Var "x"] (AppF (Var "x") [])
 stgAlgebraicAlt :: QuasiQuoter
-stgAlgebraicAlt = stgQQ algebraicAlt
+stgAlgebraicAlt = stgQQ algebraicAlt "algebraic alternative"
 
+-- | Quasiquoter for 'Stg.Language.PrimitiveAlt's.
+--
+-- >>> [stgPrimitiveAlt| 1# -> x () |]
+-- PrimitiveAlt (Literal 1) (AppF (Var "x") [])
 stgPrimitiveAlt :: QuasiQuoter
-stgPrimitiveAlt = stgQQ primitiveAlt
+stgPrimitiveAlt = stgQQ primitiveAlt "primitive alternative"
 
+-- | Quasiquoter for 'Stg.Language.DefaultAlt's.
+--
+-- >>> [stgDefaultAlt| default -> x () |]
+-- DefaultNotBound (AppF (Var "x") [])
+--
+-- >>> [stgDefaultAlt| x -> x () |]
+-- DefaultBound (Var "x") (AppF (Var "x") [])
 stgDefaultAlt :: QuasiQuoter
-stgDefaultAlt = stgQQ defaultAlt
+stgDefaultAlt = stgQQ defaultAlt "default alternative"
 
+-- | Quasiquoter for 'Stg.Language.Literal's.
+--
+-- >>> [stgLiteral| 1# |]
+-- Literal 1
 stgLiteral :: QuasiQuoter
-stgLiteral = stgQQ literal
+stgLiteral = stgQQ literal "literal"
 
+-- | Quasiquoter for 'Stg.Language.PrimOp's.
+--
+-- >>> [stgPrimOp| +# |]
+-- Add
 stgPrimOp :: QuasiQuoter
-stgPrimOp = stgQQ primOp
+stgPrimOp = stgQQ primOp "primop"
 
+-- | Quasiquoter for @['Stg.Language.Var']@.
+--
+-- >>> [stgVars| (x,y,z) |]
+-- [Var "x",Var "y",Var "z"]
 stgVars :: QuasiQuoter
-stgVars = stgQQ vars
+stgVars = stgQQ vars "variable list"
 
+-- | Quasiquoter for @['Stg.Language.Atom']@.
+--
+-- >>> [stgAtoms| (x,y,z) |]
+-- [AtomVar (Var "x"),AtomVar (Var "y"),AtomVar (Var "z")]
 stgAtoms :: QuasiQuoter
-stgAtoms = stgQQ atoms
+stgAtoms = stgQQ atoms "atom list"
 
+-- | Quasiquoter for 'Stg.Language.Atom's.
+--
+-- >>> [stgAtom| x |]
+-- AtomVar (Var "x")
 stgAtom :: QuasiQuoter
-stgAtom = stgQQ atom
+stgAtom = stgQQ atom "atom"

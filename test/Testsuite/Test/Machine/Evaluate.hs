@@ -24,6 +24,7 @@ import           Stg.Util
 import           Test.Orphans.Machine     ()
 
 
+
 tests :: TestTree
 tests = testGroup "Evaluate"
     [ testGroup "Closure reduction"
@@ -101,7 +102,7 @@ primitiveCase_defaultUnboundMatch = closureReductionTest ClosureReductionSpec
 primitiveCase_defaultBoundMatch :: TestTree
 primitiveCase_defaultBoundMatch = closureReductionTest ClosureReductionSpec
     { testName = "Bound default"
-    , successPredicate = "main" ==> [stg| () \n () -> 1# () |]
+    , successPredicate = "main" ==> [stg| () \n () -> 1# |]
     , source = [stg|
         main = () \u () -> case 1# of
             0#   -> Fail ();
