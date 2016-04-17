@@ -253,7 +253,7 @@ stgRule s@StgState
     in s { stgCode = ReturnInt (apply op xVal yVal)
          , stgInfo = Info "Primitive function application"}
 
--- (15) Entering updatable closures
+-- (15) Entering updatable closure
 stgRule s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS

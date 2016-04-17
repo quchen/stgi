@@ -59,7 +59,8 @@ defaultQuoter = QuasiQuoter
 --
 -- To gain more fine-grained control over what the input should be parsed to,
 -- use one of the non-heuristic quoters, such as 'stgProgram' or
--- 'stgLambdaForm'.
+-- 'stgLambdaForm'. These will also give you much better error messages than
+-- merely "doesn't work".
 --
 -- >>> [stg| id = () \n (x) -> x () |]
 -- Program (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))])

@@ -26,17 +26,12 @@ main = do
         -- -- ... because only variables may be on the RHS ..?
         -- main = () \u () -> add (2#, 1#)
 
-        -- main = () \u () -> case Just () of
-        --     Just () -> Yes ();
-        --     Nothing () -> Maybe ();
-        --     default -> No ()
+        main = () \u () -> case add (one,two) of
+            v -> v ();
 
-        main = () \u () -> case tuple (fst, snd) of
-            default -> Tuple (fst, snd);
-
-        fst = () \n () -> Fst ();
-        snd = () \n () -> Snd ();
-        tuple = () \n (x,y) -> Tuple (x,y)
+        add = () \n (x,y) -> +# x y;
+        one = () \n () -> 1#;
+        two = () \n () -> 2#
         |]
         initial = initialState "main" prog
         steps = iterate evalStep initial
