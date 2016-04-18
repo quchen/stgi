@@ -63,7 +63,7 @@ data StgStateColours = StgStateColours
 
 colours :: StgStateColours
 colours = StgStateColours
-    { headline = dullred
+    { headline = dullblue
     , number = dullgreen
     }
 

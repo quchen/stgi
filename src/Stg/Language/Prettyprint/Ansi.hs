@@ -18,7 +18,7 @@ import           Stg.Language
 
 -- | Keyword style
 keyword :: Doc -> Doc
-keyword = dullred
+keyword = dullblue
 
 -- | Primitive style, for literals and functions
 prim :: Doc -> Doc
@@ -30,7 +30,7 @@ name = dullyellow
 
 -- | Head of a lambda form
 lambdaHead :: Doc -> Doc
-lambdaHead = dullblue
+lambdaHead = dullcyan
 
 -- | Semicolons separating lists of bindings and alternatives
 semicolon :: Doc -> Doc

@@ -30,7 +30,7 @@ main = do
         -- main = () \u () -> add (2#, 1#)
 
         main = () \u () -> case id (unit) of
-            Unit () -> Unit ();
+            Unit () -> Success ();
             default -> Fail ();
         id = () \n (x) -> x ();
         unit = () \n () -> Unit ()
