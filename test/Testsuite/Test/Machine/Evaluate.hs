@@ -19,7 +19,6 @@ import           Stg.Machine.Env
 import           Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 import           Stg.Parser
-import           Stg.Util
 
 import           Test.Orphans.Machine     ()
 
@@ -30,6 +29,11 @@ tests = testGroup "Evaluate"
     [ testGroup "Closure reduction"
         [ testGroup "Function application"
             [ funcapp_simple ]
+        , testGroup "Default-only case"
+            [ defaultOnlyCase_unboundAlgebraic
+            , defaultOnlyCase_boundAlgebraic
+            , defaultOnlyCase_unboundPrimitive
+            , defaultOnlyCase_boundPrimitive ]
         , testGroup "Algebraic case"
             [ algebraicCase_normalMatch
             , algebraicCase_defaultUnboundMatch
@@ -46,6 +50,46 @@ tests = testGroup "Evaluate"
             [ addition ]
         ]
     ]
+
+defaultOnlyCase_unboundAlgebraic :: TestTree
+defaultOnlyCase_unboundAlgebraic = closureReductionTest ClosureReductionSpec
+    { testName = "Unbound, algebraic scrutinee"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , source = [stg|
+        main = () \u () -> case x () of
+            default -> x ();
+        x = () \n () -> Success ()
+        |] }
+
+defaultOnlyCase_boundAlgebraic :: TestTree
+defaultOnlyCase_boundAlgebraic = closureReductionTest ClosureReductionSpec
+    { testName = "Bound, algebraic scrutinee"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , source = [stg|
+        main = () \u () -> case x () of
+            x -> x ();
+        x = () \n () -> Success ()
+        |] }
+
+defaultOnlyCase_unboundPrimitive :: TestTree
+defaultOnlyCase_unboundPrimitive = closureReductionTest ClosureReductionSpec
+    { testName = "Unbound, primitive scrutinee"
+    , successPredicate = "main" ==> [stg| () \n () -> 1# |]
+    , source = [stg|
+        main = () \u () -> case x () of
+            default -> x ();
+        x = () \n () -> 1#
+        |] }
+
+defaultOnlyCase_boundPrimitive :: TestTree
+defaultOnlyCase_boundPrimitive = closureReductionTest ClosureReductionSpec
+    { testName = "Bound, primitive scrutinee"
+    , successPredicate = "main" ==> [stg| () \n () -> 1# |]
+    , source = [stg|
+        main = () \u () -> case x () of
+            x -> x ();
+        x = () \n () -> 1#
+        |] }
 
 algebraicCase_normalMatch :: TestTree
 algebraicCase_normalMatch = closureReductionTest ClosureReductionSpec
@@ -140,14 +184,13 @@ addition = closureReductionTest ClosureReductionSpec
 funcapp_simple :: TestTree
 funcapp_simple = closureReductionTest ClosureReductionSpec
     { testName = "Simple function application"
-    , successPredicate = "main" ==> [stg| () \n () -> Tuple (x,y) |]
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
-        main = () \u () -> case f (g (h x)) of
-            default -> Tuple (fst, snd);
-
-        fst = () \n () -> Fst ();
-        snd = () \n () -> Snd ();
-        tuple = () \n (x,y) -> Tuple (x,y)
+        main = () \u () -> case id (unit) of
+            Unit () -> Success ();
+            default -> Fail ();
+        id = () \n (x) -> x ();
+        unit = () \n () -> Unit ()
         |] }
 
 -- | Specifies a test that is based on the reduction of a closure.
@@ -169,12 +212,13 @@ closureReductionTest :: ClosureReductionSpec -> TestTree
 closureReductionTest testSpec = testCase (T.unpack (testName testSpec)) test
   where
     program = initialState "main" (source testSpec)
-    test = case evalUntil 1e3 (successPredicate testSpec) program of
-        Right _ -> pure ()
-        Left state -> (assertFailure . T.unpack . T.unlines)
-            [ "Machine did not satisfy predicate within " <> show' (stgTicks state) <> "steps."
+    finalState = evalUntil 1e3 (successPredicate testSpec) program
+    test = case stgInfo finalState of
+        HaltedByPredicate -> putStrLn (show finalState) >> pure ()
+        _otherwise -> (assertFailure . T.unpack . T.unlines)
+            [ "STG failed to satisfy predicate: " <> prettyprintAnsi (stgInfo finalState)
             , "Final state:"
-            , prettyprintAnsi state ]
+            , prettyprintAnsi finalState ]
 
 -- | Build a state predicate that asserts that a certain 'Var' maps to
 -- a 'LambdaForm' in the heap.

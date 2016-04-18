@@ -43,6 +43,18 @@ evalStep :: StgState -> StgState
 evalStep state = let state' = stgRule state
                  in state' { stgTicks = stgTicks state' + 1 }
 
+-- | Decide whether evaluation of the machine should halt.
+--
+-- Checks whether the machine decided to halt by itself (because no further
+-- evaluation rules apply), or whether a user-specified predicate applies.
+halted
+    :: (StgState -> Bool) -- ^ Halting predicate. An example would be a number
+                          -- of steps exceeded.
+    -> StgState
+    -> Bool
+halted p s@StgState{ stgInfo = StateTransiton{} } = p s
+halted _ _ = False
+
 -- | Evaluate the STG until a predicate holds.
 --
 -- A safer version of this is 'evalUntil', which aborts if a certain
@@ -51,22 +63,21 @@ evalUntil'
     :: (StgState -> Bool) -- ^ Halting decision function
     -> StgState           -- ^ Initial state
     -> StgState           -- ^ Final state
-evalUntil' p = until p evalStep
+evalUntil' p = until (halted p) evalStep
 
 -- | Evaluate the STG until a predicate holds, aborting if the maximum number of
 -- steps are exceeded.
 --
 -- Use 'evalUntil\'' if you do not want a step limit.
 evalUntil
-    :: Integer                  -- ^ Maximum number of steps allowed
-    -> (StgState -> Bool)       -- ^ Halting decision function
-    -> StgState                 -- ^ Initial state
-    -> Either StgState StgState -- ^ Final state. 'Left' if the maximum
-                                --   number of steps are exceeded.
-evalUntil maxSteps p state
-    | stgTicks state > maxSteps = Left state
-    | p state                   = Right state
-    | otherwise                 = evalUntil maxSteps p (evalStep state)
+    :: Integer            -- ^ Maximum number of steps allowed
+    -> (StgState -> Bool) -- ^ Halting decision function
+    -> StgState           -- ^ Initial state
+    -> StgState           -- ^ Final state
+evalUntil maxSteps p state@StgState{ stgTicks = ticks }
+    | ticks > maxSteps = state { stgInfo = MaxStepsExceeded }
+    | (halted p) state = state { stgInfo = HaltedByPredicate }
+    | otherwise        = evalUntil maxSteps p (evalStep state)
 
 
 
@@ -85,7 +96,7 @@ stgRule s@StgState
 
     in s { stgCode     = Enter a
          , stgArgStack = argS'
-         , stgInfo     = Info "Function application" }
+         , stgInfo     = StateTransiton "Function application" }
 
 -- (2) Entering non-updatable closure
 stgRule s@StgState
@@ -101,7 +112,7 @@ stgRule s@StgState
 
     in s { stgCode     = Eval body locals
          , stgArgStack = argS'
-         , stgInfo     = Info "Entering non-updatable closure" }
+         , stgInfo     = StateTransiton "Entering non-updatable closure" }
 
 -- (3) let(rec)
 stgRule s@StgState
@@ -131,7 +142,7 @@ stgRule s@StgState
 
     in s { stgCode = Eval expr locals'
          , stgHeap = heap'
-         , stgInfo = Info infotext }
+         , stgInfo = StateTransiton infotext }
 
 -- (4) Case evaluation
 stgRule s@StgState
@@ -151,7 +162,7 @@ stgRule s@StgState
   = let valsXs = unsafeVals locals globals xs
 
     in s { stgCode = ReturnCon con valsXs
-         , stgInfo = Info "Constructor application" }
+         , stgInfo = StateTransiton "Constructor application" }
 
 -- (6) Algebraic constructor return, standard match found
 stgRule s@StgState
@@ -163,7 +174,7 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
-         , stgInfo        = Info "Algebraic constructor return, standard match" }
+         , stgInfo        = StateTransiton "Algebraic constructor return, standard match" }
 
 -- (7) Algebraic constructor return, unbound default match
 stgRule s@StgState
@@ -173,7 +184,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = Info "Algebraic constructor return, unbound default match" }
+      , stgInfo        = StateTransiton "Algebraic constructor return, unbound default match" }
 
 -- (8) Algebraic constructor return, bound default match
 stgRule s@StgState
@@ -191,19 +202,19 @@ stgRule s@StgState
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
          , stgHeap        = heap'
-         , stgInfo        = Info "Algebraic constructor return, bound default match" }
+         , stgInfo        = StateTransiton "Algebraic constructor return, bound default match" }
 
 -- (9) Literal evaluation
 stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = s { stgCode = ReturnInt k
-      , stgInfo = Info "Literal evaluation" }
+      , stgInfo = StateTransiton "Literal evaluation" }
 
 -- (10) Literal application
 stgRule s@StgState { stgCode = Eval (AppF f []) locals }
     | Just (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k
-      , stgInfo = Info "Literal application" }
+      , stgInfo = StateTransiton "Literal application" }
 
 -- (11) Primitive constructor return, standard match found
 stgRule s@StgState
@@ -213,7 +224,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = Info "Primitive constructor return, standard match found" }
+      , stgInfo        = StateTransiton "Primitive constructor return, standard match found" }
 
 -- (12) Primitive constructor return, bound default match
 stgRule s@StgState
@@ -225,7 +236,7 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
-         , stgInfo        = Info "Primitive constructor return, bound default match" }
+         , stgInfo        = StateTransiton "Primitive constructor return, bound default match" }
 
 -- (13) Primitive constructor return, unbound default match
 stgRule s@StgState
@@ -235,7 +246,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = Info "Primitive constructor return, unbound default match" }
+      , stgInfo        = StateTransiton "Primitive constructor return, unbound default match" }
 
 -- (14) Primitive function application
 stgRule s@StgState
@@ -251,7 +262,7 @@ stgRule s@StgState
             Mod -> rem
 
     in s { stgCode = ReturnInt (apply op xVal yVal)
-         , stgInfo = Info "Primitive function application"}
+         , stgInfo = StateTransiton "Primitive function application"}
 
 -- (15) Entering updatable closure
 stgRule s@StgState
@@ -270,7 +281,7 @@ stgRule s@StgState
          , stgArgStack    = Empty
          , stgReturnStack = Empty
          , stgUpdateStack = updS'
-         , stgInfo        = Info "Entering updatable closure" }
+         , stgInfo        = StateTransiton "Entering updatable closure" }
 
 -- (16) Algebraic constructor return, argument stack empty
 stgRule s@StgState
@@ -291,7 +302,7 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = Info "Algebraic constructor return, argument stack empty" }
+         , stgInfo        = StateTransiton "Algebraic constructor return, argument stack empty" }
 
 -- (17a) Entering partially applied closure
 stgRule s@StgState
@@ -306,7 +317,7 @@ stgRule s@StgState
 
   = let argS' = argS <> argSU
         (xs1, xs2) = splitAt (F.length argS) xs
-        f = Var ("upd17a_ " <> show' ticks)
+        f = Var ("upd17a_" <> show' ticks)
         moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate xs2 body)
                                   (Addr addr : F.foldMap (\(ArgumentFrame v) -> [v]) argS)
         heap' = H.update addrU moreArgsClosure heap
@@ -316,11 +327,11 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = Info "Entering partially applied closure" }
+         , stgInfo        = StateTransiton "Entering partially applied closure" }
 
-stgRule StgState
-    { stgCode        = x@ReturnInt{}
+stgRule s@StgState
+    { stgCode        = ReturnInt{}
     , stgUpdateStack = Empty }
-  = error ("(" <> show x <> ") state with empty update stack")
+  = s { stgInfo = StateError "ReturnInt state with empty update stack" }
 
-stgRule _ = error "Invalid STG state"
+stgRule s = s { stgInfo = NoRulesApply }

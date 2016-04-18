@@ -34,7 +34,7 @@ initialState mainVar (Program binds) = StgState
     , stgHeap        = heap
     , stgGlobals     = globals
     , stgTicks       = 0
-    , stgInfo        = Info "Initial state" }
+    , stgInfo        = StateTransiton "Initial state" }
   where
     globalVars :: [Var]
     globalVals :: [LambdaForm]

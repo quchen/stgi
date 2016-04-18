@@ -1,12 +1,39 @@
-module Stg.Parser (parse, stg) where
+module Stg.Parser (
+
+    -- * Parser
+    parse,
+
+    -- * Quasiquoters
+
+    -- ** Heuristic quasiquoter
+    stg,
+
+    -- ** Specific syntax element quasiquoters
+    stgProgram,
+    stgBinds,
+    stgLambdaForm,
+    stgExpr,
+    stgAlts,
+    stgAlgebraicAlts,
+    stgPrimitiveAlts,
+    stgAlgebraicAlt,
+    stgPrimitiveAlt,
+    stgDefaultAlt,
+    stgLiteral,
+    stgPrimOp,
+    stgVars,
+    stgAtoms,
+    stgAtom,
+) where
 
 
 
 import           Data.Text              (Text)
 import qualified Stg.Parser.Parser      as P
-import           Stg.Parser.QuasiQuoter (stg)
+import           Stg.Parser.QuasiQuoter
 
 import           Stg.Language
+
 
 
 -- | Parse an STG program.

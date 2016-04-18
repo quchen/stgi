@@ -54,6 +54,7 @@ data StgState = StgState
     , stgInfo        :: Info
         -- ^ Information about the current state
     }
+    deriving (Show)
 
 data StgStateColours = StgStateColours
     { headline :: Doc -> Doc
@@ -77,9 +78,7 @@ instance Pretty StgState where
                 , "Update:  " <+> prettyStack (align . vsep) (stgUpdateStack state) ])])
         , nest 4 (vsep [ "Heap", pretty (stgHeap state)])
         , nest 4 (vsep [ "Globals", pretty (stgGlobals state)])
-        , nest 4 (vsep
-            [ "Info" <+> pretty (stgInfo state)
-            , "Steps:" <+> pretty (stgTicks state) ])])])
+        , nest 4 ("Step:" <+> pretty (stgTicks state)) ])])
 
 instance PrettyAnsi StgState where
     prettyAnsi state = nest 4 (vsep ["STG state", align (vsep
@@ -92,9 +91,7 @@ instance PrettyAnsi StgState where
                 , "Update:  " <+> prettyStackAnsi (align . vsep) (stgUpdateStack state) ])])
         , nest 4 (vsep [headline colours "Heap", prettyAnsi (stgHeap state)])
         , nest 4 (vsep [headline colours "Globals", prettyAnsi (stgGlobals state)])
-        , nest 4 (vsep
-            [ headline colours "Info" <+> prettyAnsi (stgInfo state)
-            , headline colours "Steps:" <+> prettyAnsi (stgTicks state) ])])])
+        , nest 4 (headline colours "Step:" <+> pretty (stgTicks state)) ])])
 
 prettyStack :: Pretty a => ([Doc] -> Doc) -> Stack a -> Doc
 prettyStack _ Empty = "(empty)"
@@ -231,14 +228,37 @@ instance Pretty Locals where
 instance PrettyAnsi Locals where
     prettyAnsi (Locals locals) = prettyAnsiMap locals
 
-data Info = Info Text
+data Info =
+      NoRulesApply
+      -- ^ There is no valid state transition to continue with.
+
+    | MaxStepsExceeded
+      -- ^ The machine did not halt within a number of steps. Used by
+      -- 'Stg.Machine.evalUntil'.
+
+    | HaltedByPredicate
+      -- ^ The machine halted because a user-specified halting predicate
+      -- held.
+
+    | StateError Text
+      -- ^ The machine halted in a state that is known to be invalid, there is
+      -- no valid state transition to continue with.
+      --
+      -- An example of this would be a 'ReturnCon' state with an empty
+      -- return stack.
+
+    | StateTransiton Text
+      -- ^ Description of the state transition that lead to the current state.
     deriving (Eq, Ord, Show)
 
 instance Pretty Info where
-    pretty (Info x) = pretty (T.unpack x)
+    pretty HaltedByPredicate  = "Halting predicate held"
+    pretty NoRulesApply       = "No further rules apply"
+    pretty MaxStepsExceeded   = "Maximum number of steps exceeded"
+    pretty (StateError x)     = "Errorenous state: " <+> pretty (T.unpack x)
+    pretty (StateTransiton x) = "State transition:" <+> pretty (T.unpack x)
 
-instance PrettyAnsi Info where
-    prettyAnsi (Info x) = prettyAnsiList (T.unpack x)
+instance PrettyAnsi Info
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]

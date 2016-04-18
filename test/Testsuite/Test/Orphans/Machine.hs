@@ -61,4 +61,8 @@ instance Arbitrary Heap where
     arbitrary = arbitrary1 (Heap . M.fromList)
 
 instance Arbitrary Info where
-    arbitrary = arbitrary1 (Info . T.pack)
+    arbitrary = oneof [ pure HaltedByPredicate
+                      , pure MaxStepsExceeded
+                      , pure NoRulesApply
+                      , arbitrary1 (StateError . T.pack)
+                      , arbitrary1 (StateTransiton . T.pack) ]
