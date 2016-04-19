@@ -24,7 +24,7 @@ main :: IO ()
 main = do
     let prog = [stgProgram|
         foldr = () \n (f, z) ->
-            letrec go = (go, f, z) \n (xs) -> case xs () of
+            letrec go = (f, z) \n (xs) -> case xs () of
                     Nil () -> z ();
                     Cons (y,ys) ->
                         let rest = (go, ys) \u () -> go (ys)
