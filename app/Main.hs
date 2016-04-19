@@ -23,12 +23,14 @@ import           Stg.Parser
 main :: IO ()
 main = do
     let prog = [stgProgram|
-        foldr = () \n (f, z, xs) -> case xs () of
-            Nil () -> z ();
-            Cons (y,ys) ->
-                let rest = (f,z,ys) \n () -> foldr (f,z,ys)
-                in f (y, rest);
-            default -> Error ();
+        foldr = () \n (f, z) ->
+            letrec go = (go, f, z) \n (xs) -> case xs () of
+                    Nil () -> z ();
+                    Cons (y,ys) ->
+                        let rest = (go, ys) \u () -> go (ys)
+                        in f (y, rest);
+                    default -> Error ()
+            in go ();
 
         add2 = () \n (x,y) -> case x () of
             Int (x') -> case y () of
