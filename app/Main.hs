@@ -23,17 +23,9 @@ import           Stg.Parser
 main :: IO ()
 main = do
     let prog = [stg|
-        -- one = () \n () -> 1#;
-        -- add = () \n (x, y) -> +# x y;
-        -- -- INVALID: three = () \u () -> +# 1# 2#;
-        -- -- ... because only variables may be on the RHS ..?
-        -- main = () \u () -> add (2#, 1#)
-
-        main = () \u () -> case id (unit) of
-            Unit () -> Success ();
-            default -> Fail ();
-        id = () \n (x) -> x ();
-        unit = () \n () -> Unit ()
+        add = () \n (x, y) -> case +# x y of
+            v -> Int (v);
+        main = () \u () -> add (1#, 2#)
         |]
         initial = initialState "main" prog
     ansiSupport <- hSupportsANSI stdout

@@ -177,7 +177,8 @@ addition = closureReductionTest ClosureReductionSpec
     { testName = "Adding numbers"
     , successPredicate = "main" ==> [stg| () \n () -> 3# |]
     , source = [stg|
-        add = () \n (x, y) -> +# x y;
+        add = () \n (x, y) -> case +# x y of
+            v -> Int (v);
         main = () \u () -> add (1#, 2#)
         |] }
 
@@ -216,7 +217,8 @@ closureReductionTest testSpec = testCase (T.unpack (testName testSpec)) test
     test = case stgInfo finalState of
         HaltedByPredicate -> pure ()
         _otherwise -> (assertFailure . T.unpack . T.unlines)
-            [ "STG failed to satisfy predicate: " <> prettyprintAnsi (stgInfo finalState)
+            [ "STG failed to satisfy predicate: "
+                <> prettyprintAnsi (stgInfo finalState)
             , "Final state:"
             , prettyprintAnsi finalState ]
 
@@ -227,6 +229,7 @@ var ==> lambdaForm = \state -> case varLookup state var of
     VarLookupClosure (Closure lf _) -> lf == lambdaForm
     _otherwise                      -> False
 
+-- | Used as the result of 'varLookup'.
 data VarLookupResult =
       VarLookupError Text
     | VarLookupPrim Integer

@@ -26,16 +26,26 @@ import           Stg.Util
 
 -- | Look up an algebraic constructor among the given alternatives, and return
 -- the first match. If nothing matches, return the default alternative.
-lookupAlgebraicAlts :: AlgebraicAlts -> Constr -> Either DefaultAlt AlgebraicAlt
+lookupAlgebraicAlts
+    :: AlgebraicAlts
+    -> Constr
+    -> Either DefaultAlt AlgebraicAlt
 lookupAlgebraicAlts (AlgebraicAlts alts def) constr
-    | Just alt <- L.find (\(AlgebraicAlt c _ _) -> c == constr) alts = Right alt
-    | otherwise = Left def
+  = let matchingAlt (AlgebraicAlt c _ _) = c == constr
+    in case L.find matchingAlt alts of
+        Just alt -> Right alt
+        _otherwise -> Left def
 
 -- | 'lookupAAlts' for primitive literals.
-lookupPrimitiveAlts :: PrimitiveAlts -> Literal -> Either DefaultAlt PrimitiveAlt
+lookupPrimitiveAlts
+    :: PrimitiveAlts
+    -> Literal
+    -> Either DefaultAlt PrimitiveAlt
 lookupPrimitiveAlts (PrimitiveAlts alts def) lit
-    | Just alt <- L.find (\(PrimitiveAlt lit' _) -> lit' == lit) alts = Right alt
-    | otherwise = Left def
+  = let matchingAlt (PrimitiveAlt lit' _) = lit' == lit
+    in case L.find matchingAlt alts of
+        Just alt -> Right alt
+        _otherwise -> Left def
 
 -- | Perform a single STG machine evaluation step.
 evalStep :: StgState -> StgState
@@ -78,7 +88,7 @@ stgRule s@StgState
          , stgArgStack = argS'
          , stgInfo     = StateTransiton "Function application" }
 
--- (2) Entering non-updatable closure
+-- (2) Enter non-updatable closure
 stgRule s@StgState
     { stgCode     = Enter a
     , stgArgStack = argS
@@ -92,7 +102,7 @@ stgRule s@StgState
 
     in s { stgCode     = Eval body locals
          , stgArgStack = argS'
-         , stgInfo     = StateTransiton "Entering non-updatable closure" }
+         , stgInfo     = StateTransiton "Enter non-updatable closure" }
 
 -- (3) let(rec)
 stgRule s@StgState
@@ -244,7 +254,7 @@ stgRule s@StgState
     in s { stgCode = ReturnInt (apply op xVal yVal)
          , stgInfo = StateTransiton "Primitive function application"}
 
--- (15) Entering updatable closure
+-- (15) Enter updatable closure
 stgRule s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
@@ -261,7 +271,7 @@ stgRule s@StgState
          , stgArgStack    = Empty
          , stgReturnStack = Empty
          , stgUpdateStack = updS'
-         , stgInfo        = StateTransiton "Entering updatable closure" }
+         , stgInfo        = StateTransiton "Enter updatable closure" }
 
 -- (16) Algebraic constructor return, argument stack empty
 stgRule s@StgState
@@ -284,7 +294,7 @@ stgRule s@StgState
          , stgHeap        = heap'
          , stgInfo        = StateTransiton "Algebraic constructor return, argument stack empty" }
 
--- (17a) Entering partially applied closure
+-- (17a) Enter partially applied closure
 stgRule s@StgState
     { stgCode        = Enter addr
     , stgArgStack    = argS
@@ -307,7 +317,7 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = StateTransiton "Entering partially applied closure" }
+         , stgInfo        = StateTransiton "Enter partially applied closure" }
 
 stgRule s@StgState
     { stgCode        = ReturnInt{}
