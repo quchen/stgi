@@ -70,7 +70,6 @@ evalUntil maxSteps p = \case
         -> state
 
 
-
 -- | Apply a single STG evaluation rule, as specified in the 1992 paper.
 stgRule :: StgState -> StgState
 
@@ -322,5 +321,12 @@ stgRule s@StgState
     { stgCode        = ReturnInt{}
     , stgUpdateStack = Empty }
   = s { stgInfo = StateError "ReturnInt state with empty update stack" }
+
+-- Page 39, 2nd paragraph
+stgRule s@StgState
+    { stgCode = Enter addr
+    , stgHeap = heap }
+    | Just (Closure (LambdaForm _ Update (_:_) _) _) <- H.lookup addr heap
+  = s { stgInfo = StateError "Closures with non-empty argument lists are never updatable" }
 
 stgRule s = s { stgInfo = NoRulesApply }
