@@ -4,7 +4,6 @@
 module Stg.Machine.Evaluate (
     evalStep,
     evalUntil,
-    evalUntil',
 ) where
 
 
@@ -43,41 +42,22 @@ evalStep :: StgState -> StgState
 evalStep state = let state' = stgRule state
                  in state' { stgTicks = stgTicks state' + 1 }
 
--- | Decide whether evaluation of the machine should halt.
---
--- Checks whether the machine decided to halt by itself (because no further
--- evaluation rules apply), or whether a user-specified predicate applies.
-halted
-    :: (StgState -> Bool) -- ^ Halting predicate. An example would be a number
-                          -- of steps exceeded.
-    -> StgState
-    -> Bool
-halted p s@StgState{ stgInfo = StateTransiton{} } = p s
-halted _ _ = False
-
--- | Evaluate the STG until a predicate holds.
---
--- A safer version of this is 'evalUntil', which aborts if a certain
--- maximum number of steps is exceeded.
-evalUntil'
-    :: (StgState -> Bool) -- ^ Halting decision function
-    -> StgState           -- ^ Initial state
-    -> StgState           -- ^ Final state
-evalUntil' p = until (halted p) evalStep
-
 -- | Evaluate the STG until a predicate holds, aborting if the maximum number of
 -- steps are exceeded.
---
--- Use 'evalUntil\'' if you do not want a step limit.
 evalUntil
     :: Integer            -- ^ Maximum number of steps allowed
     -> (StgState -> Bool) -- ^ Halting decision function
     -> StgState           -- ^ Initial state
     -> StgState           -- ^ Final state
-evalUntil maxSteps p state@StgState{ stgTicks = ticks }
-    | ticks > maxSteps = state { stgInfo = MaxStepsExceeded }
-    | (halted p) state = state { stgInfo = HaltedByPredicate }
-    | otherwise        = evalUntil maxSteps p (evalStep state)
+evalUntil maxSteps p = \case
+    state@StgState{ stgTicks = ticks } | ticks > maxSteps
+        -> state { stgInfo = MaxStepsExceeded }
+    state | p state
+        -> state { stgInfo = HaltedByPredicate }
+    state@StgState{ stgInfo = StateTransiton{} }
+        -> evalUntil maxSteps p (evalStep state)
+    state
+        -> state
 
 
 

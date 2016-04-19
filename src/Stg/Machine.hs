@@ -5,7 +5,6 @@ module Stg.Machine (
     initialState,
     evalStep,
     evalUntil,
-    evalUntil',
 ) where
 
 

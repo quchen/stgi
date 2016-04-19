@@ -214,7 +214,7 @@ closureReductionTest testSpec = testCase (T.unpack (testName testSpec)) test
     program = initialState "main" (source testSpec)
     finalState = evalUntil 1e3 (successPredicate testSpec) program
     test = case stgInfo finalState of
-        HaltedByPredicate -> putStrLn (show finalState) >> pure ()
+        HaltedByPredicate -> pure ()
         _otherwise -> (assertFailure . T.unpack . T.unlines)
             [ "STG failed to satisfy predicate: " <> prettyprintAnsi (stgInfo finalState)
             , "Final state:"
