@@ -22,10 +22,27 @@ import           Stg.Parser
 
 main :: IO ()
 main = do
-    let prog = [stg|
-        add = () \n (x, y) -> case +# x y of
-            v -> Int (v);
-        main = () \u () -> add (1#, 2#)
+    let prog = [stgProgram|
+        add3 = () \n (x,y,z) -> case x () of
+            Int (i) -> case y () of
+                Int (j) -> case +# i j of
+                    12345# -> 1#; -- type hint FIXME
+                    ij -> case z () of
+                        Int (k) -> case +# ij k of
+                            12345# -> 1#; -- type hint FIXME
+                            ijk -> Int (ijk);
+                        default -> Error ()
+                default -> Error ()
+            default -> Error ();
+
+        one   = () \n () -> Int (1#);
+        two   = () \n () -> Int (2#);
+        three = () \n () -> Int (3#);
+        main = () \u () -> case add3 (one, two, three) of
+            Int (i) -> case i () of
+                6# -> Success ();
+                wrongResult -> Fail (wrongResult);
+            default -> Error ()
         |]
         initial = initialState "main" prog
     ansiSupport <- hSupportsANSI stdout

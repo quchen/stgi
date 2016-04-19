@@ -48,6 +48,8 @@ tests = testGroup "Evaluate"
             , letrecBinding ]
         , testGroup "Primitive functions"
             [ addition ]
+        , testGroup "Programs"
+            [ program_add3 ]
         ]
     ]
 
@@ -193,6 +195,34 @@ funcapp_simple = closureReductionTest ClosureReductionSpec
         id = () \n (x) -> x ();
         unit = () \n () -> Unit ()
         |] }
+
+program_add3 :: TestTree
+program_add3 = closureReductionTest ClosureReductionSpec
+    { testName = "add3(x,y,z) = x+y+z"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , source = [stg|
+        add3 = () \n (x,y,z) -> case x () of
+            Int (i) -> case y () of
+                Int (j) -> case +# i j of
+                    12345# -> 1#; -- type hint FIXME
+                    ij -> case z () of
+                        Int (k) -> case +# ij k of
+                            12345# -> 1#; -- type hint FIXME
+                            ijk -> Int (ijk);
+                        default -> Error ()
+                default -> Error ()
+            default -> Error ();
+
+        one   = () \n () -> Int (1#);
+        two   = () \n () -> Int (2#);
+        three = () \n () -> Int (3#);
+        main = () \u () -> case add3 (one, two, three) of
+            Int (i) -> case i () of
+                6# -> Success ();
+                wrongResult -> Fail (wrongResult);
+            default -> Error ()
+        |] }
+
 
 -- | Specifies a test that is based on the reduction of a closure.
 data ClosureReductionSpec = ClosureReductionSpec

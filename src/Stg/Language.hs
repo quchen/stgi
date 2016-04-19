@@ -67,9 +67,17 @@ import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 newtype Program = Program Binds
     deriving (Eq, Ord, Show, Generic)
 
+instance Monoid Program where
+    mempty = Program mempty
+    Program x `mappend` Program y = Program (x <> y)
+
 -- | Bindings are collections of lambda forms, indexed over variables.
 newtype Binds = Binds (Map Var LambdaForm)
     deriving (Eq, Ord, Generic)
+
+instance Monoid Binds where
+    mempty = Binds mempty
+    Binds x `mappend` Binds y = Binds (x <> y)
 
 instance Show Binds where
     show (Binds binds) = "(Binds " <> show (M.toList binds) <> ")"

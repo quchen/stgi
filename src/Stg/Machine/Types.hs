@@ -95,11 +95,17 @@ instance PrettyAnsi StgState where
 
 prettyStack :: Pretty a => ([Doc] -> Doc) -> Stack a -> Doc
 prettyStack _ Empty = "(empty)"
-prettyStack separator s = separator [pretty x | x <- toList s]
+prettyStack separator stack = separator prettyFrames
+  where
+    prettyFrame frame i = "Frame" <+> int i <> ":" <+> align (pretty frame)
+    prettyFrames = zipWith prettyFrame (toList stack) [1..]
 
 prettyStackAnsi :: PrettyAnsi a => ([Doc] -> Doc) -> Stack a -> Doc
 prettyStackAnsi _ Empty = "(empty)"
-prettyStackAnsi separator s = separator [prettyAnsi x | x <- toList s]
+prettyStackAnsi separator stack = separator prettyFrames
+  where
+    prettyFrame frame i = "Frame" <+> int i <> ":" <+> align (prettyAnsi frame)
+    prettyFrames = zipWith prettyFrame (toList stack) [1..]
 
 -- | Argument frames store values on the argument stack, so that they can
 -- later be retrieved when the calling function can be applied to them.
@@ -119,11 +125,13 @@ data ReturnFrame = ReturnFrame Alts Locals
 
 instance Pretty ReturnFrame where
     pretty (ReturnFrame alts locals) =
-        hsep [ pretty alts, "Locals:" <+> pretty locals ]
+        (align . vsep) [ "Alts:" <+> align (pretty alts)
+                       , "Locals:" <+> align (pretty locals) ]
 
 instance PrettyAnsi ReturnFrame where
     prettyAnsi (ReturnFrame alts locals) =
-        hsep [ prettyAnsi alts, "Locals:" <+> prettyAnsi locals ]
+        (align . vsep) [ "Alts:" <+> align (prettyAnsi alts)
+                       , "Locals:" <+> align (prettyAnsi locals) ]
 
 -- | Update frames store information about the machine's state before an
 -- updateable closure was entered, so that they can help update it once it is
@@ -161,13 +169,13 @@ data Value = Addr MemAddr | PrimInt Integer
 instance Pretty Value where
     pretty = \case
         Addr addr -> pretty addr
-        PrimInt i -> pretty i
+        PrimInt i -> pretty i <> "#"
     prettyList = parens . hsep . punctuate "," . map pretty
 
 instance PrettyAnsi Value where
     prettyAnsi = \case
-        Addr addr -> prettyAnsi addr
-        PrimInt i -> prettyAnsi i
+        Addr addr -> number colours (prettyAnsi addr)
+        PrimInt i -> number colours (prettyAnsi i <> "#")
     prettyAnsiList = parens . hsep . punctuate "," . map prettyAnsi
 
 -- | The different code states the STG can be in.
@@ -268,13 +276,13 @@ instance Pretty Closure where
     pretty (Closure lambdaForm []) = pretty lambdaForm
     pretty (Closure lambdaForm free) = (align . vsep)
         [ pretty lambdaForm
-        , "where" <+> prettyList free ]
+        , "enclosed:" <+> prettyList free ]
 
 instance PrettyAnsi Closure where
     prettyAnsi (Closure lambdaForm []) = prettyAnsi lambdaForm
     prettyAnsi (Closure lambdaForm free) = (align . vsep)
         [ prettyAnsi lambdaForm
-        , "where" <+> prettyAnsiList free ]
+        , "enclosed:" <+> prettyAnsiList free ]
 
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr Closure)

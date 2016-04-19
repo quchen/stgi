@@ -126,8 +126,8 @@ stgRule s@StgState
             Recursive    -> locals'
 
         infotext = case rec of
-            NonRecursive -> "let"
-            Recursive    -> "letrec"
+            NonRecursive -> "let evaluation"
+            Recursive    -> "letrec evaluation"
 
     in s { stgCode = Eval expr locals'
          , stgHeap = heap'
@@ -141,7 +141,8 @@ stgRule s@StgState
   = let retS' = ReturnFrame alts locals :< retS
 
     in s { stgCode        = Eval expr locals
-         , stgReturnStack = retS'  }
+         , stgReturnStack = retS'
+         , stgInfo        = StateTransiton "case evaluation" }
 
 -- (5) Constructor application
 stgRule s@StgState
@@ -290,7 +291,7 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = StateTransiton "Algebraic constructor return, argument stack empty" }
+         , stgInfo        = StateTransiton "Algebraic constructor return, argument stack empty. Triggering update" }
 
 -- (17a) Enter partially applied closure
 stgRule s@StgState
@@ -317,6 +318,7 @@ stgRule s@StgState
          , stgHeap        = heap'
          , stgInfo        = StateTransiton "Enter partially applied closure" }
 
+-- TODO: Why this rule? Citation!
 stgRule s@StgState
     { stgCode        = ReturnInt{}
     , stgUpdateStack = Empty }
