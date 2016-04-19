@@ -26,13 +26,13 @@ main = do
         foldr = () \n (f, z, xs) -> case xs () of
             Nil () -> z ();
             Cons (y,ys) ->
-                let rest = () \n () -> foldr (f,z,ys)
+                let rest = (f,z,ys) \n () -> foldr (f,z,ys)
                 in f (y, rest);
             default -> Error ();
 
         add2 = () \n (x,y) -> case x () of
             Int (x') -> case y () of
-                Int (y') -> case +# x y of
+                Int (y') -> case +# x' y' of
                     1# -> Int (1#); -- FIXME type hint
                     v -> Int (v);
                 default -> Error ();
@@ -45,19 +45,19 @@ main = do
         cons = () \n (x,xs) -> Cons (x,xs);
         nil = () \n () -> Nil ();
         list = () \u () ->
-            letrec one = () \n () -> Int (1#);
+            letrec one   = () \n () -> Int (1#);
                    two   = () \n () -> Int (2#);
                    three = () \n () -> Int (3#);
-                   list3    = () \n () -> cons (three, nil);
-                   list23   = () \n () -> cons (two,   list3);
-                   list123  = () \n () -> cons (one,   list23);
-                   list3123 = () \n () -> cons (three, list123)
-            in list3 ();
+                   list3    = (three)          \n () -> cons (three, nil);
+                   list23   = (two, list3)     \n () -> cons (two,   list3);
+                   list123  = (one, list23)    \n () -> cons (one,   list23);
+                   list3123 = (three, list123) \n () -> cons (three, list123)
+            in list3123 ();
 
         main = () \u () -> case sum (list) of
             Int (i) -> case i () of
-                6# -> Success ();
-                wrongResult -> Fail (wrongResult);
+                9# -> Success ();
+                wrongResult -> TestFail (wrongResult);
             default -> Error ()
         |]
         initial = initialState "main" prog

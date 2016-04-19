@@ -212,6 +212,7 @@ prettyMap m = (align . vsep)
     | (k,v) <- M.toList m ]
 
 prettyAnsiMap :: (PrettyAnsi k, PrettyAnsi v) => Map k v -> Doc
+prettyAnsiMap m | M.null m = "(empty)"
 prettyAnsiMap m = (align . vsep)
     [ prettyAnsi k <+> "->" <+> prettyAnsi v
     | (k,v) <- M.toList m ]

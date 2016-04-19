@@ -60,7 +60,7 @@ evalUntil
     -> StgState           -- ^ Initial state
     -> StgState           -- ^ Final state
 evalUntil maxSteps p = \case
-    state@StgState{ stgTicks = ticks } | ticks > maxSteps
+    state@StgState{ stgTicks = ticks } | ticks >= maxSteps
         -> state { stgInfo = MaxStepsExceeded }
     state | p state
         -> state { stgInfo = HaltedByPredicate }

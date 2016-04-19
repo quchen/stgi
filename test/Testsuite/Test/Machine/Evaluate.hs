@@ -4,7 +4,12 @@
 
 module Test.Machine.Evaluate (tests) where
 
-
+-- TODO: Important tests to add:
+--   - Only case does evaluation
+--   - Don't forget to add the variables closed over in let(rec)
+--   - Primops can only be applied to primitive ints, not int-valued variables.
+--     For example, `add2 = () \n (x,y) -> +# x y` is wrong: unboxing-boxing
+--     needs to be done.
 
 import           Data.Monoid
 import           Data.Text
@@ -45,7 +50,10 @@ tests = testGroup "Evaluate"
             ]
         , testGroup "Let"
             [ letBinding
-            , letrecBinding ]
+            , letrecBinding
+            , letMultiBinding
+            , letNestedBinding
+            , letrecMultiBinding ]
         , testGroup "Primitive functions"
             [ addition ]
         , testGroup "Programs"
@@ -55,7 +63,7 @@ tests = testGroup "Evaluate"
     ]
 
 defaultOnlyCase_unboundAlgebraic :: TestTree
-defaultOnlyCase_unboundAlgebraic = closureReductionTest ClosureReductionSpec
+defaultOnlyCase_unboundAlgebraic = closureReductionTest defClosureReductionSpec
     { testName = "Unbound, algebraic scrutinee"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
@@ -65,7 +73,7 @@ defaultOnlyCase_unboundAlgebraic = closureReductionTest ClosureReductionSpec
         |] }
 
 defaultOnlyCase_boundAlgebraic :: TestTree
-defaultOnlyCase_boundAlgebraic = closureReductionTest ClosureReductionSpec
+defaultOnlyCase_boundAlgebraic = closureReductionTest defClosureReductionSpec
     { testName = "Bound, algebraic scrutinee"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
@@ -75,7 +83,7 @@ defaultOnlyCase_boundAlgebraic = closureReductionTest ClosureReductionSpec
         |] }
 
 defaultOnlyCase_unboundPrimitive :: TestTree
-defaultOnlyCase_unboundPrimitive = closureReductionTest ClosureReductionSpec
+defaultOnlyCase_unboundPrimitive = closureReductionTest defClosureReductionSpec
     { testName = "Unbound, primitive scrutinee"
     , successPredicate = "main" ==> [stg| () \n () -> 1# |]
     , source = [stg|
@@ -85,7 +93,7 @@ defaultOnlyCase_unboundPrimitive = closureReductionTest ClosureReductionSpec
         |] }
 
 defaultOnlyCase_boundPrimitive :: TestTree
-defaultOnlyCase_boundPrimitive = closureReductionTest ClosureReductionSpec
+defaultOnlyCase_boundPrimitive = closureReductionTest defClosureReductionSpec
     { testName = "Bound, primitive scrutinee"
     , successPredicate = "main" ==> [stg| () \n () -> 1# |]
     , source = [stg|
@@ -95,71 +103,71 @@ defaultOnlyCase_boundPrimitive = closureReductionTest ClosureReductionSpec
         |] }
 
 algebraicCase_normalMatch :: TestTree
-algebraicCase_normalMatch = closureReductionTest ClosureReductionSpec
+algebraicCase_normalMatch = closureReductionTest defClosureReductionSpec
     { testName = "Successful"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case Nothing () of
             Nothing () -> Success ();
-            default    -> Fail ()
+            default    -> TestFail ()
         |] }
 
 algebraicCase_defaultUnboundMatch :: TestTree
-algebraicCase_defaultUnboundMatch = closureReductionTest ClosureReductionSpec
+algebraicCase_defaultUnboundMatch = closureReductionTest defClosureReductionSpec
     { testName = "Unbound default"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case Nothing () of
-            Just (x) -> Fail ();
+            Just (x) -> TestFail ();
             default  -> Success ()
         |] }
 
 algebraicCase_defaultBoundMatch :: TestTree
-algebraicCase_defaultBoundMatch = closureReductionTest ClosureReductionSpec
+algebraicCase_defaultBoundMatch = closureReductionTest defClosureReductionSpec
     { testName = "Bound default"
     , successPredicate = "main" ==> [stg| () \n () -> Nothing () |]
     , source = [stg|
         main = () \u () -> case Nothing () of
-            Just (x) -> Fail ();
+            Just (x) -> TestFail ();
             v -> v ()
 
         |] }
 
 primitiveCase_normalMatch :: TestTree
-primitiveCase_normalMatch = closureReductionTest ClosureReductionSpec
+primitiveCase_normalMatch = closureReductionTest defClosureReductionSpec
     { testName = "Successful"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case 1# of
             1#      -> Success ();
-            default -> Fail ()
+            default -> TestFail ()
         |] }
 
 primitiveCase_defaultUnboundMatch :: TestTree
-primitiveCase_defaultUnboundMatch = closureReductionTest ClosureReductionSpec
+primitiveCase_defaultUnboundMatch = closureReductionTest defClosureReductionSpec
     { testName = "Unbound default"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case 1# of
-            0#      -> Fail ();
-            123#    -> Fail ();
+            0#      -> TestFail ();
+            123#    -> TestFail ();
             default -> Success ()
         |] }
 
 primitiveCase_defaultBoundMatch :: TestTree
-primitiveCase_defaultBoundMatch = closureReductionTest ClosureReductionSpec
+primitiveCase_defaultBoundMatch = closureReductionTest defClosureReductionSpec
     { testName = "Bound default"
     , successPredicate = "main" ==> [stg| () \n () -> 1# |]
     , source = [stg|
         main = () \u () -> case 1# of
-            0#   -> Fail ();
-            123# -> Fail ();
+            0#   -> TestFail ();
+            123# -> TestFail ();
             x    -> x ()
         |] }
 
 letBinding :: TestTree
-letBinding = closureReductionTest ClosureReductionSpec
-    { testName = "Let binding"
+letBinding = closureReductionTest defClosureReductionSpec
+    { testName = "let with a single binding"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> let x = () \n () -> Success ()
@@ -167,16 +175,64 @@ letBinding = closureReductionTest ClosureReductionSpec
         |] }
 
 letrecBinding :: TestTree
-letrecBinding = closureReductionTest ClosureReductionSpec
-    { testName = "Let binding"
+letrecBinding = closureReductionTest defClosureReductionSpec
+    { testName = "letrec with a single binding"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> letrec x = () \n () -> Success ()
                            in x ()
         |] }
 
+letMultiBinding :: TestTree
+letMultiBinding = closureReductionTest defClosureReductionSpec
+    { testName = "let with two bindings"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , source = [stg|
+        main = () \u () ->
+            let id = () \n (x) -> x ();
+                one = () \n () -> Int (1#)
+            in case id (one) of
+                Int (y) -> case y () of
+                    1# -> Success ();
+                    wrong -> TestFail (wrong);
+                default -> Error ()
+        |] }
+
+letNestedBinding :: TestTree
+letNestedBinding = closureReductionTest defClosureReductionSpec
+    { testName = "let with nested bindings"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , source = [stg|
+        main = () \u () ->
+            let id = () \n (x) -> x ();
+                one = () \n () -> Int (1#)
+            in let idOne = (id, one) \n () -> case id (one) of
+                          v -> v ()
+               in case idOne () of
+                   Int (y) -> case y () of
+                       1# -> Success ();
+                       wrong -> TestFail (wrong);
+                   default -> Error ()
+        |] }
+
+letrecMultiBinding :: TestTree
+letrecMultiBinding = closureReductionTest defClosureReductionSpec
+    { testName = "letrec with nested bindings"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , source = [stg|
+        main = () \u () -> letrec id = () \n (x) -> x ();
+                                  idOne = (id, one) \n () -> case id (one) of
+                                      v -> v ();
+                                  one = () \n () -> Int (1#)
+                           in case idOne () of
+                               Int (y) -> case y () of
+                                   1# -> Success ();
+                                   default -> TestFail ();
+                               default -> Error ()
+        |] }
+
 addition :: TestTree
-addition = closureReductionTest ClosureReductionSpec
+addition = closureReductionTest defClosureReductionSpec
     { testName = "Adding numbers"
     , successPredicate = "main" ==> [stg| () \n () -> 3# |]
     , source = [stg|
@@ -186,21 +242,22 @@ addition = closureReductionTest ClosureReductionSpec
         |] }
 
 funcapp_simple :: TestTree
-funcapp_simple = closureReductionTest ClosureReductionSpec
+funcapp_simple = closureReductionTest defClosureReductionSpec
     { testName = "Simple function application"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case id (unit) of
             Unit () -> Success ();
-            default -> Fail ();
+            default -> TestFail ();
         id = () \n (x) -> x ();
         unit = () \n () -> Unit ()
         |] }
 
 program_add3 :: TestTree
-program_add3 = closureReductionTest ClosureReductionSpec
+program_add3 = closureReductionTest defClosureReductionSpec
     { testName = "add3(x,y,z) = x+y+z"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , maxSteps = 100
     , source = [stg|
         add3 = () \n (x,y,z) -> case x () of
             Int (i) -> case y () of
@@ -220,25 +277,26 @@ program_add3 = closureReductionTest ClosureReductionSpec
         main = () \u () -> case add3 (one, two, three) of
             Int (i) -> case i () of
                 6# -> Success ();
-                wrongResult -> Fail (wrongResult);
+                wrongResult -> TestFail (wrongResult);
             default -> Error ()
         |] }
 
 program_foldrSum :: TestTree
-program_foldrSum = closureReductionTest ClosureReductionSpec
+program_foldrSum = closureReductionTest defClosureReductionSpec
     { testName = "Sum of list via foldr"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , maxSteps = 128
     , source = [stg|
         foldr = () \n (f, z, xs) -> case xs () of
             Nil () -> z ();
             Cons (y,ys) ->
-                let rest = () \n () -> foldr (f,z,ys)
+                let rest = (f,z,ys) \n () -> foldr (f,z,ys)
                 in f (y, rest);
             default -> Error ();
 
         add2 = () \n (x,y) -> case x () of
             Int (x') -> case y () of
-                Int (y') -> case +# x y of
+                Int (y') -> case +# x' y' of
                     1# -> Int (1#); -- FIXME type hint
                     v -> Int (v);
                 default -> Error ();
@@ -251,19 +309,19 @@ program_foldrSum = closureReductionTest ClosureReductionSpec
         cons = () \n (x,xs) -> Cons (x,xs);
         nil = () \n () -> Nil ();
         list = () \u () ->
-            letrec one = () \n () -> Int (1#);
+            letrec one   = () \n () -> Int (1#);
                    two   = () \n () -> Int (2#);
                    three = () \n () -> Int (3#);
-                   list3    = () \n () -> cons (three, nil);
-                   list23   = () \n () -> cons (two,   list3);
-                   list123  = () \n () -> cons (one,   list23);
-                   list3123 = () \n () -> cons (three, list123)
-            in list3 ();
+                   list3    = (three)          \n () -> cons (three, nil);
+                   list23   = (two, list3)     \n () -> cons (two,   list3);
+                   list123  = (one, list23)    \n () -> cons (one,   list23);
+                   list3123 = (three, list123) \n () -> cons (three, list123)
+            in list3123 ();
 
         main = () \u () -> case sum (list) of
             Int (i) -> case i () of
-                6# -> Success ();
-                wrongResult -> Fail (wrongResult);
+                9# -> Success ();
+                wrongResult -> TestFail (wrongResult);
             default -> Error ()
         |] }
 
@@ -279,7 +337,17 @@ data ClosureReductionSpec = ClosureReductionSpec
 
     , source           :: Program
         -- ^ STG program to run.
+
+    , maxSteps         :: Integer
+        -- ^ Maximum number of steps to take
     }
+
+defClosureReductionSpec :: ClosureReductionSpec
+defClosureReductionSpec = ClosureReductionSpec
+    { testName = "Default closure reduction test template"
+    , successPredicate = const True
+    , source = [stg| main = () \n () -> Unit () |]
+    , maxSteps = 32 }
 
 -- | Evaluate the @main@ closure of a STG program, and check whether the
 -- machine state satisfies a predicate when it is evaluated.
@@ -287,7 +355,7 @@ closureReductionTest :: ClosureReductionSpec -> TestTree
 closureReductionTest testSpec = testCase (T.unpack (testName testSpec)) test
   where
     program = initialState "main" (source testSpec)
-    finalState = evalUntil 1e3 (successPredicate testSpec) program
+    finalState = evalUntil (maxSteps testSpec) (successPredicate testSpec) program
     test = case stgInfo finalState of
         HaltedByPredicate -> pure ()
         _otherwise -> (assertFailure . T.unpack . T.unlines)
