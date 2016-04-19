@@ -262,7 +262,6 @@ stgRule s@StgState
     , stgUpdateStack = updS
     , stgHeap        = heap }
     | Just (Closure (LambdaForm free Update [] body) freeVals) <- H.lookup addr heap
-        -- TODO: Is the closure removed from the heap?
 
   = let updS' = UpdateFrame argS retS addr :< updS
         locals = makeLocals (zip free freeVals)
