@@ -73,9 +73,9 @@ instance Pretty StgState where
         , nest 4 (vsep
             [ "Stacks"
             , align (vsep
-                [ "Argument:" <+> prettyStack (align . vsep) (stgArgStack state)
-                , "Return:  " <+> prettyStack (align . vsep) (stgReturnStack state)
-                , "Update:  " <+> prettyStack (align . vsep) (stgUpdateStack state) ])])
+                [ "Arg:" <+> prettyStack (stgArgStack state)
+                , "Ret:" <+> prettyStack (stgReturnStack state)
+                , "Upd:" <+> prettyStack (stgUpdateStack state) ])])
         , nest 4 (vsep [ "Heap", pretty (stgHeap state)])
         , nest 4 (vsep [ "Globals", pretty (stgGlobals state)])
         , nest 4 ("Step:" <+> pretty (stgTicks state)) ])])
@@ -86,23 +86,23 @@ instance PrettyAnsi StgState where
         , nest 4 (vsep
             [headline colours "Stacks"
             , align (vsep
-                [ "Argument:" <+> prettyStackAnsi (align . vsep) (stgArgStack state)
-                , "Return:  " <+> prettyStackAnsi (align . vsep) (stgReturnStack state)
-                , "Update:  " <+> prettyStackAnsi (align . vsep) (stgUpdateStack state) ])])
+                [ headline colours "Arg:" <+> prettyStackAnsi (stgArgStack state)
+                , headline colours "Ret:" <+> prettyStackAnsi (stgReturnStack state)
+                , headline colours "Upd:" <+> prettyStackAnsi (stgUpdateStack state) ])])
         , nest 4 (vsep [headline colours "Heap", prettyAnsi (stgHeap state)])
         , nest 4 (vsep [headline colours "Globals", prettyAnsi (stgGlobals state)])
         , nest 4 (headline colours "Step:" <+> pretty (stgTicks state)) ])])
 
-prettyStack :: Pretty a => ([Doc] -> Doc) -> Stack a -> Doc
-prettyStack _ Empty = "(empty)"
-prettyStack separator stack = separator prettyFrames
+prettyStack :: Pretty a => Stack a -> Doc
+prettyStack Empty = "(empty)"
+prettyStack stack = (align . vsep) prettyFrames
   where
     prettyFrame frame i = "Frame" <+> int i <> ":" <+> align (pretty frame)
     prettyFrames = zipWith prettyFrame (toList stack) [1..]
 
-prettyStackAnsi :: PrettyAnsi a => ([Doc] -> Doc) -> Stack a -> Doc
-prettyStackAnsi _ Empty = "(empty)"
-prettyStackAnsi separator stack = separator prettyFrames
+prettyStackAnsi :: PrettyAnsi a => Stack a -> Doc
+prettyStackAnsi Empty = "(empty)"
+prettyStackAnsi stack = (align . vsep) prettyFrames
   where
     prettyFrame frame i = "Frame" <+> int i <> ":" <+> align (prettyAnsi frame)
     prettyFrames = zipWith prettyFrame (toList stack) [1..]
@@ -141,15 +141,17 @@ data UpdateFrame = UpdateFrame (Stack ArgumentFrame) (Stack ReturnFrame) MemAddr
 
 instance Pretty UpdateFrame where
     pretty (UpdateFrame upd ret addr) =
-        hsep [ prettyStack hsep upd
-             , prettyStack hsep ret
-             , pretty addr ]
+        (align . vsep)
+             [ "Arg: " <+> prettyStack upd
+             , "Ret: " <+> prettyStack ret
+             , "Cont:" <+> pretty addr ]
 
 instance PrettyAnsi UpdateFrame where
     prettyAnsi (UpdateFrame upd ret addr) =
-        hsep [ prettyStackAnsi hsep upd
-             , prettyStackAnsi hsep ret
-             , prettyAnsi addr ]
+        (align . vsep)
+             [ headline colours "Arg: " <+> prettyStackAnsi upd
+             , headline colours "Ret: " <+> prettyStackAnsi ret
+             , headline colours "Cont:" <+> prettyAnsi addr ]
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int
@@ -170,13 +172,13 @@ instance Pretty Value where
     pretty = \case
         Addr addr -> pretty addr
         PrimInt i -> pretty i <> "#"
-    prettyList = parens . hsep . punctuate "," . map pretty
+    prettyList = tupled . map pretty
 
 instance PrettyAnsi Value where
     prettyAnsi = \case
         Addr addr -> number colours (prettyAnsi addr)
         PrimInt i -> number colours (prettyAnsi i <> "#")
-    prettyAnsiList = parens . hsep . punctuate "," . map prettyAnsi
+    prettyAnsiList = tupled . map prettyAnsi
 
 -- | The different code states the STG can be in.
 data Code = Eval Expr Locals
@@ -204,6 +206,7 @@ instance PrettyAnsi Code where
         ReturnInt i -> "ReturnInt" <+> prettyAnsi i
 
 prettyMap :: (Pretty k, Pretty v) => Map k v -> Doc
+prettyMap m | M.null m = "(empty)"
 prettyMap m = (align . vsep)
     [ pretty k <+> "->" <+> pretty v
     | (k,v) <- M.toList m ]

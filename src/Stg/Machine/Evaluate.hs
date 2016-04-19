@@ -78,10 +78,10 @@ stgRule s@StgState
     { stgCode     = Eval (AppF f xs) locals
     , stgArgStack = argS
     , stgGlobals  = globals }
-    | Just (Addr a) <- val locals globals (AtomVar f)
+    | Right (Addr a) <- val locals globals (AtomVar f)
+    , Right xsVals <- vals locals globals xs
 
-  = let xsVals = unsafeVals locals globals xs
-        argS' = map ArgumentFrame xsVals <>> argS
+  = let argS' = map ArgumentFrame xsVals <>> argS
 
     in s { stgCode     = Enter a
          , stgArgStack = argS'
@@ -108,18 +108,20 @@ stgRule s@StgState
     { stgCode = Eval (Let rec (Binds binds) expr) locals
     , stgHeap = heap }
 
-  = let locals' = makeLocals (zipWith (\n a -> (n, Addr a))
-                             (M.keys binds)
-                             addrs )
-
-        (addrs, heap') = H.allocMany (map liftClosure (M.elems binds)) heap
+  = let (addrs, heap') = H.allocMany (map liftClosure (M.elems binds)) heap
 
         liftClosure :: LambdaForm -> Closure
         liftClosure lf@(LambdaForm free _ _ _) =
             let freeVals :: [Value]
-                freeVals = fromMaybe (error "FOOBAR")
+                freeVals = fromMaybe (error "liftClosure in (3)/let(rec)")
                                      (traverse (localVal localsRhs) free)
             in Closure lf freeVals
+
+         -- rho' in the paper
+        locals' = locals <> newLocals
+          where
+            newLocals = makeLocals (zipWith makeLocal (M.keys binds) addrs)
+            makeLocal n a = (n, Addr a)
 
         localsRhs = case rec of
             NonRecursive -> locals
@@ -148,11 +150,10 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode    = Eval (AppC con xs) locals
     , stgGlobals = globals }
+    | Right valsXs <- vals locals globals xs
 
-  = let valsXs = unsafeVals locals globals xs
-
-    in s { stgCode = ReturnCon con valsXs
-         , stgInfo = StateTransiton "Constructor application" }
+  = s { stgCode = ReturnCon con valsXs
+      , stgInfo = StateTransiton "Constructor application" }
 
 -- (6) Algebraic constructor return, standard match found
 stgRule s@StgState
@@ -201,7 +202,7 @@ stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
 
 -- (10) Literal application
 stgRule s@StgState { stgCode = Eval (AppF f []) locals }
-    | Just (PrimInt k) <- val locals mempty (AtomVar f)
+    | Right (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k
       , stgInfo = StateTransiton "Literal application" }
@@ -272,7 +273,7 @@ stgRule s@StgState
          , stgUpdateStack = updS'
          , stgInfo        = StateTransiton "Enter updatable closure" }
 
--- (16) Algebraic constructor return, argument stack empty
+-- (16) Algebraic constructor return, argument/return stacks empty -> update
 stgRule s@StgState
     { stgCode        = ReturnCon con ws
     , stgArgStack    = Empty
@@ -291,7 +292,7 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = StateTransiton "Algebraic constructor return, argument stack empty. Triggering update" }
+         , stgInfo        = StateTransiton "Algebraic constructor return, argument/return stacks empty. Triggering update" }
 
 -- (17a) Enter partially applied closure
 stgRule s@StgState
@@ -330,5 +331,19 @@ stgRule s@StgState
     , stgHeap = heap }
     | Just (Closure (LambdaForm _ Update (_:_) _) _) <- H.lookup addr heap
   = s { stgInfo = StateError "Closures with non-empty argument lists are never updatable" }
+
+-- Function argument not in scope
+stgRule s@StgState
+    { stgCode    = Eval (AppF f xs) locals
+    , stgGlobals = globals }
+    | Left valLookupError <- vals locals globals (AtomVar f : xs)
+  = s { stgInfo = StateError valLookupError }
+
+-- Constructor argument not in scope
+stgRule s@StgState
+    { stgCode    = Eval (AppC _con xs) locals
+    , stgGlobals = globals }
+    | Left valLookupError <- vals locals globals xs
+  = s { stgInfo = StateError valLookupError }
 
 stgRule s = s { stgInfo = NoRulesApply }

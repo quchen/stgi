@@ -23,22 +23,38 @@ import           Stg.Parser
 main :: IO ()
 main = do
     let prog = [stgProgram|
-        add3 = () \n (x,y,z) -> case x () of
-            Int (i) -> case y () of
-                Int (j) -> case +# i j of
-                    12345# -> 1#; -- type hint FIXME
-                    ij -> case z () of
-                        Int (k) -> case +# ij k of
-                            12345# -> 1#; -- type hint FIXME
-                            ijk -> Int (ijk);
-                        default -> Error ()
-                default -> Error ()
+        foldr = () \n (f, z, xs) -> case xs () of
+            Nil () -> z ();
+            Cons (y,ys) ->
+                let rest = () \n () -> foldr (f,z,ys)
+                in f (y, rest);
             default -> Error ();
 
-        one   = () \n () -> Int (1#);
-        two   = () \n () -> Int (2#);
-        three = () \n () -> Int (3#);
-        main = () \u () -> case add3 (one, two, three) of
+        add2 = () \n (x,y) -> case x () of
+            Int (x') -> case y () of
+                Int (y') -> case +# x y of
+                    1# -> Int (1#); -- FIXME type hint
+                    v -> Int (v);
+                default -> Error ();
+            default -> Error ();
+
+        zero = () \n () -> Int (0#);
+
+        sum = () \n (xs) -> foldr (add2, zero, xs);
+
+        cons = () \n (x,xs) -> Cons (x,xs);
+        nil = () \n () -> Nil ();
+        list = () \u () ->
+            letrec one = () \n () -> Int (1#);
+                   two   = () \n () -> Int (2#);
+                   three = () \n () -> Int (3#);
+                   list3    = () \n () -> cons (three, nil);
+                   list23   = () \n () -> cons (two,   list3);
+                   list123  = () \n () -> cons (one,   list23);
+                   list3123 = () \n () -> cons (three, list123)
+            in list3 ();
+
+        main = () \u () -> case sum (list) of
             Int (i) -> case i () of
                 6# -> Success ();
                 wrongResult -> Fail (wrongResult);
