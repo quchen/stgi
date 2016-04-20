@@ -26,11 +26,18 @@ To do
 - Main functionality
     - Test the stepper
     - Write lots of test cases
+    - Unify primitive and algebraic alts into a single type a la
+      `Alts [Alt] Default`, `Alt = Algebraic | Primitive`
+    - Remove all `error`s
+    - Unify the stacks to one; should be more instructional. For example, an
+      update frame is very clearly flattened into the argument and return
+      frames it contains when an update is triggered. Should also reduce the
+      nesting of stacks in the overview.
 - Nice to have
+    - Explain steps better
+    - Separate lexer and parser
     - Garbage collector
-    - Explain steps
     - Annotate syntax tree
-    - Separate tokenizer and parser
     - Highlight error location in input
     - HTML prettyprinter
 - Small stuff
