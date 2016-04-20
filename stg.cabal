@@ -18,6 +18,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Stack
                      , Stg.Language
+                     , Stg.Language.Prelude
                      , Stg.Language.Prettyprint
                      , Stg.Language.Prettyprint.Ansi
                      , Stg.Language.Prettyprint.ParserInverse

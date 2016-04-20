@@ -73,6 +73,7 @@ defaultQuoter = QuasiQuoter
 stg :: QuasiQuoter
 stg = defaultQuoter { quoteExp  = expQuoter }
   where
+      -- TODO return all parse errors, not just "doesn't work"
     expQuoter input =
         let inputText = T.pack input
             parses =
