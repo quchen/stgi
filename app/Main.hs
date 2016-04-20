@@ -23,14 +23,14 @@ import           Stg.Parser
 main :: IO ()
 main = do
     let prog = [stgProgram|
-        foldr = () \n (f, z) ->
-            letrec go = (f, z) \n (xs) -> case xs () of
-                    Nil () -> z ();
-                    Cons (y,ys) ->
-                        let rest = (go, ys) \u () -> go (ys)
-                        in f (y, rest);
-                    default -> Error ()
-            in go ();
+        foldl = () \n (f, acc, xs) ->
+            case xs () of
+                Nil () -> acc ();
+                Cons (y,ys) ->
+                    let acc' = (f,acc,y) \u () -> case f (acc, y) of
+                            v -> v()
+                    in foldl (f, acc', ys)
+                default -> Error ();
 
         add2 = () \n (x,y) -> case x () of
             Int (x') -> case y () of
@@ -42,7 +42,7 @@ main = do
 
         zero = () \n () -> Int (0#);
 
-        sum = () \n (xs) -> foldr (add2, zero, xs);
+        sum = () \n (xs) -> foldl (add2, zero, xs);
 
         cons = () \n (x,xs) -> Cons (x,xs);
         nil = () \n () -> Nil ();

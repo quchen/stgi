@@ -241,7 +241,7 @@ instance PrettyAnsi Locals where
     prettyAnsi (Locals locals) = prettyAnsiMap locals
 
 data Info =
-      NoRulesApply
+      NoRulesApply (Maybe Text)
       -- ^ There is no valid state transition to continue with.
 
     | MaxStepsExceeded
@@ -264,10 +264,11 @@ data Info =
     deriving (Eq, Ord, Show)
 
 instance Pretty Info where
-    pretty HaltedByPredicate  = "Halting predicate held"
-    pretty NoRulesApply       = "No further rules apply"
-    pretty MaxStepsExceeded   = "Maximum number of steps exceeded"
-    pretty (StateError x)     = "Errorenous state: " <+> pretty (T.unpack x)
+    pretty HaltedByPredicate = "Halting predicate held"
+    pretty (NoRulesApply Nothing) = "No further rules apply"
+    pretty (NoRulesApply (Just detail)) = "No further rules apply, but " <> pretty (T.unpack detail)
+    pretty MaxStepsExceeded = "Maximum number of steps exceeded"
+    pretty (StateError x) = "Errorenous state: " <+> pretty (T.unpack x)
     pretty (StateTransiton x) = "State transition:" <+> pretty (T.unpack x)
 
 instance PrettyAnsi Info
@@ -283,10 +284,26 @@ instance Pretty Closure where
         , "enclosed:" <+> prettyList free ]
 
 instance PrettyAnsi Closure where
-    prettyAnsi (Closure lambdaForm []) = prettyAnsi lambdaForm
-    prettyAnsi (Closure lambdaForm free) = (align . vsep)
-        [ prettyAnsi lambdaForm
-        , "enclosed:" <+> prettyAnsiList free ]
+    prettyAnsi (Closure (lambdaForm) []) = prettyAnsi lambdaForm
+    prettyAnsi (Closure lambda freeVals) =
+        prettyLambda id -- FIXME: this should be lambdaHead to match the Ansi colour version
+                     prettyFree
+                     prettyAnsi
+                     prettyAnsiList
+                     prettyAnsi
+                     lambda
+      where
+        tupled' = encloseSep lparen rparen (comma <> space)
+        prettyFree vars = tupled' (zipWith
+            (\var val -> prettyAnsi var <+> "->" <+> prettyAnsi val)
+            vars
+            freeVals )
+
+-- instance PrettyAnsi Closure where
+--     prettyAnsi (Closure lambdaForm []) = prettyAnsi lambdaForm
+--     prettyAnsi (Closure lambdaForm free) = (align . vsep)
+--         [ prettyAnsi lambdaForm
+--         , "enclosed:" <+> prettyAnsiList free ]
 
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr Closure)

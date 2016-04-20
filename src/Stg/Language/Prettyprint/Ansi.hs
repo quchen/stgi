@@ -44,7 +44,7 @@ semicolon = dullwhite
 -- The 'plain'ed version of 'ppr' should match the uncoloured one.
 --
 -- @
--- 'plain' . 'prettyAnsi'  ≡ 'pretty'
+-- 'plain' . 'prettyAnsi'     ≡ 'pretty'
 -- 'plain' . 'prettyAnsiList' ≡ 'prettyList'
 -- @
 class Pretty a => PrettyAnsi a where
@@ -82,12 +82,11 @@ instance PrettyAnsi Binds where
             prettyAnsi var <+> "=" <+> prettyAnsi lambda
 
 instance PrettyAnsi LambdaForm where
-    prettyAnsi (LambdaForm free upd bound expr) =
-        lambdaHead (prettyAnsiList free
-             <+> prettyAnsi upd
-             <+> prettyAnsiList bound)
-        <+> "->"
-        <+> prettyAnsi expr
+    prettyAnsi = prettyLambda lambdaHead
+                              prettyAnsiList
+                              prettyAnsi
+                              prettyAnsiList
+                              prettyAnsi
 
 instance PrettyAnsi UpdateFlag
 

@@ -33,6 +33,7 @@ module Stg.Language (
     Program       (..),
     Binds         (..),
     LambdaForm    (..),
+    prettyLambda,
     UpdateFlag    (..),
     Rec           (..),
     Expr          (..),
@@ -210,13 +211,34 @@ instance Pretty Binds where
         prettyBinding (var, lambda) =
             pretty var <+> "=" <+> pretty lambda
 
+-- | Prettyprint a 'LambdaForm', given prettyprinters for subcomponents.
+--
+-- Introduced so 'Stg.Machine.Types.Closure' can hijack it to display
+-- the free value list differently.
+prettyLambda
+    :: (Doc -> Doc)        -- ^ Lambda head formatter, e.g. to colour @() \n ()@
+    -> ([Var] -> Doc)      -- ^ Free variable list printer
+    -> (UpdateFlag -> Doc) -- ^ Update flag printer
+    -> ([Var] -> Doc)      -- ^ Bound variable list printer
+    -> (Expr -> Doc)       -- ^ Body printer
+    -> LambdaForm
+    -> Doc
+prettyLambda
+    prettyLambdaHead
+    prettyFreeList
+    prettyUpd
+    prettyBoundList
+    prettyExpr
+    (LambdaForm free upd bound expr)
+  = hsep [ prettyLambdaHead (hsep
+             [ prettyFreeList free
+             , prettyUpd upd
+             , prettyBoundList bound ])
+         , "->"
+         , prettyExpr expr ]
+
 instance Pretty LambdaForm where
-    pretty (LambdaForm free upd bound expr) =
-        hsep [ prettyList free
-             , pretty upd
-             , prettyList bound
-             , "->"
-             , pretty expr ]
+    pretty = prettyLambda id prettyList pretty prettyList pretty
 
 instance Pretty UpdateFlag where
     pretty = \case

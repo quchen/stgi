@@ -40,4 +40,4 @@ prettyprintAnsi = asText prettyAnsi
 
 asText :: (a -> Doc) -> a -> Text
 asText prettyprinter input =
-    T.pack (displayS (renderPretty 0.4 80 (prettyprinter input)) "")
+    T.pack (displayS (renderPretty 0.4 1000 (prettyprinter input)) "")

@@ -188,7 +188,7 @@ stgRule s@StgState
   = let locals' = addLocals [(v, Addr addr)] locals
         (addr, heap') = H.alloc closure heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
-        vs = let newVar _old i = Var ("alg8_" <> show' ticks <> "#" <> show' i)
+        vs = let newVar _old i = Var ("alg8_" <> show' ticks <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
@@ -282,7 +282,7 @@ stgRule s@StgState
     , stgHeap        = heap
     , stgTicks       = ticks }
 
-  = let vs = let newVar _old i = Var ("upd16_" <> show' ticks <> "_" <> show' i)
+  = let vs = let newVar _old i = Var ("upd16_" <> show' ticks <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = H.update addrU (Closure lf ws) heap
@@ -346,4 +346,10 @@ stgRule s@StgState
     | Left valLookupError <- vals locals globals xs
   = s { stgInfo = StateError valLookupError }
 
-stgRule s = s { stgInfo = NoRulesApply }
+stgRule s@StgState
+    { stgArgStack    = S.Empty
+    , stgReturnStack = S.Empty
+    , stgUpdateStack = S.Empty }
+  = s { stgInfo = NoRulesApply Nothing }
+
+stgRule s = s { stgInfo = NoRulesApply (Just "but the stacks are not empty; the program probably terminated early") }
