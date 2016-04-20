@@ -40,7 +40,7 @@ numbers, add :: Program
 --
 -- @
 -- nil : [a]
--- cons : (a,[a]) -> [a]
+-- cons : (a, [a]) -> [a]
 -- @
 listC = [stg|
     nil = () \n () -> Nil ();
@@ -119,10 +119,10 @@ iterate = listC <> [stgProgram|
 --
 -- @
 -- minusOne = -1
--- zero     = 0
--- one      = 1
--- two      = 2
--- three    = 3
+-- zero     =  0
+-- one      =  1
+-- two      =  2
+-- three    =  3
 -- ten      = 10
 -- @
 numbers = [stgProgram|

@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | "Stg.Parser.Parser"-inverse prettyprinting.
 module Stg.Language.Prettyprint.ParserInverse (
     PrettyParserInverse(..),
 ) where

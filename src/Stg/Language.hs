@@ -68,6 +68,7 @@ import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 newtype Program = Program Binds
     deriving (Eq, Ord, Show, Generic)
 
+-- | Left-biased union of the contained bindings.
 instance Monoid Program where
     mempty = Program mempty
     Program x `mappend` Program y = Program (x <> y)

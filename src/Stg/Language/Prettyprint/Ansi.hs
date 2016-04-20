@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Prettyprinting for ANSI terminals.
 module Stg.Language.Prettyprint.Ansi (
     PrettyAnsi(..),
 ) where

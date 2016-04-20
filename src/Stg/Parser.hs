@@ -1,3 +1,4 @@
+-- | Convert source code to syntax trees.
 module Stg.Parser (
 
     -- * Parser

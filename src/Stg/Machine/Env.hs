@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Defines operations on local and global variable environments.
 module Stg.Machine.Env (
 
     -- * Locals

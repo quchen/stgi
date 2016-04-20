@@ -56,11 +56,13 @@ data StgState = StgState
     }
     deriving (Show)
 
+-- | Package of colour definitions used in this module.
 data StgStateColours = StgStateColours
     { headline :: Doc -> Doc
     , number   :: Doc -> Doc
     }
 
+-- | Colour definitions used in this module.
 colours :: StgStateColours
 colours = StgStateColours
     { headline = dullblue
@@ -93,6 +95,7 @@ instance PrettyAnsi StgState where
         , nest 4 (vsep [headline colours "Globals", prettyAnsi (stgGlobals state)])
         , nest 4 (headline colours "Step:" <+> pretty (stgTicks state)) ])])
 
+-- | Prettyprint a 'Stack'.
 prettyStack :: Pretty a => Stack a -> Doc
 prettyStack Empty = "(empty)"
 prettyStack stack = (align . vsep) prettyFrames
@@ -100,6 +103,7 @@ prettyStack stack = (align . vsep) prettyFrames
     prettyFrame frame i = "Frame" <+> int i <> ":" <+> align (pretty frame)
     prettyFrames = zipWith prettyFrame (toList stack) [1..]
 
+-- | ANSI-prettyprint a 'Stack'.
 prettyStackAnsi :: PrettyAnsi a => Stack a -> Doc
 prettyStackAnsi Empty = "(empty)"
 prettyStackAnsi stack = (align . vsep) prettyFrames
@@ -205,12 +209,14 @@ instance PrettyAnsi Code where
         ReturnCon constr args -> "ReturnCon" <+> prettyAnsi constr <+> prettyAnsiList args
         ReturnInt i -> "ReturnInt" <+> prettyAnsi i
 
+-- | Prettyprint a 'Map', @key -> value@.
 prettyMap :: (Pretty k, Pretty v) => Map k v -> Doc
 prettyMap m | M.null m = "(empty)"
 prettyMap m = (align . vsep)
     [ pretty k <+> "->" <+> pretty v
     | (k,v) <- M.toList m ]
 
+-- | ANSI-prettyprint a 'Map', @key -> value@.
 prettyAnsiMap :: (PrettyAnsi k, PrettyAnsi v) => Map k v -> Doc
 prettyAnsiMap m | M.null m = "(empty)"
 prettyAnsiMap m = (align . vsep)
@@ -240,6 +246,7 @@ instance Pretty Locals where
 instance PrettyAnsi Locals where
     prettyAnsi (Locals locals) = prettyAnsiMap locals
 
+-- | User-facing information about the current state of the STG.
 data Info =
       NoRulesApply (Maybe Text)
       -- ^ There is no valid state transition to continue with.
@@ -298,12 +305,6 @@ instance PrettyAnsi Closure where
             (\var val -> prettyAnsi var <+> "->" <+> prettyAnsi val)
             vars
             freeVals )
-
--- instance PrettyAnsi Closure where
---     prettyAnsi (Closure lambdaForm []) = prettyAnsi lambdaForm
---     prettyAnsi (Closure lambdaForm free) = (align . vsep)
---         [ prettyAnsi lambdaForm
---         , "enclosed:" <+> prettyAnsiList free ]
 
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr Closure)

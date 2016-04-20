@@ -19,6 +19,7 @@ import           Text.PrettyPrint.ANSI.Leijen hiding (list, (<>))
 
 
 
+-- | The usual stack data structure.
 data Stack a = Empty | a :< Stack a
     deriving (Eq, Ord)
 

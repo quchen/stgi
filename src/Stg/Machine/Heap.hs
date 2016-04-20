@@ -14,6 +14,9 @@ import           Prelude           hiding (lookup)
 
 import           Stg.Machine.Types
 
+
+
+-- | Current number of elements in a heap.
 size :: Heap -> Int
 size (Heap heap) = M.size heap
 

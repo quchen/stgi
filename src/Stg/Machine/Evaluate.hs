@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Evaluate STG 'Program's.
 module Stg.Machine.Evaluate (
     evalStep,
     evalUntil,
