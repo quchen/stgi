@@ -63,6 +63,6 @@ instance Arbitrary Heap where
 instance Arbitrary Info where
     arbitrary = oneof [ pure HaltedByPredicate
                       , pure MaxStepsExceeded
-                      , pure NoRulesApply
+                      , arbitrary1 (NoRulesApply . fmap T.pack)
                       , arbitrary1 (StateError . T.pack)
                       , arbitrary1 (StateTransiton . T.pack) ]

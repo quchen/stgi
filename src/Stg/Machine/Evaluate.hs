@@ -79,8 +79,8 @@ stgRule s@StgState
     { stgCode     = Eval (AppF f xs) locals
     , stgArgStack = argS
     , stgGlobals  = globals }
-    | Right (Addr a) <- val locals globals (AtomVar f)
-    , Right xsVals <- vals locals globals xs
+    | Success (Addr a) <- val locals globals (AtomVar f)
+    , Success xsVals <- vals locals globals xs
 
   = let argS' = map ArgumentFrame xsVals <>> argS
 
@@ -151,7 +151,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode    = Eval (AppC con xs) locals
     , stgGlobals = globals }
-    | Right valsXs <- vals locals globals xs
+    | Success valsXs <- vals locals globals xs
 
   = s { stgCode = ReturnCon con valsXs
       , stgInfo = StateTransiton "Constructor application" }
@@ -203,7 +203,7 @@ stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
 
 -- (10) Literal application
 stgRule s@StgState { stgCode = Eval (AppF f []) locals }
-    | Right (PrimInt k) <- val locals mempty (AtomVar f)
+    | Success (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k
       , stgInfo = StateTransiton "Literal application" }
@@ -337,14 +337,14 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
-    | Left valLookupError <- vals locals globals (AtomVar f : xs)
+    | Failure valLookupError <- vals locals globals (AtomVar f : xs)
   = s { stgInfo = StateError valLookupError }
 
 -- Constructor argument not in scope
 stgRule s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
-    | Left valLookupError <- vals locals globals xs
+    | Failure valLookupError <- vals locals globals xs
   = s { stgInfo = StateError valLookupError }
 
 stgRule s@StgState

@@ -157,12 +157,13 @@ primitiveCase_defaultUnboundMatch = closureReductionTest defClosureReductionSpec
 primitiveCase_defaultBoundMatch :: TestTree
 primitiveCase_defaultBoundMatch = closureReductionTest defClosureReductionSpec
     { testName = "Bound default"
-    , successPredicate = "main" ==> [stg| () \n () -> 1# |]
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         main = () \u () -> case 1# of
             0#   -> TestFail ();
             123# -> TestFail ();
-            x    -> x ()
+            -1#  -> TestFail ();
+            x    -> Success ()
         |] }
 
 letBinding :: TestTree
@@ -233,12 +234,17 @@ letrecMultiBinding = closureReductionTest defClosureReductionSpec
 
 addition :: TestTree
 addition = closureReductionTest defClosureReductionSpec
-    { testName = "Adding numbers"
-    , successPredicate = "main" ==> [stg| () \n () -> 3# |]
+    { testName = "Adding primitive numbers"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
-        add = () \n (x, y) -> case +# x y of
-            v -> Int (v);
-        main = () \u () -> add (1#, 2#)
+        add = () \n (x,y) -> case +# x y of
+            1# -> Int (1#); -- FIXME type hint
+            v  -> Int (v);
+        main = () \u () -> case add (1#, 2#) of
+            Int (x) -> case x () of
+                3# -> Success ()
+                v  -> TestFail (v)
+            default -> Error ()
         |] }
 
 funcapp_simple :: TestTree

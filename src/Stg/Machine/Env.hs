@@ -24,6 +24,7 @@ import           Data.Text           (Text)
 
 import           Stg.Language
 import           Stg.Machine.Types
+import           Stg.Util
 
 
 -- | Add a list of bindings to the local environment.
@@ -38,16 +39,16 @@ makeLocals = Locals . M.fromList
 
 -- | Look up the value of an 'Atom' first in the local, then in the global
 -- environment.
-val :: Locals -> Globals -> Atom -> Either Text Value
-val _lcl _gbl (AtomLit (Literal k)) = Right (PrimInt k)
+val :: Locals -> Globals -> Atom -> Validate Text Value
+val _lcl _gbl (AtomLit (Literal k)) = Success (PrimInt k)
 val (Locals locals) (Globals globals) (AtomVar var@(Var varName)) =
     case (M.lookup var locals <|> M.lookup var globals) of
-        Just v -> Right v
-        Nothing -> Left ("Variable '" <> varName <> "' not in scope")
+        Just v -> Success v
+        Nothing -> Failure ("Variable '" <> varName <> "' not in scope")
 
 -- | Look up the values of many 'Atom's, and return their values in the
 -- input's order.
-vals :: Locals -> Globals -> [Atom] -> Either Text [Value]
+vals :: Locals -> Globals -> [Atom] -> Validate Text [Value]
 vals locals globals = traverse (val locals globals)
 
 -- | Look up the value of a variable in the local environment.
