@@ -33,6 +33,9 @@ To do
       update frame is very clearly flattened into the argument and return
       frames it contains when an update is triggered. Should also reduce the
       nesting of stacks in the overview.
+    - Implement `Evaluate.evalsUntil` and write `main` in terms of it, getting
+      rid of the embarassing `IO` galore
+    - Test GC
 - Nice to have
     - Explain steps better
     - Command line options (in particular to control colouring)

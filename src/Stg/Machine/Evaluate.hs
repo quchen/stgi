@@ -56,6 +56,10 @@ evalStep state = let state' = stgRule state
 
 -- | Evaluate the STG until a predicate holds, aborting if the maximum number of
 -- steps are exceeded.
+--
+-- @
+-- 'last' ('evalsUntil' ...) ≡ 'evalUntil'
+-- @
 evalUntil
     :: Integer            -- ^ Maximum number of steps allowed
     -> (StgState -> Bool) -- ^ Halting decision function
@@ -72,6 +76,20 @@ evalUntil maxSteps p = \case
         -> evalUntil maxSteps p (evalStep state)
     state
         -> state
+
+-- | Evaluate the STG, and record all intermediate states.
+--
+-- Stop when a predicate holds, or if the maximum number of steps are exceeded.
+--
+-- @
+-- 'evalsUntil' ≈ 'unfoldr' 'evalUntil'
+-- @
+evalsUntil
+    :: Integer            -- ^ Maximum number of steps allowed
+    -> (StgState -> Bool) -- ^ Halting decision function
+    -> StgState           -- ^ Initial state
+    -> [StgState]         -- ^ All intermediate states
+evalsUntil = undefined
 
 
 -- | Apply a single STG evaluation rule, as specified in the 1992 paper.
