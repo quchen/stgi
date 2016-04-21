@@ -72,10 +72,12 @@ loopStg :: (forall a. PrettyAnsi a => a -> Text) -> StgState -> IO ()
 loopStg ppr state = do
     T.putStrLn (T.replicate 80 "=")
     T.putStrLn (ppr (stgInfo state))
-    case stgInfo state of
-        Info (StateTransiton{}) _ -> do
+    let continue = do
             T.putStrLn (T.replicate 80 "-")
             T.putStrLn (ppr state)
             loopStg ppr (evalStep state)
-        _other -> do
-            T.putStrLn (T.replicate 80 "=")
+        stop = T.putStrLn (T.replicate 80 "=")
+    case stgInfo state of
+        Info (StateTransiton{}) _ -> continue
+        Info (StateInitial{}) _   -> continue
+        _other                    -> stop

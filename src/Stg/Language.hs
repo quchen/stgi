@@ -11,24 +11,21 @@
 -- "Stg.Parser" module, as opposed to manually combining the data types given
 -- in this module.
 --
--- For example, the STG program
+-- For example, here is a STG program and its syntax tree representation:
 --
--- @
+-- >>> :{
+-- [|stg
 -- fix = () \\n (f) ->
 --     letrec x = (f, x) \\u () -> f (x)
 --     in x ()
--- @
---
--- is represented by
---
--- @
--- 'Binds'
---     [("fix", 'LambdaForm' [] 'NoUpdate' ["f"]
---         ('Let' 'Recursive'
---             ('Binds' [("x", 'LambdaForm' ["f","x"] 'Update' []
---                 ('AppF' "f" ['AtomVar' "x"]))])
---             ('AppF' "x" [])))]
--- @
+-- |]
+-- :}
+-- Binds
+--     [("fix", LambdaForm [] NoUpdate ["f"]
+--         (Let Recursive
+--             (Binds [("x", LambdaForm ["f","x"] Update []
+--                 (AppF "f" [AtomVar "x"]))])
+--             (AppF "x" [])))]
 module Stg.Language (
     Program       (..),
     Binds         (..),
@@ -62,6 +59,10 @@ import           GHC.Generics
 import           Language.Haskell.TH.Lift
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
+-- $setup
+-- >>> :set -XQuasiQuotes
+-- >>> import Stg.Parser
+
 
 
 -- | An STG program consists of bindings.
@@ -86,6 +87,9 @@ instance Show Binds where
 
 -- | A lambda form unifies free and bound variables associated with a function
 -- body.
+--
+-- >>> [stg| (x) \u (y, z) -> expr (x,z) |]
+-- LambdaForm [Var "x"] Update [Var "y",Var "z"] (AppF (Var "expr") [AtomVar (Var "x"),AtomVar (Var "z")])
 data LambdaForm = LambdaForm [Var] UpdateFlag [Var] Expr
     deriving (Eq, Ord, Show, Generic)
 
