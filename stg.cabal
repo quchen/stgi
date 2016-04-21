@@ -26,6 +26,7 @@ library
                      , Stg.Machine.Env
                      , Stg.Machine.Evaluate
                      , Stg.Machine.Heap
+                     , Stg.Machine.Heap.GarbageCollection
                      , Stg.Machine.Types
                      , Stg.Parser
                      , Stg.Parser.Parser

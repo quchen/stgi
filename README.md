@@ -43,13 +43,6 @@ To do
       `pretty = prettyLambda pretty pretty`
       `prettyAnsi = prettyLambda prettyAnsi prettyAnsi`
     - Separate lexer and parser
-    - Garbage collector. Simple tracing GC outlone:
-        1. Get the addresses of all globals and put them in a bucket.
-        2. Traverse all closures at the addresses, and add all contained
-           addresses into the bucket.
-        3. The bucket should now contain all used memory addresses. Running
-           the traversal again should be idempotent.
-        4. Drop all heap elements not found in the bucket.
     - Annotate syntax tree
     - Highlight error location in input
     - HTML prettyprinter

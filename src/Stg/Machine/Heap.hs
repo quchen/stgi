@@ -5,13 +5,15 @@ module Stg.Machine.Heap (
     update,
     alloc,
     allocMany,
+    garbageCollect,
 ) where
 
 
 
-import qualified Data.Map          as M
-import           Prelude           hiding (lookup)
+import qualified Data.Map                           as M
+import           Prelude                            hiding (lookup)
 
+import           Stg.Machine.Heap.GarbageCollection
 import           Stg.Machine.Types
 
 
