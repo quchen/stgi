@@ -7,49 +7,33 @@ module Main (main) where
 
 
 
+import           Data.Monoid
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import qualified Data.Text.IO             as T
 import           System.Console.ANSI      (hSupportsANSI)
 import           System.IO                (stdout)
 
+import qualified Stg.Language.Prelude     as Stg
 import           Stg.Language.Prettyprint
 import           Stg.Machine
 import           Stg.Machine.Types
 import           Stg.Parser
+import           Stg.Util
 
 
 
 main :: IO ()
 main = do
-    let prog = [stgProgram|
-        foldl = () \n (f, acc, xs) ->
-            case xs () of
-                Nil () -> acc ();
-                Cons (y,ys) ->
-                    let acc' = (f,acc,y) \u () -> case f (acc, y) of
-                            v -> v()
-                    in foldl (f, acc', ys)
-                default -> Error ();
+    let prog = Stg.foldl' <> Stg.add <> Stg.listC <> [stgProgram|
+        zero = () \n () -> Int# (0#);
 
-        add2 = () \n (x,y) -> case x () of
-            Int (x') -> case y () of
-                Int (y') -> case +# x' y' of
-                    1# -> Int (1#); -- FIXME type hint
-                    v -> Int (v);
-                default -> Error ();
-            default -> Error ();
+        sum = () \n (xs) -> foldl' (add, zero, xs);
 
-        zero = () \n () -> Int (0#);
-
-        sum = () \n (xs) -> foldl (add2, zero, xs);
-
-        cons = () \n (x,xs) -> Cons (x,xs);
-        nil = () \n () -> Nil ();
         list = () \u () ->
-            letrec one   = () \n () -> Int (1#);
-                   two   = () \n () -> Int (2#);
-                   three = () \n () -> Int (3#);
+            letrec one   = () \n () -> Int# (1#);
+                   two   = () \n () -> Int# (2#);
+                   three = () \n () -> Int# (3#);
                    list3    = (three)          \n () -> cons (three, nil);
                    list23   = (two, list3)     \n () -> cons (two,   list3);
                    list123  = (one, list23)    \n () -> cons (one,   list23);
@@ -57,21 +41,21 @@ main = do
             in list3123 ();
 
         main = () \u () -> case sum (list) of
-            Int (i) -> case i () of
+            Int# (i) -> case i () of
                 9# -> Success ();
                 wrongResult -> TestFail (wrongResult);
             default -> Error ()
         |]
         initial = initialState "main" prog
     ansiSupport <- hSupportsANSI stdout
-    if ansiSupport
+    if ansiSupport || True
         then loopStg prettyprintAnsi initial
         else loopStg prettyprint     initial
 
 loopStg :: (forall a. PrettyAnsi a => a -> Text) -> StgState -> IO ()
 loopStg ppr state = do
     T.putStrLn (T.replicate 80 "=")
-    T.putStrLn (ppr (stgInfo state))
+    T.putStrLn (show' (stgTicks state) <> ". " <> ppr (stgInfo state))
     let continue = do
             T.putStrLn (T.replicate 80 "-")
             T.putStrLn (ppr state)

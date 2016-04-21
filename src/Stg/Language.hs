@@ -260,10 +260,8 @@ instance Pretty Expr where
         Let rec binds expr -> align (
             vsep [ "let" <> pretty rec <+> pretty binds
                  , "in" <+> pretty expr ])
-        Case expr alts ->
-            (hang 4 . vsep)
-                [ "case" <+> pretty expr <+> "of"
-                , pretty alts ]
+        Case expr alts -> vsep [ "case" <+> pretty expr <+> "of"
+                               , indent 4 (align (pretty alts)) ]
         AppF var args -> pretty var <+> prettyList args
         AppC con args -> pretty con <+> prettyList args
         AppP op arg1 arg2 -> pretty op <+> pretty arg1 <+> pretty arg2

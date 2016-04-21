@@ -7,6 +7,8 @@
 --     @x ()@, as opposed to having no argument list at all in the paper.
 --   * parentheses @()@ instead of curly braces @{}@
 --   * Comment syntax like in Haskell
+--   * Constructors can end with a @#@ to allow labelling primitive boxes
+--     e.g. with @Int#@.
 module Stg.Parser.Parser where
 
 
@@ -103,13 +105,15 @@ varTok = lexeme p <?> "variable"
                (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
 
 -- | Parse a constructor name. Constructors follow the same naming conventions
--- as variables, but start with an upper-case character instead.
+-- as variables, but start with an upper-case character instead, and may
+-- end with a @#@ symbol.
 conTok :: Parser Constr
 conTok = lexeme p <?> "constructor"
   where
-    p = liftA2 (\x xs -> Constr (T.pack (x:xs)))
-                P.upperChar
-                (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
+    p = liftA3 (\x xs hash -> Constr (T.pack (x:xs ++ hash)))
+               P.upperChar
+               (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
+               (P.option "" (P.string "#"))
 
 -- | Parse the @default@ token, used for alternatives that always match.
 defNotBoundTok :: Parser (Expr -> DefaultAlt)

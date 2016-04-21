@@ -20,6 +20,9 @@ module Stg.Language.Prelude (
     -- * Numbers
     add,
     numbers,
+
+    -- * Other
+    seq,
 ) where
 
 
@@ -35,6 +38,7 @@ import           Stg.Parser
 
 listC, foldl, foldl', foldr, iterate :: Program
 numbers, add :: Program
+seq :: Program
 
 -- | List standard constructors.
 --
@@ -53,10 +57,10 @@ listC = [stg|
 -- @
 add = [stg|
     add = () \n (x,y) -> case x () of
-        Int (x') -> case y () of
-            Int (y') -> case +# x' y' of
-                1# -> Int (1#); -- FIXME type hint
-                v  -> Int (v)
+        Int# (x') -> case y () of
+            Int# (y') -> case +# x' y' of
+                1# -> Int# (1#); -- FIXME type hint
+                v  -> Int# (v)
             default -> Error_add ()
         default -> Error_add () |]
 
@@ -126,9 +130,12 @@ iterate = listC <> [stgProgram|
 -- ten      = 10
 -- @
 numbers = [stgProgram|
-    minusOne = () \n () -> Int (-1#);
-    zero     = () \n () -> Int (0#);
-    one      = () \n () -> Int (1#);
-    two      = () \n () -> Int (2#);
-    three    = () \n () -> Int (3#);
-    ten      = () \n () -> Int (10#) |]
+    minusOne = () \n () -> Int# (-1#);
+    zero     = () \n () -> Int# (0#);
+    one      = () \n () -> Int# (1#);
+    two      = () \n () -> Int# (2#);
+    three    = () \n () -> Int# (3#);
+    ten      = () \n () -> Int# (10#) |]
+
+-- | Finally I can define 'Prelude.seq' directly! :-)
+seq = [stgProgram| seq = () \n (x,y) -> case x () of default -> y () |]

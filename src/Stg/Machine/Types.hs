@@ -17,8 +17,8 @@ import           Data.Monoid
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import qualified GHC.Exts                      as Exts
-import           Numeric
 import           Text.PrettyPrint.ANSI.Leijen  hiding ((<>))
+import           Text.Printf
 
 import           Stack
 import           Stg.Language
@@ -62,14 +62,17 @@ data StgState = StgState
 -- | Package of colour definitions used in this module.
 data StgStateColours = StgStateColours
     { headline :: Doc -> Doc
-    , number   :: Doc -> Doc
+        -- ^ Style of headlines in the state overview, such as \"Heap" and
+        --   "Frame i".
+    , address  :: Doc -> Doc
+        -- ^ Style of memory addresses.
     }
 
 -- | Colour definitions used in this module.
-colours :: StgStateColours
-colours = StgStateColours
+colour :: StgStateColours
+colour = StgStateColours
     { headline = dullblue
-    , number = dullgreen
+    , address = dullcyan . underline
     }
 
 instance Pretty StgState where
@@ -87,16 +90,16 @@ instance Pretty StgState where
 
 instance PrettyAnsi StgState where
     prettyAnsi state = nest 4 (vsep ["STG state", align (vsep
-        [ headline colours "Code:" <+> prettyAnsi (stgCode state)
+        [ headline colour "Code:" <+> prettyAnsi (stgCode state)
         , nest 4 (vsep
-            [headline colours "Stacks"
+            [headline colour "Stacks"
             , align (vsep
-                [ headline colours "Arg:" <+> prettyStackAnsi (stgArgStack state)
-                , headline colours "Ret:" <+> prettyStackAnsi (stgReturnStack state)
-                , headline colours "Upd:" <+> prettyStackAnsi (stgUpdateStack state) ])])
-        , nest 4 (vsep [headline colours "Heap", prettyAnsi (stgHeap state)])
-        , nest 4 (vsep [headline colours "Globals", prettyAnsi (stgGlobals state)])
-        , nest 4 (headline colours "Step:" <+> pretty (stgTicks state)) ])])
+                [ headline colour "Arg:" <+> prettyStackAnsi (stgArgStack state)
+                , headline colour "Ret:" <+> prettyStackAnsi (stgReturnStack state)
+                , headline colour "Upd:" <+> prettyStackAnsi (stgUpdateStack state) ])])
+        , nest 4 (vsep [headline colour "Heap", prettyAnsi (stgHeap state)])
+        , nest 4 (vsep [headline colour "Globals", prettyAnsi (stgGlobals state)])
+        , nest 4 (headline colour "Step:" <+> pretty (stgTicks state)) ])])
 
 -- | Prettyprint a 'Stack'.
 prettyStack :: Pretty a => Stack a -> Doc
@@ -132,13 +135,13 @@ data ReturnFrame = ReturnFrame Alts Locals
 
 instance Pretty ReturnFrame where
     pretty (ReturnFrame alts locals) =
-        (align . vsep) [ "Alts:" <+> align (pretty alts)
-                       , "Locals:" <+> align (pretty locals) ]
+        (align . vsep) [ fill 7 "Alts:"   <+> align (pretty alts)
+                       , fill 7 "Locals:" <+> align (pretty locals) ]
 
 instance PrettyAnsi ReturnFrame where
     prettyAnsi (ReturnFrame alts locals) =
-        (align . vsep) [ "Alts:" <+> align (prettyAnsi alts)
-                       , "Locals:" <+> align (prettyAnsi locals) ]
+        (align . vsep) [ headline colour (fill 7 "Alts:") <+> align (prettyAnsi alts)
+                       , headline colour (fill 7 "Locals:") <+> align (prettyAnsi locals) ]
 
 -- | Update frames store information about the machine's state before an
 -- updateable closure was entered, so that they can help update it once it is
@@ -149,27 +152,32 @@ data UpdateFrame = UpdateFrame (Stack ArgumentFrame) (Stack ReturnFrame) MemAddr
 instance Pretty UpdateFrame where
     pretty (UpdateFrame upd ret addr) =
         (align . vsep)
-             [ "Arg: " <+> prettyStack upd
-             , "Ret: " <+> prettyStack ret
-             , "Cont:" <+> pretty addr ]
+             [ "Update address:" <+> pretty addr
+             , "Arg:" <+> prettyStack upd
+             , "Ret:" <+> prettyStack ret ]
 
 instance PrettyAnsi UpdateFrame where
     prettyAnsi (UpdateFrame upd ret addr) =
         (align . vsep)
-             [ headline colours "Arg: " <+> prettyStackAnsi upd
-             , headline colours "Ret: " <+> prettyStackAnsi ret
-             , headline colours "Cont:" <+> prettyAnsi addr ]
+             [ headline colour "Update address:" <+> prettyAnsi addr
+             , headline colour "Arg:" <+> prettyStackAnsi upd
+             , headline colour "Ret:" <+> prettyStackAnsi ret]
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int
     deriving (Eq, Ord, Show)
 
+
+
 instance Pretty MemAddr where
-    pretty (MemAddr addr) = (text . ("0x" <>) . ($ "") . showHex) addr
+    pretty (MemAddr addr) =  "^" <> hexAddr addr
+      where
+        hexAddr = text . printf "%02x"
 
 instance PrettyAnsi MemAddr where
-    prettyAnsi (MemAddr addr) = number colours
-        ((text . ("0x" <>) . ($ "") . showHex) addr)
+    prettyAnsi (MemAddr addr) = address colour (hexAddr addr)
+      where
+        hexAddr = text . printf "%02x"
 
 -- | A value of the STG machine.
 data Value = Addr MemAddr | PrimInt Integer
@@ -183,8 +191,8 @@ instance Pretty Value where
 
 instance PrettyAnsi Value where
     prettyAnsi = \case
-        Addr addr -> number colours (prettyAnsi addr)
-        PrimInt i -> number colours (prettyAnsi i <> "#")
+        Addr addr -> prettyAnsi addr
+        PrimInt i -> prettyAnsi (Literal i)
     prettyAnsiList = tupled . map prettyAnsi
 
 -- | The different code states the STG can be in.
@@ -210,7 +218,7 @@ instance PrettyAnsi Code where
             , "Locals:" <+> prettyAnsi locals ]
         Enter addr -> "Enter" <+> prettyAnsi addr
         ReturnCon constr args -> "ReturnCon" <+> prettyAnsi constr <+> prettyAnsiList args
-        ReturnInt i -> "ReturnInt" <+> prettyAnsi i
+        ReturnInt i -> "ReturnInt" <+> prettyAnsi (Literal i)
 
 -- | Prettyprint a 'Map', @key -> value@.
 prettyMap :: (Pretty k, Pretty v) => Map k v -> Doc
@@ -316,10 +324,20 @@ data Closure = Closure LambdaForm [Value]
     deriving (Eq, Ord, Show)
 
 instance Pretty Closure where
-    pretty (Closure lambdaForm []) = pretty lambdaForm
-    pretty (Closure lambdaForm free) = (align . vsep)
-        [ pretty lambdaForm
-        , "enclosed:" <+> prettyList free ]
+    pretty (Closure (lambdaForm) []) = pretty lambdaForm
+    pretty (Closure lambda freeVals) =
+        prettyLambda id
+                     prettyFree
+                     pretty
+                     prettyList
+                     pretty
+                     lambda
+      where
+        tupled' = encloseSep lparen rparen (comma <> space)
+        prettyFree vars = tupled' (zipWith
+            (\var val -> pretty var <+> "->" <+> pretty val)
+            vars
+            freeVals )
 
 instance PrettyAnsi Closure where
     prettyAnsi (Closure (lambdaForm) []) = prettyAnsi lambdaForm

@@ -17,25 +17,33 @@ import           Stg.Language
 
 
 
--- | Keyword style
-keyword :: Doc -> Doc
-keyword = dullblue
+-- | Package of colour definitions used in this module.
+data StgStateColours = StgStateColours
+    { keyword     :: Doc -> Doc
+        -- ^ Keyword style
+    , prim        :: Doc -> Doc
+        -- ^ Primitive style, for literals and functions
+    , variable    :: Doc -> Doc
+        -- ^ Variable style
+    , constructor :: Doc -> Doc
+        -- ^ Constructor style
+    , lambdaHead  :: Doc -> Doc
+        -- ^ Head of a lambda form
+    , semicolon   :: Doc -> Doc
+        -- ^ Semicolons separating lists of bindings and alternatives
+    }
 
--- | Primitive style, for literals and functions
-prim :: Doc -> Doc
-prim = dullgreen
+-- | Colour definitions used in this module.
+colour :: StgStateColours
+colour = StgStateColours
+    { keyword = id
+    , prim = dullgreen
+    , variable = dullyellow
+    , constructor = dullmagenta
+    , lambdaHead = id
+    , semicolon = dullwhite
+    }
 
--- | Name style, for variables and constructors
-name :: Doc -> Doc
-name = dullyellow
-
--- | Head of a lambda form
-lambdaHead :: Doc -> Doc
-lambdaHead = dullcyan
-
--- | Semicolons separating lists of bindings and alternatives
-semicolon :: Doc -> Doc
-semicolon = dullwhite
 
 
 
@@ -77,13 +85,13 @@ instance PrettyAnsi Program where
 
 instance PrettyAnsi Binds where
     prettyAnsi (Binds bs) =
-        (align . vsep . punctuate (semicolon ";") . map prettyBinding . M.toList) bs
+        (align . vsep . punctuate (semicolon colour ";") . map prettyBinding . M.toList) bs
       where
         prettyBinding (var, lambda) =
             prettyAnsi var <+> "=" <+> prettyAnsi lambda
 
 instance PrettyAnsi LambdaForm where
-    prettyAnsi = prettyLambda lambdaHead
+    prettyAnsi = prettyLambda (lambdaHead colour)
                               prettyAnsiList
                               prettyAnsi
                               prettyAnsiList
@@ -91,16 +99,17 @@ instance PrettyAnsi LambdaForm where
 
 instance PrettyAnsi UpdateFlag
 
-instance PrettyAnsi Rec
+instance PrettyAnsi Rec where
+    prettyAnsi = keyword colour . pretty
 
 instance PrettyAnsi Expr where
     prettyAnsi = \case
         Let rec binds expr -> align (
-            keyword "let" <> prettyAnsi rec <+> prettyAnsi binds
+            keyword colour "let" <> prettyAnsi rec <+> prettyAnsi binds
             <$>
-            keyword "in" <+> prettyAnsi expr )
+            keyword colour "in" <+> prettyAnsi expr )
         Case expr alts ->
-            keyword "case" <+> prettyAnsi expr <+> keyword "of"
+            keyword colour "case" <+> prettyAnsi expr <+> keyword colour "of"
             <$>
             indent 4 (prettyAnsi alts)
         AppF var args -> prettyAnsi var <+> prettyAnsiList args
@@ -115,11 +124,11 @@ instance PrettyAnsi Alts where
 
 instance PrettyAnsi AlgebraicAlts where
     prettyAnsi (AlgebraicAlts alts def) =
-        vsep (punctuate (semicolon ";") (map prettyAnsi alts ++ [prettyAnsi def]))
+        vsep (punctuate (semicolon colour ";") (map prettyAnsi alts ++ [prettyAnsi def]))
 
 instance PrettyAnsi PrimitiveAlts where
     prettyAnsi (PrimitiveAlts alts def) =
-        vsep (punctuate (semicolon ";") (map prettyAnsi alts ++ [prettyAnsi def]))
+        vsep (punctuate (semicolon colour ";") (map prettyAnsi alts ++ [prettyAnsi def]))
 
 instance PrettyAnsi AlgebraicAlt where
     prettyAnsi (AlgebraicAlt con args expr) =
@@ -131,14 +140,14 @@ instance PrettyAnsi PrimitiveAlt where
 
 instance PrettyAnsi DefaultAlt where
     prettyAnsi = \case
-        DefaultNotBound expr  -> keyword "default" <+> "->" <+> prettyAnsi expr
+        DefaultNotBound expr  -> keyword colour "default" <+> "->" <+> prettyAnsi expr
         DefaultBound var expr -> prettyAnsi var <+> "->" <+> prettyAnsi expr
 
 instance PrettyAnsi Literal where
-    prettyAnsi (Literal i) = prim (integer i <> "#")
+    prettyAnsi (Literal i) = prim colour (integer i <> "#")
 
 instance PrettyAnsi PrimOp where
-    prettyAnsi op = prim (case op of
+    prettyAnsi op = prim colour (case op of
         Add -> "+#"
         Sub -> "-#"
         Mul -> "*#"
@@ -146,14 +155,14 @@ instance PrettyAnsi PrimOp where
         Mod -> "%#" )
 
 instance PrettyAnsi Var where
-    prettyAnsi (Var var) = name (string (T.unpack var))
+    prettyAnsi (Var var) = variable colour (string (T.unpack var))
     prettyAnsiList = parens . align . hcat . punctuate "," . map prettyAnsi
 
 instance PrettyAnsi Atom where
     prettyAnsi = \case
-        AtomVar var -> prettyAnsi     var
+        AtomVar var -> prettyAnsi var
         AtomLit lit -> prettyAnsi lit
     prettyAnsiList = parens . align . hcat . punctuate "," . map prettyAnsi
 
 instance PrettyAnsi Constr where
-    prettyAnsi (Constr con) = name (string (T.unpack con))
+    prettyAnsi (Constr con) = constructor colour (string (T.unpack con))
