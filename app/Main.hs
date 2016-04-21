@@ -73,7 +73,7 @@ loopStg ppr state = do
     T.putStrLn (T.replicate 80 "=")
     T.putStrLn (ppr (stgInfo state))
     case stgInfo state of
-        StateTransiton{} -> do
+        Info (StateTransiton{}) _ -> do
             T.putStrLn (T.replicate 80 "-")
             T.putStrLn (ppr state)
             loopStg ppr (evalStep state)

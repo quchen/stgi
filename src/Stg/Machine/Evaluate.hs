@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Evaluate STG 'Program's.
@@ -62,10 +63,12 @@ evalUntil
     -> StgState           -- ^ Final state
 evalUntil maxSteps p = \case
     state@StgState{ stgTicks = ticks } | ticks >= maxSteps
-        -> state { stgInfo = MaxStepsExceeded }
+        -> state { stgInfo = Info MaxStepsExceeded [] }
     state | p state
-        -> state { stgInfo = HaltedByPredicate }
-    state@StgState{ stgInfo = StateTransiton{} }
+        -> state { stgInfo = Info HaltedByPredicate [] }
+    state@StgState{ stgInfo = Info (StateTransiton _) _ }
+        -> evalUntil maxSteps p (evalStep state)
+    state@StgState{ stgInfo = Info StateInitial _ }
         -> evalUntil maxSteps p (evalStep state)
     state
         -> state
@@ -86,7 +89,7 @@ stgRule s@StgState
 
     in s { stgCode     = Enter a
          , stgArgStack = argS'
-         , stgInfo     = StateTransiton "Function application" }
+         , stgInfo     = Info (StateTransiton "Function application") [] }
 
 -- (2) Enter non-updatable closure
 stgRule s@StgState
@@ -102,7 +105,7 @@ stgRule s@StgState
 
     in s { stgCode     = Eval body locals
          , stgArgStack = argS'
-         , stgInfo     = StateTransiton "Enter non-updatable closure" }
+         , stgInfo     = Info (StateTransiton "Enter non-updatable closure") [] }
 
 -- (3) let(rec)
 stgRule s@StgState
@@ -134,7 +137,7 @@ stgRule s@StgState
 
     in s { stgCode = Eval expr locals'
          , stgHeap = heap'
-         , stgInfo = StateTransiton infotext }
+         , stgInfo = Info (StateTransiton infotext) [] }
 
 -- (4) Case evaluation
 stgRule s@StgState
@@ -145,7 +148,7 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals
          , stgReturnStack = retS'
-         , stgInfo        = StateTransiton "case evaluation" }
+         , stgInfo        = Info (StateTransiton "case evaluation") [] }
 
 -- (5) Constructor application
 stgRule s@StgState
@@ -154,7 +157,7 @@ stgRule s@StgState
     | Success valsXs <- vals locals globals xs
 
   = s { stgCode = ReturnCon con valsXs
-      , stgInfo = StateTransiton "Constructor application" }
+      , stgInfo = Info (StateTransiton "Constructor application") [] }
 
 -- (6) Algebraic constructor return, standard match found
 stgRule s@StgState
@@ -166,7 +169,7 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
-         , stgInfo        = StateTransiton "Algebraic constructor return, standard match" }
+         , stgInfo        = Info (StateTransiton "Algebraic constructor return, standard match") [] }
 
 -- (7) Algebraic constructor return, unbound default match
 stgRule s@StgState
@@ -176,7 +179,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = StateTransiton "Algebraic constructor return, unbound default match" }
+      , stgInfo        = Info (StateTransiton "Algebraic constructor return, unbound default match") [] }
 
 -- (8) Algebraic constructor return, bound default match
 stgRule s@StgState
@@ -194,19 +197,19 @@ stgRule s@StgState
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
          , stgHeap        = heap'
-         , stgInfo        = StateTransiton "Algebraic constructor return, bound default match" }
+         , stgInfo        = Info (StateTransiton "Algebraic constructor return, bound default match") [] }
 
 -- (9) Literal evaluation
 stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = s { stgCode = ReturnInt k
-      , stgInfo = StateTransiton "Literal evaluation" }
+      , stgInfo = Info (StateTransiton "Literal evaluation") [] }
 
 -- (10) Literal application
 stgRule s@StgState { stgCode = Eval (AppF f []) locals }
     | Success (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k
-      , stgInfo = StateTransiton "Literal application" }
+      , stgInfo = Info (StateTransiton "Literal application") [] }
 
 -- (11) Primitive constructor return, standard match found
 stgRule s@StgState
@@ -216,7 +219,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = StateTransiton "Primitive constructor return, standard match found" }
+      , stgInfo        = Info (StateTransiton "Primitive constructor return, standard match found") [] }
 
 -- (12) Primitive constructor return, bound default match
 stgRule s@StgState
@@ -228,7 +231,7 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
-         , stgInfo        = StateTransiton "Primitive constructor return, bound default match" }
+         , stgInfo        = Info (StateTransiton "Primitive constructor return, bound default match") [] }
 
 -- (13) Primitive constructor return, unbound default match
 stgRule s@StgState
@@ -238,7 +241,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = StateTransiton "Primitive constructor return, unbound default match" }
+      , stgInfo        = Info (StateTransiton "Primitive constructor return, unbound default match") [] }
 
 -- (14) Primitive function application
 stgRule s@StgState
@@ -254,7 +257,7 @@ stgRule s@StgState
             Mod -> rem
 
     in s { stgCode = ReturnInt (apply op xVal yVal)
-         , stgInfo = StateTransiton "Primitive function application"}
+         , stgInfo = Info (StateTransiton "Primitive function application") [] }
 
 -- (15) Enter updatable closure
 stgRule s@StgState
@@ -272,7 +275,7 @@ stgRule s@StgState
          , stgArgStack    = Empty
          , stgReturnStack = Empty
          , stgUpdateStack = updS'
-         , stgInfo        = StateTransiton "Enter updatable closure" }
+         , stgInfo        = Info (StateTransiton "Enter updatable closure") [] }
 
 -- (16) Algebraic constructor return, argument/return stacks empty -> update
 stgRule s@StgState
@@ -293,7 +296,7 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = StateTransiton "Algebraic constructor return, argument/return stacks empty. Triggering update" }
+         , stgInfo        = Info (StateTransiton "Algebraic constructor return, argument/return stacks empty. Triggering update") [] }
 
 -- (17a) Enter partially applied closure
 stgRule s@StgState
@@ -318,39 +321,39 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = StateTransiton "Enter partially applied closure" }
+         , stgInfo        = Info (StateTransiton "Enter partially applied closure") [] }
 
 -- TODO: Why this rule? Citation!
 stgRule s@StgState
     { stgCode        = ReturnInt{}
     , stgUpdateStack = Empty }
-  = s { stgInfo = StateError "ReturnInt state with empty update stack" }
+  = s { stgInfo = Info (StateError "ReturnInt state with empty update stack") [] }
 
 -- Page 39, 2nd paragraph
 stgRule s@StgState
     { stgCode = Enter addr
     , stgHeap = heap }
     | Just (Closure (LambdaForm _ Update (_:_) _) _) <- H.lookup addr heap
-  = s { stgInfo = StateError "Closures with non-empty argument lists are never updatable" }
+  = s { stgInfo = Info (StateError "Closures with non-empty argument lists are never updatable") [] }
 
 -- Function argument not in scope
 stgRule s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
     | Failure valLookupError <- vals locals globals (AtomVar f : xs)
-  = s { stgInfo = StateError valLookupError }
+  = s { stgInfo = Info (StateError valLookupError) [] }
 
 -- Constructor argument not in scope
 stgRule s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
     | Failure valLookupError <- vals locals globals xs
-  = s { stgInfo = StateError valLookupError }
+  = s { stgInfo = Info (StateError valLookupError) [] }
 
 stgRule s@StgState
     { stgArgStack    = S.Empty
     , stgReturnStack = S.Empty
     , stgUpdateStack = S.Empty }
-  = s { stgInfo = NoRulesApply Nothing }
+  = s { stgInfo = Info NoRulesApply [] }
 
-stgRule s = s { stgInfo = NoRulesApply (Just "but the stacks are not empty; the program probably terminated early") }
+stgRule s = s { stgInfo = Info NoRulesApply ["Stacks are not empty; the program probably terminated early"] }

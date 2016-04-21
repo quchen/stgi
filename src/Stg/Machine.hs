@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | User-facing API to work with STG programs.
@@ -33,7 +34,7 @@ initialState mainVar (Program binds) = StgState
     , stgHeap        = heap
     , stgGlobals     = globals
     , stgTicks       = 0
-    , stgInfo        = StateTransiton "Initial state" }
+    , stgInfo        = Info StateInitial [] }
   where
     globalVars :: [Var]
     globalVals :: [LambdaForm]

@@ -1,7 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 -- | Types used in the execution of the STG machine.
 module Stg.Machine.Types where
@@ -14,6 +16,7 @@ import qualified Data.Map                      as M
 import           Data.Monoid
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
+import qualified GHC.Exts                      as Exts
 import           Numeric
 import           Text.PrettyPrint.ANSI.Leijen  hiding ((<>))
 
@@ -247,8 +250,17 @@ instance PrettyAnsi Locals where
     prettyAnsi (Locals locals) = prettyAnsiMap locals
 
 -- | User-facing information about the current state of the STG.
-data Info =
-      NoRulesApply (Maybe Text)
+data Info = Info InfoShort InfoDetail
+    deriving (Eq, Ord, Show)
+
+instance Pretty Info where
+    pretty (Info short []) = pretty short
+    pretty (Info short details) = vsep [pretty short, pretty details]
+
+instance PrettyAnsi Info
+
+data InfoShort =
+      NoRulesApply
       -- ^ There is no valid state transition to continue with.
 
     | MaxStepsExceeded
@@ -268,17 +280,36 @@ data Info =
 
     | StateTransiton Text
       -- ^ Description of the state transition that lead to the current state.
+
+    | StateInitial
+      -- ^ Used to mark the initial state of the machine.
     deriving (Eq, Ord, Show)
 
-instance Pretty Info where
+instance Pretty InfoShort where
     pretty HaltedByPredicate = "Halting predicate held"
-    pretty (NoRulesApply Nothing) = "No further rules apply"
-    pretty (NoRulesApply (Just detail)) = "No further rules apply, but " <> pretty (T.unpack detail)
+    pretty NoRulesApply = "No further rules apply"
     pretty MaxStepsExceeded = "Maximum number of steps exceeded"
     pretty (StateError x) = "Errorenous state: " <+> pretty (T.unpack x)
     pretty (StateTransiton x) = "State transition:" <+> pretty (T.unpack x)
+    pretty StateInitial = "Initial state"
 
-instance PrettyAnsi Info
+newtype InfoDetail = InfoDetail [Text]
+    deriving (Eq, Ord, Show)
+
+instance Exts.IsList InfoDetail where
+    type Item InfoDetail = Text
+    toList = Exts.coerce
+    fromList = Exts.coerce
+
+instance Pretty InfoDetail where
+    pretty (InfoDetail entries) = case entries of
+        [] -> mempty
+        es -> let -- TODO: rewrite this crap code
+                  worded = map T.words es
+                  concatted = map (hsep . map (text . T.unpack)) worded
+                  bulleted = map ("  -" <+>) concatted
+                  listed = align (vsep bulleted)
+              in listed
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]
