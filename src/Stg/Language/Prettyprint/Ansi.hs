@@ -147,12 +147,7 @@ instance PrettyAnsi Literal where
     prettyAnsi (Literal i) = prim colour (integer i <> "#")
 
 instance PrettyAnsi PrimOp where
-    prettyAnsi op = prim colour (case op of
-        Add -> "+#"
-        Sub -> "-#"
-        Mul -> "*#"
-        Div -> "/#"
-        Mod -> "%#" )
+    prettyAnsi = prim colour . pretty
 
 instance PrettyAnsi Var where
     prettyAnsi (Var var) = variable colour (string (T.unpack var))

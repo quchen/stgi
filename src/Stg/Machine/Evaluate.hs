@@ -267,12 +267,19 @@ stgRule s@StgState
     | Just (PrimInt xVal) <- localVal locals x
     , Just (PrimInt yVal) <- localVal locals y
 
-  = let apply = \case
+  = let boolToPrim p a b = if p a b then 1 else 0
+        apply = \case
             Add -> (+)
             Sub -> (-)
             Mul -> (*)
             Div -> quot
             Mod -> rem
+            Eq  -> boolToPrim (==)
+            Lt  -> boolToPrim (<)
+            Leq -> boolToPrim (<=)
+            Gt  -> boolToPrim (>)
+            Geq -> boolToPrim (>=)
+            Neq -> boolToPrim (/=)
 
     in s { stgCode = ReturnInt (apply op xVal yVal)
          , stgInfo = Info (StateTransiton "Primitive function application") [] }

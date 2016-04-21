@@ -151,7 +151,8 @@ instance Num Literal where
     fromInteger = Literal . fromInteger
 
 -- | Primitive operations.
-data PrimOp = Add | Sub | Mul | Div | Mod
+data PrimOp =
+    Add | Sub | Mul | Div | Mod | Eq | Lt | Leq | Gt | Geq | Neq
     deriving (Eq, Ord, Show, Generic, Bounded, Enum)
 
 -- | Variable.
@@ -292,6 +293,12 @@ instance Pretty PrimOp where
         Mul -> "*#"
         Div -> "/#"
         Mod -> "%#"
+        Eq  -> "==#"
+        Lt  -> "<#"
+        Leq -> "<=#"
+        Gt  -> ">#"
+        Geq -> ">=#"
+        Neq -> "/=#"
 
 instance Pretty Var where
     pretty (Var name) = string (T.unpack name)
