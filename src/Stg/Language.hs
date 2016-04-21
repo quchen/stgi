@@ -11,21 +11,8 @@
 -- "Stg.Parser" module, as opposed to manually combining the data types given
 -- in this module.
 --
--- For example, here is a STG program and its syntax tree representation:
---
--- >>> :{
--- [|stg
--- fix = () \\n (f) ->
---     letrec x = (f, x) \\u () -> f (x)
---     in x ()
--- |]
--- :}
--- Binds
---     [("fix", LambdaForm [] NoUpdate ["f"]
---         (Let Recursive
---             (Binds [("x", LambdaForm ["f","x"] Update []
---                 (AppF "f" [AtomVar "x"]))])
---             (AppF "x" [])))]
+-- For plenty of comparisons of STG language source and generated parse trees,
+-- have a look at the "Stg.Parser.QuasiQuoter" module.
 module Stg.Language (
     Program       (..),
     Binds         (..),
@@ -75,6 +62,8 @@ instance Monoid Program where
     Program x `mappend` Program y = Program (x <> y)
 
 -- | Bindings are collections of lambda forms, indexed over variables.
+--
+-- They exist at the top level, or as part of a let(rec) binding.
 newtype Binds = Binds (Map Var LambdaForm)
     deriving (Eq, Ord, Generic)
 
