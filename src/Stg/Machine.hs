@@ -11,13 +11,14 @@ module Stg.Machine (
 
 
 import qualified Data.Map             as M
-import           Data.Maybe
+import qualified Data.Text            as T
 
 import           Stg.Language
 import           Stg.Machine.Env
 import           Stg.Machine.Evaluate
 import qualified Stg.Machine.Heap     as H
 import           Stg.Machine.Types
+import           Stg.Util
 
 
 
@@ -51,6 +52,7 @@ initialState mainVar (Program binds) = StgState
     liftClosure :: LambdaForm -> Closure
     liftClosure lf@(LambdaForm free _ _ _) =
         let freeVals :: [Value]
-            freeVals = fromMaybe (error "FOOBAR-MAIN")
-                                 (traverse (globalVal globals) free)
+            freeVals = case traverse (globalVal globals) free of
+                Success x -> x
+                Failure e -> (error ("liftClosure in initial state: " ++ T.unpack e))
         in Closure lf freeVals

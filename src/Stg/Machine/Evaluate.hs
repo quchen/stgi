@@ -13,8 +13,8 @@ module Stg.Machine.Evaluate (
 import qualified Data.Foldable     as F
 import qualified Data.List         as L
 import qualified Data.Map          as M
-import           Data.Maybe
 import           Data.Monoid
+import qualified Data.Text         as T
 
 import           Stack             (Stack (..), (<>>))
 import qualified Stack             as S
@@ -135,8 +135,9 @@ stgRule s@StgState
         liftClosure :: LambdaForm -> Closure
         liftClosure lf@(LambdaForm free _ _ _) =
             let freeVals :: [Value]
-                freeVals = fromMaybe (error "liftClosure in (3)/let(rec)")
-                                     (traverse (localVal localsRhs) free)
+                freeVals = case traverse (localVal localsRhs) free of
+                    Success x -> x
+                    Failure e -> (error ("liftClosure in (3)/let(rec): " ++ T.unpack e))
             in Closure lf freeVals
 
          -- rho' in the paper
@@ -264,8 +265,8 @@ stgRule s@StgState
 -- (14) Primitive function application
 stgRule s@StgState
     { stgCode = Eval (AppP op (AtomVar x) (AtomVar y)) locals }
-    | Just (PrimInt xVal) <- localVal locals x
-    , Just (PrimInt yVal) <- localVal locals y
+    | Success (PrimInt xVal) <- localVal locals x
+    , Success (PrimInt yVal) <- localVal locals y
 
   = let boolToPrim p a b = if p a b then 1 else 0
         apply = \case

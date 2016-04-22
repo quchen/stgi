@@ -52,13 +52,13 @@ vals :: Locals -> Globals -> [Atom] -> Validate Text [Value]
 vals locals globals = traverse (val locals globals)
 
 -- | Look up the value of a variable in the local environment.
-localVal :: Locals -> Var -> Maybe Value
-localVal (Locals locals) var = M.lookup var locals
+localVal :: Locals -> Var -> Validate Text Value
+localVal locals = val locals mempty . AtomVar
 
 -- | Create the global environment from a list of bindings.
 makeGlobals :: [(Var, Value)] -> Globals
 makeGlobals = Globals . M.fromList
 
 -- | Look up the value of a variable in the global environment.
-globalVal :: Globals -> Var -> Maybe Value
-globalVal (Globals globals) var = M.lookup var globals
+globalVal :: Globals -> Var -> Validate Text Value
+globalVal globals = val mempty globals . AtomVar
