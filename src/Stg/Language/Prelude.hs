@@ -100,7 +100,7 @@ foldr = [stg|
     foldr = () \n (f, z, xs) -> case xs () of
         Nil () -> z ();
         Cons (y,ys) ->
-            let rest = () \n () -> foldr (f,z,ys)
+            let rest = (f,z,ys) \u () -> foldr (f,z,ys)
             in f (y, rest)
         default -> Error_foldr () |]
 
