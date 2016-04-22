@@ -12,10 +12,14 @@
 module Stg.Language.Prelude (
     -- * Lists
     listC,
+    concat,
     foldl,
     foldl',
     foldr,
     iterate,
+    cycle,
+    take,
+    repeat,
 
     -- * Numbers
     add,
@@ -23,6 +27,9 @@ module Stg.Language.Prelude (
 
     -- * Other
     seq,
+    id,
+    const,
+    compose,
 ) where
 
 
@@ -36,9 +43,9 @@ import           Stg.Parser
 
 
 
-listC, foldl, foldl', foldr, iterate :: Program
+listC, concat, foldl, foldl', foldr, iterate, cycle, take, repeat :: Program
 numbers, add :: Program
-seq :: Program
+seq, id, const, compose :: Program
 
 -- | List standard constructors.
 --
@@ -49,6 +56,14 @@ seq :: Program
 listC = [stg|
     nil = () \n () -> Nil ();
     cons = () \n (x,xs) -> Cons (x,xs) |]
+
+concat = [stg|
+    concat = () \n (xs, ys) -> case xs () of
+        Nil () -> ys ();
+        Cons (x,xs') -> let rest = () \u () -> concat (xs', ys)
+                        in cons (x, rest)
+        default -> Error_concat ()
+    |]
 
 -- | Integer addition.
 --
@@ -113,11 +128,61 @@ foldr = [stg|
 -- @
 -- iterate : (a -> a, a) -> [a]
 -- @
-iterate = listC <> [stgProgram|
+iterate = listC <> [stg|
     iterate = () \n (f,x) ->
         letrec fx = (f,x) \u () -> f (x);
                rest = (f,fx) \u () -> iterate (f,fx)
         in cons (x,rest) |]
+
+-- | Infinite list, created by repeating an initial (non-empty) list.
+--
+-- @
+-- cycle [x,y,z] = [x,y,z, x,y,z, x,y,z, ...]
+-- @
+--
+-- @
+-- cycle : [a] -> [a]
+-- @
+cycle = concat <> [stg|
+    cycle = () \n (xs) ->
+        letrec xs' = (xs, xs') \u () -> concat (xs, xs')
+        in xs' ()
+    |]
+
+-- | Take n elements form the beginning of a list.
+--
+-- @
+-- take : Int -> [a] -> [a]
+-- @
+take = listC <> add <> [stg|
+    take = () \n (n) ->
+        letrec  minusOne = () \n () -> Int# (-1#);
+                takeN = (n, minusOne) \n (xs) -> case n () of
+                    Int# (i) -> case i () of
+                        0# -> nil ()
+                        default ->
+                            letrec n' = (n, minusOne) \u () -> add (n, minusOne)
+                            in case xs () of
+                                   Nil () -> nil ();
+                                   Cons (y,ys) ->
+                                       let rest = (n', ys) \u () -> take (n', ys)
+                                       in cons (y, rest)
+                                   default -> Error_take_not_a_list ()
+                    default -> Error_take_not_an_int ()
+        in takeN ()
+    |]
+
+-- | Repeat a single element infinitely.
+--
+-- @
+-- repeat : a -> [a]
+-- @
+repeat = listC <> [stg|
+    repeat = () \n (x) ->
+        letrec xs = (x, xs) \u () -> cons (x,xs)
+        in xs ()
+    |]
+
 
 -- | Various common numbers.
 --
@@ -129,7 +194,7 @@ iterate = listC <> [stgProgram|
 -- three    =  3
 -- ten      = 10
 -- @
-numbers = [stgProgram|
+numbers = [stg|
     minusOne = () \n () -> Int# (-1#);
     zero     = () \n () -> Int# (0#);
     one      = () \n () -> Int# (1#);
@@ -137,5 +202,34 @@ numbers = [stgProgram|
     three    = () \n () -> Int# (3#);
     ten      = () \n () -> Int# (10#) |]
 
+
+
 -- | Finally I can define 'Prelude.seq' directly! :-)
-seq = [stgProgram| seq = () \n (x,y) -> case x () of default -> y () |]
+seq = [stg| seq = () \n (x,y) -> case x () of default -> y () |]
+
+-- | Identity function.
+--
+-- @
+-- id : a -> a
+-- @
+id = [stg| id = () \n (x) -> x () |]
+
+-- | Constant function.
+--
+-- @
+-- const : (a, b) -> a
+-- @
+const = [stg| const = () \n (x,y) -> x () |]
+
+-- | Function composition.
+--
+-- @
+-- compose : (b -> c, a -> b) -> a -> c
+-- @
+compose = [stg|
+    compose = () \n (f, g) ->
+        let fgx = (f,g) \n (x) ->
+                let gx = (g,x) \n () -> g (x) -- TODO: \u or \n?
+                in f (gx)
+        in fgx ()
+    |]
