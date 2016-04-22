@@ -131,7 +131,7 @@ prettyStackAnsi Empty = "(empty)"
 prettyStackAnsi stack = (align . vsep) prettyFrames
   where
     prettyFrame frame i = "Frame" <+> int i <> ":" <+> align (prettyAnsi frame)
-    prettyFrames = zipWith prettyFrame (toList stack) [1..]
+    prettyFrames = zipWith prettyFrame (toList stack) (reverse [1..length stack])
 
 -- | Argument frames store values on the argument stack, so that they can
 -- later be retrieved when the calling function can be applied to them.
@@ -231,7 +231,7 @@ instance PrettyAnsi Code where
     prettyAnsi = \case
         Eval expr locals -> (align . vsep)
             [ "Eval" <+> prettyAnsi expr
-            , "Locals:" <+> prettyAnsi locals ]
+            , headline colour "Locals:" <+> prettyAnsi locals ]
         Enter addr -> "Enter" <+> prettyAnsi addr
         ReturnCon constr args -> "ReturnCon" <+> prettyAnsi constr <+> prettyAnsiList args
         ReturnInt i -> "ReturnInt" <+> prettyAnsi (Literal i)
