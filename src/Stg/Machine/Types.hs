@@ -6,7 +6,23 @@
 {-# LANGUAGE TypeFamilies               #-}
 
 -- | Types used in the execution of the STG machine.
-module Stg.Machine.Types where
+module Stg.Machine.Types (
+    StgState(..),
+    StgStateColours(..),
+    ArgumentFrame(..),
+    ReturnFrame(..),
+    UpdateFrame(..),
+    MemAddr(..),
+    Value(..),
+    Code(..),
+    Globals(..),
+    Locals(..),
+    Info(..),
+    InfoShort(..),
+    InfoDetail(..),
+    Closure(..),
+    Heap(..),
+) where
 
 
 
@@ -267,6 +283,8 @@ instance Pretty Info where
 
 instance PrettyAnsi Info
 
+-- | Short machine status info. This field may be used programmatically, in
+-- particular it tells the stepper whether the machine has halted.
 data InfoShort =
       NoRulesApply
       -- ^ There is no valid state transition to continue with.
@@ -301,6 +319,8 @@ instance Pretty InfoShort where
     pretty (StateTransiton x) = "State transition:" <+> pretty (T.unpack x)
     pretty StateInitial = "Initial state"
 
+-- | Detailed information that may be useful to the user. Not used
+-- programmatically.
 newtype InfoDetail = InfoDetail [Text]
     deriving (Eq, Ord, Show)
 
