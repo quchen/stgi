@@ -5,6 +5,8 @@ module Stg.Machine.Heap (
     update,
     alloc,
     allocMany,
+
+    -- * Garbage collection
     garbageCollect,
 ) where
 

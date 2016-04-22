@@ -1,8 +1,11 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase      #-}
+{-# LANGUAGE OverloadedLists #-}
 
 -- | Remove unused heap objects.
 module Stg.Machine.Heap.GarbageCollection (
-    garbageCollect
+    garbageCollect,
+    Dead(..),
+    Alive(..),
 ) where
 
 
@@ -19,6 +22,12 @@ import           Stg.Machine.Types
 
 
 
+-- | Alive memory addresses.
+newtype Alive = Alive (Set MemAddr)
+
+-- | Dead memory addresses that have been eliminated by garbage collection.
+newtype Dead = Dead (Set MemAddr)
+
 -- | Simple tracing garbage collector.
 --
 -- 1. Get the addresses of all globals.
@@ -28,13 +37,52 @@ import           Stg.Machine.Types
 garbageCollect
     :: Globals -- ^ Root elements (unconditionally alive).
     -> Heap
-    -> (Set MemAddr, Set MemAddr, Heap) -- ^ (dead, alive, new heap)
-garbageCollect globals heap = (dead, alive, cleanHeap)
+    -> (Dead, Alive, Heap)
+garbageCollect globals h@(Heap heap) = (Dead dead, Alive alive, Heap cleanHeap)
+  where
+    alive = aliveAddresses globals h
+    dead = M.keysSet heap `S.difference` alive
+    (cleanHeap, _deadHeap) = M.partitionWithKey isAlive heap
+    isAlive addr _ = S.member addr alive
+
+-- garbageCollect'
+--     :: Globals -- ^ Root elements (unconditionally alive).
+--     -> Heap
+--     -> (Dead, Alive, Heap)
+garbageCollect' globals heap = loop ([], alive, alive, heap)
   where
     alive = aliveAddresses globals heap
-    dead = let Heap h = heap
-           in M.keysSet h `S.difference` alive
-    cleanHeap = heap `keepOnly` alive
+    loop x@(_, _, [], _) = x
+    loop x = loop (gcStep x)
+    gcStep (dead, alive, toConsider, heap) = (dead', alive', toConsider', heap')
+      where
+        (aliveHeap, deadHeap) = let isAlive addr _ = S.member addr alive
+                                    Heap h = heap
+                                in M.partitionWithKey isAlive h
+        dead'  = dead  <> M.keysSet deadHeap
+        alive' = alive <> M.keysSet aliveHeap
+        toConsider' = M.keysSet aliveHeap
+        heap' = Heap aliveHeap
+
+garbageCollect2 globals heap = evacLoop ([], globalHeap, heap)
+  where
+    globalHeap = _aliveAddresses2 (M.intersection (let Globals gbl = globals in gbl)
+                                                  (let Heap hp = heap in hp))
+                                                  heap
+
+    evacLoop :: (Heap, Heap, Heap) -> (Heap, Heap)
+    evacLoop (dead, alive, toConsider) | let Heap foo = toConsider in M.null foo = (dead, alive)
+    evacLoop (dead, alive, toConsider) =
+        let (dead', alive') = M.partition (\addr -> M.member addr alive) toConsider
+        in _
+
+    -- | Find all alive addresses in the heap, starting at the values of the
+    -- globals, which are considered alive.
+    aliveAddresses2 :: Set MemAddr -> Heap -> Set MemAddr
+    aliveAddresses2 alive (Heap heap) = foldMap addrs aliveClosures
+      where
+        aliveAddrs = [ addr | Addr addr <- S.toList alive ] -- TODO: don't use list, Set is sufficient
+        aliveClosures = mapMaybe (\addr -> M.lookup addr heap) aliveAddrs
 
 -- | Find all alive addresses in the heap, starting at the values of the
 -- globals, which are considered alive.
@@ -43,16 +91,6 @@ aliveAddresses (Globals globals) (Heap heap) = foldMap addrs globalClosures
   where
     globalAddrs = [ addr | (_, Addr addr) <- M.toList globals ]
     globalClosures = mapMaybe (\addr -> M.lookup addr heap) globalAddrs
-
--- | Drop everything but certain addresses from the heap.
-keepOnly
-    :: Heap
-    -> Set MemAddr -- ^ Addresses to keep
-    -> Heap
-keepOnly (Heap heap) keep = Heap (M.intersectionWith
-    (\closure () -> closure)
-    heap
-    (M.fromSet (const ()) keep) )
 
 
 

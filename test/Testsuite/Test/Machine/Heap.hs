@@ -7,9 +7,10 @@ import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
 import           Stg.Language.Prettyprint
-import qualified Stg.Machine.Heap         as Heap
+import qualified Stg.Machine.Heap                    as Heap
 
-import           Test.Orphans     ()
+import qualified Test.Machine.Heap.GarbageCollection as GarbageCollection
+import           Test.Orphans                        ()
 import           Test.Util
 
 
@@ -38,4 +39,5 @@ tests = testGroup "Heap"
            ==
            Just closures
         )
+    , GarbageCollection.tests
     ]

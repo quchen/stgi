@@ -72,6 +72,7 @@ test-suite stg-test
                      , Test.Machine
                      , Test.Machine.Evaluate
                      , Test.Machine.Heap
+                     , Test.Machine.Heap.GarbageCollection
                      , Test.Orphans
                      , Test.Orphans.Language
                      , Test.Orphans.Machine
