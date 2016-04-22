@@ -9,7 +9,29 @@
 --   * Comment syntax like in Haskell
 --   * Constructors can end with a @#@ to allow labelling primitive boxes
 --     e.g. with @Int#@.
-module Stg.Parser.Parser where
+module Stg.Parser.Parser (
+    -- Parsing functions
+    parse,
+
+    -- Parser values
+    program,
+    binds,
+    lambdaForm,
+    expr,
+    alts,
+    algebraicAlts,
+    primitiveAlts,
+    algebraicAlt,
+    primitiveAlt,
+    defaultAlt,
+    literal,
+    primOp,
+    vars,
+    atoms,
+    atom,
+    varTok,
+    conTok,
+) where
 
 
 
@@ -41,7 +63,11 @@ import           Stg.Language
 -- >>> parse program "id = () \\n (x) -> x ()"
 -- Right (Program (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))]))
 parse :: Parser ast -> Text -> Either Text ast
-parse p = first (T.pack . show) . P.runParser p "(string)"
+parse p input = first (T.pack . show) parseResult
+  where
+    parseResult = P.runParser (spaceConsumer *> p <* P.eof)
+                              "(string)"
+                              input
 
 
 

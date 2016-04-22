@@ -37,7 +37,6 @@ import qualified Data.Text                 as T
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Lift
 import           Language.Haskell.TH.Quote
-import qualified Text.Megaparsec           as P
 import           Text.Megaparsec.Text
 
 import           Stg.Parser.Parser
@@ -104,7 +103,7 @@ stg = defaultQuoter { quoteExp  = expQuoter }
     -- | Attempt to parse an input using a certain parser, and return the
     -- generated expression on success.
     quoteAs :: Lift ast => Parser ast -> Text -> Either Text (Q Exp)
-    quoteAs p inputText = fmap lift (parse (spaceConsumer *> p <* P.eof) inputText)
+    quoteAs p inputText = fmap lift (parse p inputText)
 
 -- | Build a quasiquoter from a 'Parser'.
 stgQQ
@@ -114,7 +113,7 @@ stgQQ
     -> QuasiQuoter
 stgQQ parser elementName = defaultQuoter { quoteExp  = expQuoter }
     where
-    expQuoter input = case parse (spaceConsumer *> parser) (T.pack input) of
+    expQuoter input = case parse parser (T.pack input) of
         Left err  -> fail (T.unpack ("Invalid STG " <> elementName <> ":\n" <> err))
         Right ast -> [| ast |]
 
