@@ -332,13 +332,14 @@ stgRule s@StgState
     , stgUpdateStack = UpdateFrame argSU retSU addrU :< updS'
     , stgHeap        = heap
     , stgTicks       = ticks }
-    | Just (Closure (LambdaForm _vs NoUpdate xs body) _wsf) <- H.lookup addr heap
+    | Just (Closure (LambdaForm _vs NoUpdate xs _body) _wsf) <- H.lookup addr heap
     , F.length argS < L.length xs
 
   = let argS' = argS <> argSU
-        (xs1, xs2) = splitAt (F.length argS) xs
+        (xs1, _xs2) = splitAt (F.length argS) xs
         f = Var ("upd17a_" <> show' ticks)
-        moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate xs2 body)
+        fxs1 = AppF f (map AtomVar xs1)
+        moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate [] fxs1)
                                   (Addr addr : F.foldMap (\(ArgumentFrame v) -> [v]) argS)
         heap' = H.update addrU moreArgsClosure heap
 

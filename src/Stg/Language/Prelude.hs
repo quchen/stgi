@@ -155,22 +155,27 @@ cycle = concat <> [stg|
 -- take : Int -> [a] -> [a]
 -- @
 take = listC <> add <> [stg|
-    take = () \n (n) ->
+    take = () \u () ->
         letrec  minusOne = () \n () -> Int# (-1#);
-                takeN = (n, minusOne) \n (xs) -> case n () of
-                    Int# (i) -> case i () of
-                        0# -> nil ()
+                take' = (minusOne) \n (n, xs) -> case n () of
+                    Int# (nPrim) -> case nPrim () of
+                        0# -> nil ();
                         default ->
-                            letrec n' = (n, minusOne) \u () -> add (n, minusOne)
+                            let n' = (n, minusOne) \u () -> add (n, minusOne)
                             in case xs () of
-                                   Nil () -> nil ();
-                                   Cons (y,ys) ->
-                                       let rest = (n', ys) \u () -> take (n', ys)
-                                       in cons (y, rest)
-                                   default -> Error_take_not_a_list ()
+                               Nil () -> nil ();
+                               Cons (y,ys) ->
+                                   let rest = (n', ys) \u () -> take (n', ys)
+                                   in cons (y, rest)
+                               default -> Error_take_not_a_list ()
                     default -> Error_take_not_an_int ()
-        in takeN ()
+        in take' ()
     |]
+
+-- TODO doc
+-- filter = listC <> [stg|
+--     filter = () \n (p) ->
+--     |]
 
 -- | Repeat a single element infinitely.
 --
@@ -195,7 +200,7 @@ repeat = listC <> [stg|
 -- ten      = 10
 -- @
 numbers = [stg|
-    minusOne = () \n () -> Int# (-1#);
+    -- minusOne = () \n () -> Int# (-1#);
     zero     = () \n () -> Int# (0#);
     one      = () \n () -> Int# (1#);
     two      = () \n () -> Int# (2#);
