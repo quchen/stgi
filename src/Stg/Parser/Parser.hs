@@ -300,16 +300,20 @@ literal = (Literal . fromInteger) <$> signedIntegerTok <* hashTok
 -- +#
 -- @
 primOp :: Parser PrimOp
-primOp = P.try (P.choice ops <* hashTok)
-    <?> "primitive function"
+primOp = P.choice ops <?> "primitive function"
   where
-    (~>) :: Char -> PrimOp -> Parser PrimOp
-    c ~> val = P.char c *> pure val
-    ops = [ '+' ~> Add
-          , '-' ~> Sub
-          , '*' ~> Mul
-          , '/' ~> Div
-          , '%' ~> Mod ]
+    ops = [ "+"  ~> Add
+          , "-"  ~> Sub
+          , "*"  ~> Mul
+          , "/"  ~> Div
+          , "%"  ~> Mod
+          , "<"  ~> Lt
+          , "<=" ~> Leq
+          , "==" ~> Eq
+          , "/=" ~> Neq
+          , ">=" ~> Geq
+          , ">"  ~> Gt ]
+    op ~> val = P.try (P.string op <* hashTok) *> pure val
 
 -- | Parse a number of variables. enclosed in parentheses, and separated by
 -- commas. Used in lambda forms.
