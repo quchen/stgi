@@ -28,10 +28,12 @@ import           Stg.Machine.Types
 garbageCollect
     :: Globals -- ^ Root elements (unconditionally alive).
     -> Heap
-    -> Heap
-garbageCollect globals heap = cleanHeap
+    -> (Set MemAddr, Set MemAddr, Heap) -- ^ (dead, alive, new heap)
+garbageCollect globals heap = (dead, alive, cleanHeap)
   where
     alive = aliveAddresses globals heap
+    dead = let Heap h = heap
+           in M.keysSet h `S.difference` alive
     cleanHeap = heap `keepOnly` alive
 
 -- | Find all alive addresses in the heap, starting at the values of the
