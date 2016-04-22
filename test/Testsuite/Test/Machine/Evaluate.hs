@@ -18,14 +18,16 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Stg.Language
+import qualified Stg.Language.Prelude     as Stg
 import           Stg.Language.Prettyprint
 import           Stg.Machine
 import           Stg.Machine.Env
 import           Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 import           Stg.Parser
+import           Stg.Util
 
-import           Test.Orphans     ()
+import           Test.Orphans             ()
 
 
 
@@ -58,7 +60,8 @@ tests = testGroup "Evaluate"
             [ addition ]
         , testGroup "Programs"
             [ program_add3
-            , program_foldrSum ]
+            , program_foldrSum
+            , program_takeRepeat ]
         ]
     ]
 
@@ -191,9 +194,9 @@ letMultiBinding = closureReductionTest defClosureReductionSpec
     , source = [stg|
         main = () \u () ->
             let id = () \n (x) -> x ();
-                one = () \n () -> Int (1#)
+                one = () \n () -> Int# (1#)
             in case id (one) of
-                Int (y) -> case y () of
+                Int# (y) -> case y () of
                     1# -> Success ();
                     wrong -> TestFail (wrong);
                 default -> Error ()
@@ -206,11 +209,11 @@ letNestedBinding = closureReductionTest defClosureReductionSpec
     , source = [stg|
         main = () \u () ->
             let id = () \n (x) -> x ();
-                one = () \n () -> Int (1#)
+                one = () \n () -> Int# (1#)
             in let idOne = (id, one) \n () -> case id (one) of
                           v -> v ()
                in case idOne () of
-                   Int (y) -> case y () of
+                   Int# (y) -> case y () of
                        1# -> Success ();
                        wrong -> TestFail (wrong);
                    default -> Error ()
@@ -224,9 +227,9 @@ letrecMultiBinding = closureReductionTest defClosureReductionSpec
         main = () \u () -> letrec id = () \n (x) -> x ();
                                   idOne = (id, one) \n () -> case id (one) of
                                       v -> v ();
-                                  one = () \n () -> Int (1#)
+                                  one = () \n () -> Int# (1#)
                            in case idOne () of
-                               Int (y) -> case y () of
+                               Int# (y) -> case y () of
                                    1# -> Success ();
                                    default -> TestFail ();
                                default -> Error ()
@@ -238,10 +241,10 @@ addition = closureReductionTest defClosureReductionSpec
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source = [stg|
         add = () \n (x,y) -> case +# x y of
-            1# -> Int (1#); -- FIXME type hint
-            v  -> Int (v);
+            1# -> Int# (1#); -- FIXME type hint
+            v  -> Int# (v);
         main = () \u () -> case add (1#, 2#) of
-            Int (x) -> case x () of
+            Int# (x) -> case x () of
                 3# -> Success ()
                 v  -> TestFail (v)
             default -> Error ()
@@ -266,22 +269,22 @@ program_add3 = closureReductionTest defClosureReductionSpec
     , maxSteps = 100
     , source = [stg|
         add3 = () \n (x,y,z) -> case x () of
-            Int (i) -> case y () of
-                Int (j) -> case +# i j of
-                    12345# -> 1#; -- type hint FIXME
+            Int# (i) -> case y () of
+                Int# (j) -> case +# i j of
+                    12345# -> 1#; -- type hInt# FIXME
                     ij -> case z () of
-                        Int (k) -> case +# ij k of
-                            12345# -> 1#; -- type hint FIXME
-                            ijk -> Int (ijk);
+                        Int# (k) -> case +# ij k of
+                            12345# -> 1#; -- type hInt# FIXME
+                            ijk -> Int# (ijk);
                         default -> Error ()
                 default -> Error ()
             default -> Error ();
 
-        one   = () \n () -> Int (1#);
-        two   = () \n () -> Int (2#);
-        three = () \n () -> Int (3#);
+        one   = () \n () -> Int# (1#);
+        two   = () \n () -> Int# (2#);
+        three = () \n () -> Int# (3#);
         main = () \u () -> case add3 (one, two, three) of
-            Int (i) -> case i () of
+            Int# (i) -> case i () of
                 6# -> Success ();
                 wrongResult -> TestFail (wrongResult);
             default -> Error ()
@@ -301,23 +304,23 @@ program_foldrSum = closureReductionTest defClosureReductionSpec
             default -> Error ();
 
         add2 = () \n (x,y) -> case x () of
-            Int (x') -> case y () of
-                Int (y') -> case +# x' y' of
-                    1# -> Int (1#); -- FIXME type hint
-                    v -> Int (v);
+            Int# (x') -> case y () of
+                Int# (y') -> case +# x' y' of
+                    1# -> Int# (1#); -- FIXME type hint
+                    v -> Int# (v);
                 default -> Error ();
             default -> Error ();
 
-        zero = () \n () -> Int (0#);
+        zero = () \n () -> Int# (0#);
 
         sum = () \n (xs) -> foldr (add2, zero, xs);
 
         cons = () \n (x,xs) -> Cons (x,xs);
         nil = () \n () -> Nil ();
         list = () \u () ->
-            letrec one   = () \n () -> Int (1#);
-                   two   = () \n () -> Int (2#);
-                   three = () \n () -> Int (3#);
+            letrec one   = () \n () -> Int# (1#);
+                   two   = () \n () -> Int# (2#);
+                   three = () \n () -> Int# (3#);
                    list3    = (three)          \n () -> cons (three, nil);
                    list23   = (two, list3)     \n () -> cons (two,   list3);
                    list123  = (one, list23)    \n () -> cons (one,   list23);
@@ -325,10 +328,41 @@ program_foldrSum = closureReductionTest defClosureReductionSpec
             in list3123 ();
 
         main = () \u () -> case sum (list) of
-            Int (i) -> case i () of
+            Int# (i) -> case i () of
                 9# -> Success ();
                 wrongResult -> TestFail (wrongResult);
             default -> Error ()
+        |] }
+
+program_takeRepeat :: TestTree
+program_takeRepeat = closureReductionTest defClosureReductionSpec
+    { testName = "take 2 (repeat ())"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , maxSteps = 200
+    , source = Stg.numbers
+            <> Stg.take
+            <> Stg.repeat
+            <> Stg.foldr
+            <> Stg.seq
+            <> Stg.listC
+            <> [stgProgram|
+
+        consBang = () \n (x,xs) -> case xs () of v -> cons (x, v);
+        forceSpine = () \n (xs) -> foldr (consBang, nil, xs);
+
+        twoUnits = () \u () ->
+            letrec  repeated = (unit) \u () -> repeat (unit);
+                    unit = () \n () -> Unit ();
+                    take2 = (repeated) \u () -> take (two, repeated)
+            in      forceSpine (take2);
+
+        main = () \u () -> case twoUnits () of
+            Cons (x,xs) -> case xs () of
+                Cons (y,ys) -> case ys () of
+                    Nil () -> Success ();
+                    default -> TestFailure ();
+                default -> TestFailure ();
+            default -> TestFailure ()
         |] }
 
 
@@ -388,8 +422,8 @@ data VarLookupResult =
 varLookup :: StgState -> Var -> VarLookupResult
 varLookup state var =
     case globalVal (stgGlobals state) var of
-        Nothing -> VarLookupError "not found in globals"
-        Just (Addr addr) -> case H.lookup addr (stgHeap state) of
+        Failure err -> VarLookupError ("not found in globals - " <> err)
+        Success (Addr addr) -> case H.lookup addr (stgHeap state) of
             Just closure -> VarLookupClosure closure
             Nothing -> VarLookupError "not found on heap"
-        Just (PrimInt i) -> VarLookupPrim i
+        Success (PrimInt i) -> VarLookupPrim i
