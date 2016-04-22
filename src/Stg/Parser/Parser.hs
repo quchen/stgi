@@ -66,7 +66,7 @@ parse :: Parser ast -> Text -> Either Text ast
 parse p input = first (T.pack . show) parseResult
   where
     parseResult = P.runParser (spaceConsumer *> p <* P.eof)
-                              "(string)"
+                              "input"
                               input
 
 
@@ -197,13 +197,18 @@ binds = fmap (Binds . M.fromList) (P.sepBy binding semicolonTok)
 -- | Parse a lambda form, consisting of a list of free variables, and update
 -- flag, a list of bound variables, and the function body.
 lambdaForm :: Parser LambdaForm
-lambdaForm = LambdaForm
+lambdaForm = lf >>= validateLambda
+  where
+    lf = LambdaForm
          <$> vars
          <*> updateFlagTok
          <*> vars
          <*  arrowTok
          <*> expr
          <?> "lambda form"
+    validateLambda (LambdaForm _ Update (_:_) _) =
+        fail "Lambda forms with non-empty argument lists are never updatable"
+    validateLambda x = pure x
 
 -- | Parse an expression, which can be
 --

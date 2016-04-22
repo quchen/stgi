@@ -9,7 +9,7 @@ import           Test.Tasty.QuickCheck
 import           Stg.Language.Prettyprint
 import qualified Stg.Machine.Heap         as Heap
 
-import           Test.Orphans.Machine     ()
+import           Test.Orphans     ()
 import           Test.Util
 
 

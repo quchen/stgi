@@ -25,7 +25,7 @@ import           Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 import           Stg.Parser
 
-import           Test.Orphans.Machine     ()
+import           Test.Orphans     ()
 
 
 

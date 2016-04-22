@@ -60,7 +60,14 @@ instance Arbitrary Binds where
     shrink (Binds b) = (map (Binds . M.fromList) . shrinkBut1st . M.toList) b
 
 instance Arbitrary LambdaForm where
-    arbitrary = arbitrary4 LambdaForm
+    arbitrary = do
+        free <- arbitrary
+        updateFlag <- arbitrary
+        bound <- case updateFlag of
+            Update -> pure []
+            NoUpdate -> arbitrary
+        body <- arbitrary
+        pure (LambdaForm free updateFlag bound body)
     shrink = genericShrink
 
 instance Arbitrary UpdateFlag where

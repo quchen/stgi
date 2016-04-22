@@ -77,8 +77,8 @@ instance Show Binds where
 -- | A lambda form unifies free and bound variables associated with a function
 -- body.
 --
--- >>> [stg| (x) \u (y, z) -> expr (x,z) |]
--- LambdaForm [Var "x"] Update [Var "y",Var "z"] (AppF (Var "expr") [AtomVar (Var "x"),AtomVar (Var "z")])
+-- >>> [stg| (x) \n (y, z) -> expr (x,z) |]
+-- LambdaForm [Var "x"] NoUpdate [Var "y",Var "z"] (AppF (Var "expr") [AtomVar (Var "x"),AtomVar (Var "z")])
 data LambdaForm = LambdaForm [Var] UpdateFlag [Var] Expr
     deriving (Eq, Ord, Show, Generic)
 

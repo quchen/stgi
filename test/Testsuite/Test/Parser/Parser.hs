@@ -46,14 +46,16 @@ import           Test.Orphans             ()
 
 
 tests :: TestTree
-tests = testGroup "Explicit parses" [simpleParses]
+tests = testGroup "Explicit parses"
+    [ simpleParses
+    , badParses ]
 
 
 
 shouldParseToSuccess
-    :: Text -- ^ Test name
-    -> Text -- ^ Parser input
-    -> Binds -- ^ STG bindings
+    :: Text  -- ^ Test name
+    -> Text  -- ^ Parser input
+    -> Binds -- ^ Expected STG bindings
     -> TestTree
 shouldParseToSuccess testName input output = testCase (T.unpack testName) test
   where
@@ -98,11 +100,11 @@ simpleParses = testGroup "Well-written programs"
 
     , shouldParseToSuccess "Let"
         "a = () \\n () ->\n\
-        \    let y = (a) \\u (x) -> Foo (x)\n\
+        \    let y = (a) \\n (x) -> Foo (x)\n\
         \    in Con (y)"
        (Binds [("a", LambdaForm [] NoUpdate []
                          (Let NonRecursive (Binds
-                             [("y", LambdaForm ["a"] Update ["x"]
+                             [("y", LambdaForm ["a"] NoUpdate ["x"]
                                         (AppC "Foo" [AtomVar "x"]))])
                              (AppC "Con" [AtomVar "y"])))])
 
@@ -188,4 +190,22 @@ simpleParses = testGroup "Well-written programs"
                                                   (AppC "Cons" [AtomVar "fy", AtomVar "mfy"]) )]
                                     (DefaultNotBound (AppF "badListError" [])) ))))])
                       (AppF "mf" [])))])
+    ]
+
+shouldFailToParse
+    :: Text -- ^ Test name
+    -> Text -- ^ Parser input
+    -> TestTree
+shouldFailToParse testName input = testCase (T.unpack testName) test
+  where
+    test = case parse input of
+        Right ast -> (assertFailure . T.unpack . T.unlines)
+            [ "Parser should have failed, but succeeded to parse to"
+            , (T.unlines . map (" > " <>) . T.lines . prettyprintAnsi) ast ]
+        Left _err -> pure ()
+
+badParses :: TestTree
+badParses = testGroup "Parsers that should fail"
+    [ shouldFailToParse "Updatable lambda forms don't take arguments"
+        "x = () \\u (y) -> z ()"
     ]
