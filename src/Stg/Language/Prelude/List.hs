@@ -9,6 +9,7 @@ module Stg.Language.Prelude.List (
     cycle,
     take,
     repeat,
+    map,
 ) where
 
 
@@ -24,7 +25,7 @@ import           Stg.Language.Prelude.Number as Num
 
 
 
-concat, foldl, foldl', foldr, iterate, cycle, take, repeat :: Program
+concat, foldl, foldl', foldr, iterate, cycle, take, repeat, map :: Program
 
 concat = [stg|
     concat = () \n (xs,ys) -> case xs () of
@@ -146,4 +147,18 @@ repeat = [stg|
     repeat = () \n (x) ->
         letrec xs = (x, xs) \u () -> Cons (x,xs)
         in xs ()
+    |]
+
+-- | Apply a function to each element of a list.
+--
+-- @
+-- map : (a -> b, [a]) -> [b]
+-- @
+map = [stg|
+    map = () \n (f, list) -> case list () of
+        Nil ()        -> Nil ();
+        Cons (x, xs) -> let fx  = (f, x)  \u () -> f (x);
+                            fxs = (f, xs) \u () -> map (f, xs)
+                        in  Cons (fx, fxs);
+        default -> Error_Map ()
     |]
