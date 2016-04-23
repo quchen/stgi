@@ -24,6 +24,7 @@ To do
 =====
 
 - Main functionality
+    - Rule 18/19 on page 65: Better primitive case
     - Test the stepper
     - Write lots of test cases
     - Unify primitive and algebraic alts into a single type a la
