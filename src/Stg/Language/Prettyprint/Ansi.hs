@@ -118,23 +118,12 @@ instance PrettyAnsi Expr where
         Lit lit -> prettyAnsi lit
 
 instance PrettyAnsi Alts where
-    prettyAnsi = \case
-        Algebraic alts -> prettyAnsi alts
-        Primitive alts -> prettyAnsi alts
+    prettyAnsi (Alts alts def) =
+        (align . vsep . punctuate ";") (map prettyAnsi alts ++ [prettyAnsi def])
 
-instance PrettyAnsi AlgebraicAlts where
-    prettyAnsi (AlgebraicAlts alts def) =
-        vsep (punctuate (semicolon colour ";") (map prettyAnsi alts ++ [prettyAnsi def]))
-
-instance PrettyAnsi PrimitiveAlts where
-    prettyAnsi (PrimitiveAlts alts def) =
-        vsep (punctuate (semicolon colour ";") (map prettyAnsi alts ++ [prettyAnsi def]))
-
-instance PrettyAnsi AlgebraicAlt where
+instance PrettyAnsi Alt where
     prettyAnsi (AlgebraicAlt con args expr) =
         prettyAnsi con <+> prettyAnsiList args <+> "->" <+> prettyAnsi expr
-
-instance PrettyAnsi PrimitiveAlt where
     prettyAnsi (PrimitiveAlt lit expr) =
         prettyAnsi lit <+> "->" <+> prettyAnsi expr
 

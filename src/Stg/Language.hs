@@ -22,10 +22,7 @@ module Stg.Language (
     Rec           (..),
     Expr          (..),
     Alts          (..),
-    AlgebraicAlts (..),
-    PrimitiveAlts (..),
-    AlgebraicAlt  (..),
-    PrimitiveAlt  (..),
+    Alt           (..),
     DefaultAlt    (..),
     Literal       (..),
     PrimOp        (..),
@@ -38,7 +35,7 @@ module Stg.Language (
 
 import           Data.Map                     (Map)
 import qualified Data.Map                     as M
-import           Data.Monoid
+import           Data.Monoid                  hiding (Alt)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           GHC.Exts
@@ -105,27 +102,11 @@ data Expr =
     deriving (Eq, Ord, Show, Generic)
 
 -- | List of possible alternatives in a 'Case' expression.
-data Alts =
-      Algebraic AlgebraicAlts -- ^ as in @True | False@
-    | Primitive PrimitiveAlts -- ^ like 1, 2, 3
+data Alts = Alts [Alt] DefaultAlt
     deriving (Eq, Ord, Show, Generic)
 
--- | Algebraic alternatives, with a default as fallback.
-data AlgebraicAlts = AlgebraicAlts [AlgebraicAlt] DefaultAlt
-    deriving (Eq, Ord, Show, Generic)
-
--- | Primitive version of 'AlgebraicAlts'.
-data PrimitiveAlts = PrimitiveAlts [PrimitiveAlt] DefaultAlt
-    deriving (Eq, Ord, Show, Generic)
-
--- | A single algebraic alternative, consisting of a constructor with its
--- pattern arguments, and an expression to continue at, should the pattern
--- match.
-data AlgebraicAlt = AlgebraicAlt Constr [Var] Expr
-    deriving (Eq, Ord, Show, Generic)
-
--- | Primitive version of 'AlgebraicAlt'.
-data PrimitiveAlt = PrimitiveAlt Literal Expr
+data Alt = AlgebraicAlt Constr [Var] Expr -- ^ as in @True | False@
+         | PrimitiveAlt Literal      Expr -- ^ like 1, 2, 3
     deriving (Eq, Ord, Show, Generic)
 
 -- | If no viable alternative is found in a pattern match, use a 'DefaultAlt'
@@ -178,8 +159,7 @@ instance IsString Constr where fromString = coerce . T.pack
 --------------------------------------------------------------------------------
 -- Lift instances
 deriveLiftMany [ ''Program, ''Literal, ''LambdaForm , ''UpdateFlag, ''Rec
-               , ''Expr, ''Alts , ''AlgebraicAlts , ''PrimitiveAlts
-               , ''AlgebraicAlt , ''PrimitiveAlt, ''DefaultAlt , ''PrimOp
+               , ''Expr, ''Alts , ''Alt , ''DefaultAlt , ''PrimOp
                , ''Atom ]
 
 instance Lift Binds where
@@ -258,23 +238,12 @@ instance Pretty Expr where
         Lit lit -> pretty lit
 
 instance Pretty Alts where
-    pretty = \case
-        Algebraic alts -> pretty alts
-        Primitive alts -> pretty alts
-
-instance Pretty AlgebraicAlts where
-    pretty (AlgebraicAlts alts def) =
+    pretty (Alts alts def) =
         (align . vsep . punctuate ";") (map pretty alts ++ [pretty def])
 
-instance Pretty PrimitiveAlts where
-    pretty (PrimitiveAlts alts def) =
-        (align . vsep . punctuate ";") (map pretty alts ++ [pretty def])
-
-instance Pretty AlgebraicAlt where
+instance Pretty Alt where
     pretty (AlgebraicAlt con args expr) =
         pretty con <+> prettyList args <+> "->" <+> pretty expr
-
-instance Pretty PrimitiveAlt where
     pretty (PrimitiveAlt lit expr) =
         pretty lit <+> "->" <+> pretty expr
 

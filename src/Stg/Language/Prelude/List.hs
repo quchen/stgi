@@ -63,7 +63,7 @@ foldl = [stg|
         Cons (y,ys) ->
             let acc' = (f,acc,y) \u () -> case f (acc, y) of
                     v -> v ()
-            in foldl (f, acc', ys)
+            in foldl (f, acc', ys);
         default -> Error_foldl () |]
 
 -- | Strict left list fold.
@@ -75,7 +75,7 @@ foldl' = [stg|
     foldl' = () \n (f, acc, xs) -> case xs () of
         Nil () -> acc ();
         Cons (y,ys) -> case f (acc, y) of
-            acc' -> foldl' (f, acc', ys)
+            acc' -> foldl' (f, acc', ys);
         default -> Error_foldl' ()
     |]
 
@@ -89,7 +89,7 @@ foldr = [stg|
         Nil () -> z ();
         Cons (y,ys) ->
             let rest = (f,z,ys) \u () -> foldr (f,z,ys)
-            in f (y, rest)
+            in f (y, rest);
         default -> Error_foldr () |]
 
 -- | Build a list by repeatedly applying a function to an initial value.
@@ -127,7 +127,7 @@ cycle = concat <> [stg|
 -- @
 -- take : Int -> [a] -> [a]
 -- @
-take = Num.add <> [stg|
+take = Num.add <> [stgProgram|
     take = () \u () ->
         letrec  minusOne = () \n () -> Int# (-1#);
                 take' = (minusOne) \n (n, xs) -> case n () of
@@ -139,8 +139,8 @@ take = Num.add <> [stg|
                                Nil () -> Nil ();
                                Cons (y,ys) ->
                                    let rest = (n', ys) \u () -> take (n', ys)
-                                   in Cons (y, rest)
-                               default -> Error_take_not_a_list ()
+                                   in Cons (y, rest);
+                               default -> Error_take_not_a_list ();
                     default -> Error_take_not_an_int ()
         in take' ()
     |]
@@ -155,7 +155,7 @@ filter = [stg|
             True () ->
                 let rest = (p, xs') \u () -> filter (p, xs')
                 in Cons (x, rest);
-            def -> Error_filter (def)
+            def -> Error_filter (def);
         def -> Error_filter (def)
     |]
 
@@ -290,8 +290,8 @@ listIntEquals = Num.eq <> [stgProgram|
                 Cons (y,ys') -> case eq (x,y) of
                     Int# (eqResult) -> case eqResult () of
                         1# -> listIntEquals (xs',ys');
-                        default -> False ()
+                        default -> False ();
                     v -> Error_listEquals_1 (v);
-                v -> Error_listEquals_2 (v)
+                v -> Error_listEquals_2 (v);
             v -> Error_listEquals_3 (v)
     |]

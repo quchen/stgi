@@ -20,7 +20,7 @@ module Test.Parser.Parser (tests) where
 --
 -- FIXME  Uh oh, this happened in the ParserInverse for primitive alternatives test:
 --     *** Failed!  (after 573 tests and 11 shrinks):
---     PrimitiveAlts [PrimitiveAlt (Literal 0) (Case (AppF (Var "i") []) (Algebraic (AlgebraicAlts [] (DefaultBound (Var "d") (Let NonRecursive (Binds [(Var "hD7G",LambdaForm [] Update [] (AppF (Var "let") []))]) (AppP Mul (AtomLit (Literal 0)) (AtomLit (Literal 0))))))))] (DefaultBound (Var "f") (AppP Mul (AtomLit (Literal 0)) (AtomVar (Var "s"))))
+--     PrimitiveAlts [PrimitiveAlt (Literal 0) (Case (AppF (Var "i") []) (Alts (AlgebraicAlts [] (DefaultBound (Var "d") (Let NonRecursive (Binds [(Var "hD7G",LambdaForm [] Update [] (AppF (Var "let") []))]) (AppP Mul (AtomLit (Literal 0)) (AtomLit (Literal 0))))))))] (DefaultBound (Var "f") (AppP Mul (AtomLit (Literal 0)) (AtomVar (Var "s"))))
 --     Input AST:
 --     0# -> case i () of
 --               d -> let hD7G = () \u () -> let ()              -- WAT.
@@ -91,7 +91,7 @@ simpleParses = testGroup "Well-written programs"
         "id = () \\n (x) -> case x () of y -> y ()"
         (Binds [("id", LambdaForm [] NoUpdate ["x"]
                           (Case (AppF "x" [])
-                                (Algebraic (AlgebraicAlts [] (DefaultBound "y" (AppF "y" [])))) ))])
+                                (Alts [] (DefaultBound "y" (AppF "y" []))) ))])
 
     , shouldParseToSuccess "Primitive function application"
         "add1 = () \\n (n) -> +# n 1#"
@@ -126,15 +126,14 @@ simpleParses = testGroup "Well-written programs"
         \                  in fac (n')                                         "
         (Binds
             [ ("fac", LambdaForm [] NoUpdate ["n"]
-                  (Case (AppF "n" []) (Primitive
-                      (PrimitiveAlts
-                          [ PrimitiveAlt 0 (Lit 1) ]
-                          (DefaultNotBound
-                              (Let NonRecursive
-                                  (Binds
-                                      [ ("n'", LambdaForm [] Update []
-                                                   (AppP Sub (AtomVar "n") (AtomLit 1)) )])
-                                  (AppF "fac" [AtomVar "n'"]) ))))))])
+                  (Case (AppF "n" []) (Alts
+                      [ PrimitiveAlt 0 (Lit 1) ]
+                      (DefaultNotBound
+                          (Let NonRecursive
+                              (Binds
+                                  [ ("n'", LambdaForm [] Update []
+                                               (AppP Sub (AtomVar "n") (AtomLit 1)) )])
+                              (AppF "fac" [AtomVar "n'"]) )))))])
 
    , shouldParseToSuccess "map with comment"
         "-- Taken from the 1992 STG paper, page 21.                          \n\
@@ -147,18 +146,17 @@ simpleParses = testGroup "Well-written programs"
         \        default -> badListError ()                                  "
        (Binds
            [ ("map", LambdaForm [] NoUpdate ["f","xs"]
-                 (Case (AppF "xs" []) (Algebraic
-                     (AlgebraicAlts
-                         [ AlgebraicAlt "Nil" []
-                               (AppC "Nil" [])
-                         , AlgebraicAlt "Cons" ["y","ys"]
-                               (Let NonRecursive
-                                   (Binds [ ("fy", LambdaForm ["f","y"] Update []
-                                                       (AppF "f" [AtomVar "y"]))
-                                          , ("mfy", LambdaForm ["f","ys"] Update []
-                                                        (AppF "map" [AtomVar "f", AtomVar "ys"])) ])
-                                   (AppC "Cons" [AtomVar "fy", AtomVar "mfy"])) ]
-                         (DefaultNotBound (AppF "badListError" [])) ))))])
+                 (Case (AppF "xs" []) (Alts
+                     [ AlgebraicAlt "Nil" []
+                           (AppC "Nil" [])
+                     , AlgebraicAlt "Cons" ["y","ys"]
+                           (Let NonRecursive
+                               (Binds [ ("fy", LambdaForm ["f","y"] Update []
+                                                   (AppF "f" [AtomVar "y"]))
+                                      , ("mfy", LambdaForm ["f","ys"] Update []
+                                                    (AppF "map" [AtomVar "f", AtomVar "ys"])) ])
+                               (AppC "Cons" [AtomVar "fy", AtomVar "mfy"])) ]
+                     (DefaultNotBound (AppF "badListError" [])) )))])
 
     , shouldParseToSuccess "map, differently implemented"
          "-- Taken from the 1992 STG paper, page 22.                         \n\
@@ -176,8 +174,7 @@ simpleParses = testGroup "Well-written programs"
                   (Let Recursive
                       (Binds
                           [ ("mf", LambdaForm ["f","mf"] NoUpdate ["xs"]
-                                (Case (AppF "xs" []) (Algebraic
-                                    (AlgebraicAlts
+                                (Case (AppF "xs" []) (Alts
                                         [ AlgebraicAlt "Nil" []
                                               (AppC "Nil" [])
                                         , AlgebraicAlt "Cons" ["y","ys"]
@@ -188,7 +185,7 @@ simpleParses = testGroup "Well-written programs"
                                                       , ("mfy", LambdaForm ["mf","ys"] Update []
                                                             (AppF "mf" [AtomVar "ys"]) )])
                                                   (AppC "Cons" [AtomVar "fy", AtomVar "mfy"]) )]
-                                    (DefaultNotBound (AppF "badListError" [])) ))))])
+                                    (DefaultNotBound (AppF "badListError" [])) )))])
                       (AppF "mf" [])))])
     ]
 

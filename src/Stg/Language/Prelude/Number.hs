@@ -50,8 +50,8 @@ add = [stg|
         Int# (x') -> case y () of
             Int# (y') -> case +# x' y' of
                 1# -> Int# (1#); -- FIXME type hint
-                v  -> Int# (v)
-            default -> Error_add ()
+                v -> Int# (v);
+            default -> Error_add ();
         default -> Error_add () |]
 
 -- | @<=@
@@ -64,8 +64,8 @@ leq = [stg|
         Int# (x') -> case y () of
             Int# (y') -> case <=# x' y' of
                 1# -> Int# (1#); -- FIXME type hint
-                v  -> Int# (v)
-            default -> Error_leq ()
+                v  -> Int# (v);
+            default -> Error_leq ();
         default -> Error_leq () |]
 
 
@@ -79,8 +79,8 @@ gt = [stg|
         Int# (x') -> case y () of
             Int# (y') -> case ># x' y' of
                 1# -> Int# (1#); -- FIXME type hint
-                v  -> Int# (v)
-            default -> Error_gt ()
+                v  -> Int# (v);
+            default -> Error_gt ();
         default -> Error_gt () |]
 
 
@@ -95,6 +95,6 @@ eq = [stg|
         Int# (x') -> case y () of
             Int# (y') -> case ==# x' y' of
                 1# -> Int# (1#); -- FIXME type hint
-                v  -> Int# (v)
-            v -> Error_eq (v)
+                v  -> Int# (v);
+            v -> Error_eq (v);
         v -> Error_gt (v) |]

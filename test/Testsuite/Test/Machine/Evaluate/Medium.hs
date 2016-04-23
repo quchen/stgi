@@ -39,17 +39,15 @@ defSpec = ClosureReductionSpec
 program_add3 :: TestTree
 program_add3 = closureReductionTest defSpec
     { testName = "add3(x,y,z) = x+y+z"
-    , source = [stg|
+    , source = [stgProgram|
         add3 = () \n (x,y,z) -> case x () of
             Int# (i) -> case y () of
                 Int# (j) -> case +# i j of
-                    12345# -> 1#; -- type hInt# FIXME
                     ij -> case z () of
                         Int# (k) -> case +# ij k of
-                            12345# -> 1#; -- type hInt# FIXME
                             ijk -> Int# (ijk);
-                        default -> Error ()
-                default -> Error ()
+                        default -> Error ();
+                default -> Error ();
             default -> Error ();
 
         one   = () \n () -> Int# (1#);
@@ -76,7 +74,6 @@ program_foldrSum = closureReductionTest defSpec
         add2 = () \n (x,y) -> case x () of
             Int# (x') -> case y () of
                 Int# (y') -> case +# x' y' of
-                    1# -> Int# (1#); -- FIXME type hint
                     v -> Int# (v);
                 default -> Error ();
             default -> Error ();

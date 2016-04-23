@@ -79,7 +79,7 @@ defaultOnlyCase_unboundPrimitive = closureReductionTest defSpec
     { testName = "Unbound, primitive scrutinee"
     , source = [stg|
         main = () \u () -> case x () of
-            default -> x ();
+            default -> Success ();
         x = () \n () -> 1#
         |] }
 
@@ -88,7 +88,7 @@ defaultOnlyCase_boundPrimitive = closureReductionTest defSpec
     { testName = "Bound, primitive scrutinee"
     , source = [stg|
         main = () \u () -> case x () of
-            x -> x ();
+            x -> Success ();
         x = () \n () -> 1#
         |] }
 
@@ -216,12 +216,11 @@ addition = closureReductionTest defSpec
     { testName = "Adding primitive numbers"
     , source = [stg|
         add = () \n (x,y) -> case +# x y of
-            1# -> Int# (1#); -- FIXME type hint
             v  -> Int# (v);
         main = () \u () -> case add (1#, 2#) of
             Int# (x) -> case x () of
-                3# -> Success ()
-                v  -> TestFail (v)
+                3# -> Success ();
+                v  -> TestFail (v);
             default -> Error ()
         |] }
 

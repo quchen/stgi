@@ -21,7 +21,7 @@ seq, id, const, compose :: Program
 
 
 -- | Finally I can define 'Prelude.seq' directly! :-)
-seq = [stg| seq = () \n (x,y) -> case x () of default -> y () |]
+seq = [stgProgram| seq = () \n (x,y) -> case x () of default -> y () |]
 
 -- | Identity function.
 --

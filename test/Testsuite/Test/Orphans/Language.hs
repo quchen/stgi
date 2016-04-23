@@ -5,7 +5,7 @@ module Test.Orphans.Language () where
 
 
 import qualified Data.Map              as M
-import           Data.Monoid
+import           Data.Monoid           hiding (Alt)
 import           Data.Ratio
 import           Data.Text             (Text)
 import qualified Data.Text             as T
@@ -89,28 +89,21 @@ instance Arbitrary Expr where
     shrink = genericShrink
 
 instance Arbitrary Alts where
-    arbitrary = oneof [arbitrary1 Algebraic, arbitrary1 Primitive]
+    arbitrary = Alts <$> homogeneousAlts <*> arbitrary
+      where
+        homogeneousAlts = oneof
+            [ listOf (scaled (2%3) algebraicAlt)
+            , listOf (scaled (2%3) primitiveAlt) ]
+        algebraicAlt = arbitrary3 AlgebraicAlt
+        primitiveAlt = arbitrary2 PrimitiveAlt
     shrink = genericShrink
 
-instance Arbitrary AlgebraicAlts where
-    -- TODO: This does not consider default-only 'case' blocks, because those
-    --       are ambiguous between algebraic/primitive.
-    arbitrary = AlgebraicAlts <$> listOf1 (scaled (2%3) arbitrary) <*> arbitrary
+instance Arbitrary Alt where
+    arbitrary = oneof
+        [ arbitrary3 AlgebraicAlt
+        , arbitrary2 PrimitiveAlt ]
     shrink = genericShrink
 
-instance Arbitrary PrimitiveAlts where
-    -- TODO: This does not consider default-only 'case' blocks, because those
-    --       are ambiguous between algebraic/primitive.
-    arbitrary = PrimitiveAlts <$> listOf1 (scaled (2%3) arbitrary) <*> arbitrary
-    shrink = genericShrink
-
-instance Arbitrary AlgebraicAlt where
-    arbitrary = arbitrary3 AlgebraicAlt
-    shrink = genericShrink
-
-instance Arbitrary PrimitiveAlt where
-    arbitrary = arbitrary2 PrimitiveAlt
-    shrink = genericShrink
 
 instance Arbitrary DefaultAlt where
     arbitrary = oneof [arbitrary1 DefaultNotBound, arbitrary2 DefaultBound]

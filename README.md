@@ -27,8 +27,6 @@ To do
     - Rule 18/19 on page 65: Better primitive case
     - Test the stepper
     - Write lots of test cases
-    - Unify primitive and algebraic alts into a single type a la
-      `Alts [Alt] Default`, `Alt = Algebraic | Primitive`
     - Remove all `error`s
     - Unify the stacks to one; should be more instructional. For example, an
       update frame is very clearly flattened into the argument and return

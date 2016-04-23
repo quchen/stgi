@@ -15,7 +15,7 @@ module Stg.Machine.GarbageCollection (
 
 import           Data.Map          (Map)
 import qualified Data.Map          as M
-import           Data.Monoid
+import           Data.Monoid       hiding (Alt)
 import           Data.Set          (Set)
 import qualified Data.Set          as S
 
@@ -152,21 +152,11 @@ instance Addresses Binds where
     addrs (Binds bs) = foldMap addrs bs
 
 instance Addresses Alts where
-    addrs = \case
-        Algebraic alts -> addrs alts
-        Primitive alts -> addrs alts
+    addrs (Alts alts def) = addrs alts <> addrs def
 
-instance Addresses AlgebraicAlts where
-    addrs (AlgebraicAlts alts defaultAlt) = addrs alts <> addrs defaultAlt
-
-instance Addresses PrimitiveAlts where
-    addrs (PrimitiveAlts alts defaultAlt) = addrs alts <> addrs defaultAlt
-
-instance Addresses AlgebraicAlt where
+instance Addresses Alt where
     addrs (AlgebraicAlt _con _vars expr) = addrs expr
-
-instance Addresses PrimitiveAlt where
-    addrs (PrimitiveAlt _prim expr) = addrs expr
+    addrs (PrimitiveAlt _prim      expr) = addrs expr
 
 instance Addresses DefaultAlt where
     addrs = \case

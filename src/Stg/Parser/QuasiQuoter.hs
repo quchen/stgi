@@ -15,8 +15,7 @@ module Stg.Parser.QuasiQuoter (
     stgLambdaForm,
     stgExpr,
     stgAlts,
-    stgAlgebraicAlts,
-    stgPrimitiveAlts,
+    stgNonDefaultAlts,
     stgAlgebraicAlt,
     stgPrimitiveAlt,
     stgDefaultAlt,
@@ -76,22 +75,21 @@ stg = defaultQuoter { quoteExp  = expQuoter }
     expQuoter input =
         let inputText = T.pack input
             parses =
-                [ quoteAs program       inputText
-                , quoteAs lambdaForm    inputText
-                , quoteAs expr          inputText
-                , quoteAs alts          inputText
-                , quoteAs algebraicAlts inputText
-                , quoteAs primitiveAlts inputText
-                , quoteAs algebraicAlt  inputText
-                , quoteAs primitiveAlt  inputText
-                , quoteAs defaultAlt    inputText
-                , quoteAs literal       inputText
-                , quoteAs primOp        inputText
-                , quoteAs vars          inputText
-                , quoteAs atoms         inputText
-                , quoteAs atom          inputText
-                , quoteAs varTok        inputText
-                , quoteAs conTok        inputText ]
+                [ quoteAs program        inputText
+                , quoteAs lambdaForm     inputText
+                , quoteAs expr           inputText
+                , quoteAs alts           inputText
+                , quoteAs nonDefaultAlts inputText
+                , quoteAs algebraicAlt   inputText
+                , quoteAs primitiveAlt   inputText
+                , quoteAs defaultAlt     inputText
+                , quoteAs literal        inputText
+                , quoteAs primOp         inputText
+                , quoteAs vars           inputText
+                , quoteAs atoms          inputText
+                , quoteAs atom           inputText
+                , quoteAs varTok         inputText
+                , quoteAs conTok         inputText ]
         in case firstRight parses of
             Just ast -> ast
             Nothing  -> fail "No parse succeeded; try using a type-specific \
@@ -147,38 +145,34 @@ stgExpr = stgQQ expr "expression"
 
 -- | Quasiquoter for 'Stg.Language.Alts'.
 --
--- >>> [stgAlts| Just (x) -> 1#; default -> 0# |]
--- Algebraic (AlgebraicAlts [AlgebraicAlt (Constr "Just") [Var "x"] (Lit (Literal 1))] (DefaultNotBound (Lit (Literal 0))))
+-- >>> [stgAlts| Just (x) -> True (); default -> False () |]
+-- Alts [AlgebraicAlt (Constr "Just") [Var "x"] (AppC (Constr "True") [])] (DefaultNotBound (AppC (Constr "False") []))
 --
--- >>> [stgAlts| 0# -> 1#; default -> 0# |]
--- Primitive (PrimitiveAlts [PrimitiveAlt (Literal 0) (Lit (Literal 1))] (DefaultNotBound (Lit (Literal 0))))
+-- >>> [stgAlts| 0# -> True (); default -> False () |]
+-- Alts [PrimitiveAlt (Literal 0) (AppC (Constr "True") [])] (DefaultNotBound (AppC (Constr "False") []))
 stgAlts :: QuasiQuoter
 stgAlts = stgQQ alts "alternatives"
 
--- | Quasiquoter for 'Stg.Language.AlgebraicAlts'.
+-- | Quasiquoter for 'Stg.Language.Alt'.
 --
--- >>>[stgAlgebraicAlts| Just (x) -> 1#; default -> 0# |]
--- AlgebraicAlts [AlgebraicAlt (Constr "Just") [Var "x"] (Lit (Literal 1))] (DefaultNotBound (Lit (Literal 0)))
-stgAlgebraicAlts :: QuasiQuoter
-stgAlgebraicAlts = stgQQ algebraicAlts "algebraic alternatives"
-
--- | Quasiquoter for 'Stg.Language.PrimitiveAlts'.
+-- >>>[stgNonDefaultAlts| Just (x) -> True (); Nothing () -> False (); |]
+-- [AlgebraicAlt (Constr "Just") [Var "x"] (AppC (Constr "True") []),AlgebraicAlt (Constr "Nothing") [] (AppC (Constr "False") [])]
 --
--- >>> [stgPrimitiveAlts| 0# -> 1#; default -> 0# |]
--- PrimitiveAlts [PrimitiveAlt (Literal 0) (Lit (Literal 1))] (DefaultNotBound (Lit (Literal 0)))
-stgPrimitiveAlts :: QuasiQuoter
-stgPrimitiveAlts = stgQQ primitiveAlts "primtive alternatives"
+-- >>>[stgNonDefaultAlts| 0# -> False (); 1# -> True (); |]
+-- [PrimitiveAlt (Literal 0) (AppC (Constr "False") []),PrimitiveAlt (Literal 1) (AppC (Constr "True") [])]
+stgNonDefaultAlts :: QuasiQuoter
+stgNonDefaultAlts = stgQQ nonDefaultAlts "algebraic alternatives"
 
 -- | Quasiquoter for 'Stg.Language.AlgebraicAlt's.
 --
--- >>> [stgAlgebraicAlt| Just (x) -> x () |]
+-- >>> [stgAlgebraicAlt| Just (x) -> x (); |]
 -- AlgebraicAlt (Constr "Just") [Var "x"] (AppF (Var "x") [])
 stgAlgebraicAlt :: QuasiQuoter
 stgAlgebraicAlt = stgQQ algebraicAlt "algebraic alternative"
 
 -- | Quasiquoter for 'Stg.Language.PrimitiveAlt's.
 --
--- >>> [stgPrimitiveAlt| 1# -> x () |]
+-- >>> [stgPrimitiveAlt| 1# -> x (); |]
 -- PrimitiveAlt (Literal 1) (AppF (Var "x") [])
 stgPrimitiveAlt :: QuasiQuoter
 stgPrimitiveAlt = stgQQ primitiveAlt "primitive alternative"

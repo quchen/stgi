@@ -19,8 +19,7 @@ module Stg.Parser.Parser (
     lambdaForm,
     expr,
     alts,
-    algebraicAlts,
-    primitiveAlts,
+    nonDefaultAlts,
     algebraicAlt,
     primitiveAlt,
     defaultAlt,
@@ -224,7 +223,7 @@ expr = P.choice [let', case', appF, appC, appP, lit]
     let' = P.try letTok
        <*> (binds <?> "list of free variables")
        <*  inTok
-       <*> (expr <?> "body")
+       <*> (expr <?> "let body")
        <?> "let"
     case' = P.try caseTok
         <*> (expr <?> "case scrutinee")
@@ -250,56 +249,49 @@ expr = P.choice [let', case', appF, appC, appP, lit]
 
 -- | Parse the alternatives given in a @case@ expression.
 alts :: Parser Alts
-alts = algebraic <|> primitive
-    <?> "case alternatives"
-  where
-    algebraic = Algebraic <$> algebraicAlts
-    primitive = Primitive <$> primitiveAlts
+alts = Alts <$> nonDefaultAlts <*> defaultAlt
+   <?> "case alternatives"
 
--- | Parse a number of algebraic alternatives, i.e. pattern matches on
--- data constructors.
+-- | Parse multiple non-default alternatives. The list of alternatives can
+-- be either all algebraic or all primitive.
 --
 -- @
--- Nil ()      -> ...
+-- Nil () -> ...
 -- Cons (x,xs) -> ...
--- default     -> ...
 -- @
-algebraicAlts :: Parser AlgebraicAlts
-algebraicAlts = AlgebraicAlts
-            <$> P.sepEndBy algebraicAlt semicolonTok
-            <*> defaultAlt
-            <?> "algebraic alternatives"
-
--- | Parse a number of primitive alternatives, i.e. matching literals.
 --
 -- @
 -- 1# -> ...
 -- 2# -> ...
--- n  -> ...
 -- @
-primitiveAlts :: Parser PrimitiveAlts
-primitiveAlts = PrimitiveAlts
-            <$> P.sepEndBy primitiveAlt semicolonTok
-            <*> defaultAlt
-            <?> "primitive alternatives"
+nonDefaultAlts :: Parser [Alt]
+nonDefaultAlts = p <|> pure [] <?> help
+  where
+    p = do
+        firstAlt <- algebraicAlt <|> primitiveAlt
+        rest <- case firstAlt of
+            AlgebraicAlt{} -> many algebraicAlt
+            PrimitiveAlt{} -> many primitiveAlt
+        pure (firstAlt:rest)
+    help = "non-default case alternatives"
 
 -- | Parse a single algebraic alternative.
 --
 -- @
 -- Cons (x,xs) -> ...
 -- @
-algebraicAlt :: Parser AlgebraicAlt
-algebraicAlt = AlgebraicAlt <$> conTok <*> vars <* arrowTok <*> expr
-    <?> "algebraic alternative"
+algebraicAlt :: Parser Alt
+algebraicAlt = P.try (AlgebraicAlt <$> conTok <*> vars) <* arrowTok <*> expr <* semicolonTok
+    <?> "algebraic case alternative"
 
 -- | Parse a single primitive alternative, such as @1#@.
 --
 -- @
 -- 1# -> ...
 -- @
-primitiveAlt :: Parser PrimitiveAlt
-primitiveAlt = PrimitiveAlt <$> literal <* arrowTok <*> expr
-    <?> "primitive alternative"
+primitiveAlt :: Parser Alt
+primitiveAlt = P.try (PrimitiveAlt <$> literal) <* arrowTok <*> expr <* semicolonTok
+    <?> "primitive case alternative"
 
 -- | Parse the default alternative, taken if none of the other alternatives
 -- in a @case@ expression match.
