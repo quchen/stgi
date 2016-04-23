@@ -52,6 +52,7 @@ allocMany closures (Heap heap) = (addrs, heap')
         closures
     heap' = Heap (heap <> M.fromList (zip addrs closures))
 
+-- | All addresses allocated on the heap.
 addresses :: Heap -> Set MemAddr
 addresses (Heap h) = M.keysSet h
 
