@@ -315,16 +315,16 @@ program_foldrSum = closureReductionTest defClosureReductionSpec
 
         sum = () \n (xs) -> foldr (add2, zero, xs);
 
-        cons = () \n (x,xs) -> Cons (x,xs);
-        nil = () \n () -> Nil ();
+        Cons = () \n (x,xs) -> Cons (x,xs);
+        Nil = () \n () -> Nil ();
         list = () \u () ->
             letrec one   = () \n () -> Int# (1#);
                    two   = () \n () -> Int# (2#);
                    three = () \n () -> Int# (3#);
-                   list3    = (three)          \n () -> cons (three, nil);
-                   list23   = (two, list3)     \n () -> cons (two,   list3);
-                   list123  = (one, list23)    \n () -> cons (one,   list23);
-                   list3123 = (three, list123) \n () -> cons (three, list123)
+                   list3    = (three)          \n () -> Cons (three, Nil);
+                   list23   = (two, list3)     \n () -> Cons (two,   list3);
+                   list123  = (one, list23)    \n () -> Cons (one,   list23);
+                   list3123 = (three, list123) \n () -> Cons (three, list123)
             in list3123 ();
 
         main = () \u () -> case sum (list) of
@@ -347,8 +347,8 @@ program_takeRepeat = closureReductionTest defClosureReductionSpec
             <> Stg.listC
             <> [stgProgram|
 
-        consBang = () \n (x,xs) -> case xs () of v -> cons (x, v);
-        forceSpine = () \n (xs) -> foldr (consBang, nil, xs);
+        ConsBang = () \n (x,xs) -> case xs () of v -> Cons (x, v);
+        forceSpine = () \n (xs) -> foldr (ConsBang, Nil, xs);
 
         twoUnits = () \u () ->
             letrec  repeated = (unit) \u () -> repeat (unit);
@@ -385,7 +385,7 @@ data ClosureReductionSpec = ClosureReductionSpec
 defClosureReductionSpec :: ClosureReductionSpec
 defClosureReductionSpec = ClosureReductionSpec
     { testName = "Default closure reduction test template"
-    , successPredicate = const True
+    , successPredicate = Const True
     , source = [stg| main = () \n () -> Unit () |]
     , maxSteps = 32 }
 

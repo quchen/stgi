@@ -19,6 +19,9 @@ library
   exposed-modules:     Stack
                      , Stg.Language
                      , Stg.Language.Prelude
+                     , Stg.Language.Prelude.Function
+                     , Stg.Language.Prelude.List
+                     , Stg.Language.Prelude.Number
                      , Stg.Language.Prettyprint
                      , Stg.Language.Prettyprint.Ansi
                      , Stg.Language.Prettyprint.ParserInverse
