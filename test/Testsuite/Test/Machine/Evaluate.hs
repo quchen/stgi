@@ -295,7 +295,7 @@ program_foldrSum = closureReductionTest defClosureReductionSpec
     { testName = "Sum of list via foldr"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , maxSteps = 128
-    , source = [stg|
+    , source = [stgProgram|
         foldr = () \n (f, z, xs) -> case xs () of
             Nil () -> z ();
             Cons (y,ys) ->
@@ -315,13 +315,12 @@ program_foldrSum = closureReductionTest defClosureReductionSpec
 
         sum = () \n (xs) -> foldr (add2, zero, xs);
 
-        Cons = () \n (x,xs) -> Cons (x,xs);
-        Nil = () \n () -> Nil ();
         list = () \u () ->
             letrec one   = () \n () -> Int# (1#);
                    two   = () \n () -> Int# (2#);
                    three = () \n () -> Int# (3#);
-                   list3    = (three)          \n () -> Cons (three, Nil);
+                   nil      = () \n () -> Nil ();
+                   list3    = (three, nil)     \n () -> Cons (three, nil);
                    list23   = (two, list3)     \n () -> Cons (two,   list3);
                    list123  = (one, list23)    \n () -> Cons (one,   list23);
                    list3123 = (three, list123) \n () -> Cons (three, list123)
@@ -344,11 +343,11 @@ program_takeRepeat = closureReductionTest defClosureReductionSpec
             <> Stg.repeat
             <> Stg.foldr
             <> Stg.seq
-            <> Stg.listC
             <> [stgProgram|
 
-        ConsBang = () \n (x,xs) -> case xs () of v -> Cons (x, v);
-        forceSpine = () \n (xs) -> foldr (ConsBang, Nil, xs);
+        consBang = () \n (x,xs) -> case xs () of v -> Cons (x, v);
+        nil = () \n () -> Nil ();
+        forceSpine = () \n (xs) -> foldr (consBang, nil, xs);
 
         twoUnits = () \u () ->
             letrec  repeated = (unit) \u () -> repeat (unit);
@@ -385,7 +384,7 @@ data ClosureReductionSpec = ClosureReductionSpec
 defClosureReductionSpec :: ClosureReductionSpec
 defClosureReductionSpec = ClosureReductionSpec
     { testName = "Default closure reduction test template"
-    , successPredicate = Const True
+    , successPredicate = const True
     , source = [stg| main = () \n () -> Unit () |]
     , maxSteps = 32 }
 
