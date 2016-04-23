@@ -61,19 +61,25 @@ minimal = testGroup "Minimal example"
     unusedIsCollected = testCase "Dead address is found" test
       where
         expectedDead = S.singleton (MemAddr 3)
-        (Dead actualDead, _alive, cleanHeap) = garbageCollect globals dirtyHeap
-        test = assertEqual (T.unpack (errorMsg cleanHeap)) expectedDead actualDead
+        (Dead (Heap actualDead), Alive cleanHeap) = garbageCollect globals dirtyHeap
+        test = assertEqual (T.unpack (errorMsg cleanHeap))
+                           expectedDead
+                           (M.keysSet actualDead)
 
     usedIsNotCollected = testCase "Alives are kept" test
       where
         expectedHeap = let Heap h = dirtyHeap
                        in Heap (M.delete (MemAddr 3) h)
-        (_dead, _alive, cleanHeap) = garbageCollect globals dirtyHeap
-        test = assertEqual (T.unpack (errorMsg cleanHeap)) expectedHeap cleanHeap
+        (_dead, Alive cleanHeap) = garbageCollect globals dirtyHeap
+        test = assertEqual (T.unpack (errorMsg cleanHeap))
+                           expectedHeap
+                           cleanHeap
 
     heapSplit = testCase "dead+alive contain all previous addresses" test
       where
-        expected = let Heap h = dirtyHeap in M.keysSet h
-        actual = dead <> alive
-        (Dead dead, Alive alive, cleanHeap) = garbageCollect globals dirtyHeap
-        test = assertEqual (T.unpack (errorMsg cleanHeap)) expected actual
+        expected = dirtyHeap
+        actual = dead <> cleanHeap
+        (Dead dead, Alive cleanHeap) = garbageCollect globals dirtyHeap
+        test = assertEqual (T.unpack (errorMsg cleanHeap))
+                           expected
+                           actual

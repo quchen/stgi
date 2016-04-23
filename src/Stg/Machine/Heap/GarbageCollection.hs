@@ -1,5 +1,8 @@
-{-# LANGUAGE LambdaCase      #-}
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE OverloadedLists            #-}
+
+{-# OPTIONS_GHC -fdefer-typed-holes #-}
 
 -- | Remove unused heap objects.
 module Stg.Machine.Heap.GarbageCollection (
@@ -12,7 +15,6 @@ module Stg.Machine.Heap.GarbageCollection (
 
 import           Data.Map          (Map)
 import qualified Data.Map          as M
-import           Data.Maybe
 import           Data.Monoid
 import           Data.Set          (Set)
 import qualified Data.Set          as S
@@ -22,75 +24,66 @@ import           Stg.Machine.Types
 
 
 
--- | Alive memory addresses.
-newtype Alive = Alive (Set MemAddr)
+-- | Alive objects.
+newtype Alive a = Alive a
+    deriving (Eq, Ord, Show, Monoid)
 
--- | Dead memory addresses that have been eliminated by garbage collection.
-newtype Dead = Dead (Set MemAddr)
+-- | Dead objects that been eliminated by garbage collection.
+newtype Dead a = Dead a
+    deriving (Eq, Ord, Show, Monoid)
 
--- | Simple tracing garbage collector.
---
--- 1. Get the addresses of all globals.
--- 2. Collect all the addresses contained in the closures the global addresses
---    map to on the heap.
--- 3. Drop all addresses from the heap that weren't found in the process.
-garbageCollect
-    :: Globals -- ^ Root elements (unconditionally alive).
-    -> Heap
-    -> (Dead, Alive, Heap)
-garbageCollect globals h@(Heap heap) = (Dead dead, Alive alive, Heap cleanHeap)
+garbageCollect :: Globals -> Heap -> (Dead Heap, Alive Heap)
+garbageCollect globals heap = (Dead dead, alive)
   where
-    alive = aliveAddresses globals h
-    dead = M.keysSet heap `S.difference` alive
-    (cleanHeap, _deadHeap) = M.partitionWithKey isAlive heap
-    isAlive addr _ = S.member addr alive
+    GcState {aliveHeap = alive, oldHeap = dead}
+        = until everythingCollected splitHeap start
 
--- garbageCollect'
---     :: Globals -- ^ Root elements (unconditionally alive).
---     -> Heap
---     -> (Dead, Alive, Heap)
-garbageCollect' globals heap = loop ([], alive, alive, heap)
+    start = GcState
+        { aliveHeap     = mempty
+        , parentRescued = Alive (globalAddrs globals)
+        , oldHeap       = heap
+        }
+
+everythingCollected :: GcState -> Bool
+everythingCollected GcState{parentRescued = Alive x} = S.null x
+
+data GcState = GcState
+    { aliveHeap     :: Alive Heap
+        -- ^ Heap of closures known to be alive.
+        --   Has no overlap with the old heap.
+
+    , parentRescued :: Alive (Set MemAddr)
+        -- ^ Memory addresses known to be alive,
+        --   but not yet scavenged from the old heap.
+
+    , oldHeap       :: Heap
+        -- ^ The old heap, containing both dead
+        --   and not-yet-found alive closures.
+    } deriving (Eq, Ord, Show)
+
+-- | Find all addresses of global values.
+globalAddrs :: Globals -> Set MemAddr
+globalAddrs (Globals globals)
+  = S.fromList [ addr | (_, Addr addr) <- M.toList globals ]
+
+splitHeap :: GcState -> GcState
+splitHeap GcState
+    { aliveHeap     = oldAlive@(Alive (Heap alive))
+    , parentRescued = Alive (parentRescuedAddrs)
+    , oldHeap       = Heap oldRest }
+  = GcState
+    { aliveHeap     = oldAlive <> Alive (Heap scavenged)
+    , parentRescued = newParentRescued
+    , oldHeap       = Heap newRest }
   where
-    alive = aliveAddresses globals heap
-    loop x@(_, _, [], _) = x
-    loop x = loop (gcStep x)
-    gcStep (dead, alive, toConsider, heap) = (dead', alive', toConsider', heap')
-      where
-        (aliveHeap, deadHeap) = let isAlive addr _ = S.member addr alive
-                                    Heap h = heap
-                                in M.partitionWithKey isAlive h
-        dead'  = dead  <> M.keysSet deadHeap
-        alive' = alive <> M.keysSet aliveHeap
-        toConsider' = M.keysSet aliveHeap
-        heap' = Heap aliveHeap
+    -- A closure is alive iff it is on the alive heap, or the closure that
+    -- contained it was scavenged in a previous step.
+    isAlive addr _closure = M.member addr alive || S.member addr parentRescuedAddrs
 
-garbageCollect2 globals heap = evacLoop ([], globalHeap, heap)
-  where
-    globalHeap = _aliveAddresses2 (M.intersection (let Globals gbl = globals in gbl)
-                                                  (let Heap hp = heap in hp))
-                                                  heap
+    -- :: (Map MemAddr Closure, Map MemAddr Closure)
+    (scavenged, newRest) = M.partitionWithKey isAlive oldRest
 
-    evacLoop :: (Heap, Heap, Heap) -> (Heap, Heap)
-    evacLoop (dead, alive, toConsider) | let Heap foo = toConsider in M.null foo = (dead, alive)
-    evacLoop (dead, alive, toConsider) =
-        let (dead', alive') = M.partition (\addr -> M.member addr alive) toConsider
-        in _
-
-    -- | Find all alive addresses in the heap, starting at the values of the
-    -- globals, which are considered alive.
-    aliveAddresses2 :: Set MemAddr -> Heap -> Set MemAddr
-    aliveAddresses2 alive (Heap heap) = foldMap addrs aliveClosures
-      where
-        aliveAddrs = [ addr | Addr addr <- S.toList alive ] -- TODO: don't use list, Set is sufficient
-        aliveClosures = mapMaybe (\addr -> M.lookup addr heap) aliveAddrs
-
--- | Find all alive addresses in the heap, starting at the values of the
--- globals, which are considered alive.
-aliveAddresses :: Globals -> Heap -> Set MemAddr
-aliveAddresses (Globals globals) (Heap heap) = foldMap addrs globalClosures
-  where
-    globalAddrs = [ addr | (_, Addr addr) <- M.toList globals ]
-    globalClosures = mapMaybe (\addr -> M.lookup addr heap) globalAddrs
+    newParentRescued = Alive (addrs scavenged)
 
 
 
