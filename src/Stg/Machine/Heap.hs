@@ -14,6 +14,7 @@ module Stg.Machine.Heap (
 
 
 
+import qualified Data.List         as L
 import qualified Data.Map          as M
 import           Data.Set          (Set)
 import           Prelude           hiding (lookup)
@@ -38,9 +39,7 @@ update addr cl (Heap h) = Heap (M.adjust (const cl) addr h)
 alloc :: Closure -> Heap -> (MemAddr, Heap)
 alloc lambdaForm (Heap h) = (addr, heap')
   where
-    addr = MemAddr (case M.maxViewWithKey h of
-        Just ((MemAddr x,_),_) -> x+1
-        Nothing                -> 0 )
+    Just addr = L.find (\i -> M.notMember i h) (map MemAddr [0..])
     heap' = Heap (M.insert addr lambdaForm h)
 
 -- | Store many values in the heap at unused addresses, and return them
