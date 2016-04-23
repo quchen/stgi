@@ -71,6 +71,9 @@ test-suite stg-test
                      , Test.Language.Prettyprint.ParserInverseAnsi
                      , Test.Machine
                      , Test.Machine.Evaluate
+                     , Test.Machine.Evaluate.Medium
+                     , Test.Machine.Evaluate.Small
+                     , Test.Machine.Evaluate.ClosureReductionTest
                      , Test.Machine.GarbageCollection
                      , Test.Machine.Heap
                      , Test.Orphans
