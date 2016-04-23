@@ -14,6 +14,7 @@ module Stg.Language.Prelude (
     take,
     filter,
     repeat,
+    sort,
 
     -- * Numbers
     add,

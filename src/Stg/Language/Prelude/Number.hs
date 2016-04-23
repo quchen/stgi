@@ -3,6 +3,8 @@
 module Stg.Language.Prelude.Number (
     numbers,
     add,
+    leq,
+    gt,
 ) where
 
 
@@ -15,6 +17,7 @@ import           Stg.Parser
 
 
 numbers, add :: Program
+leq, gt :: Program
 
 
 
@@ -49,3 +52,32 @@ add = [stg|
                 v  -> Int# (v)
             default -> Error_add ()
         default -> Error_add () |]
+
+-- | @<=@
+--
+-- @
+-- leq : (Int, Int) -> Int
+-- @
+leq = [stg|
+    leq = () \n (x,y) -> case x () of
+        Int# (x') -> case y () of
+            Int# (y') -> case <=# x' y' of
+                1# -> Int# (1#); -- FIXME type hint
+                v  -> Int# (v)
+            default -> Error_leq ()
+        default -> Error_leq () |]
+
+
+-- | @>@
+--
+-- @
+-- gt : (Int, Int) -> Int
+-- @
+gt = [stg|
+    gt = () \n (x,y) -> case x () of
+        Int# (x') -> case y () of
+            Int# (y') -> case ># x' y' of
+                1# -> Int# (1#); -- FIXME type hint
+                v  -> Int# (v)
+            default -> Error_gt ()
+        default -> Error_gt () |]

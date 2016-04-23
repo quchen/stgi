@@ -10,6 +10,7 @@ module Stg.Language.Prelude.List (
     take,
     filter,
     repeat,
+    sort,
 ) where
 
 
@@ -25,7 +26,7 @@ import           Stg.Language.Prelude.Number as Num
 
 
 
-concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat :: Program
+concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat, sort :: Program
 
 concat = [stg|
     concat = () \n (xs,ys) -> case xs () of
@@ -129,6 +130,8 @@ take = Num.add <> [stg|
         in take' ()
     |]
 
+-- TODO Doc
+-- | UNTESTED!
 filter = [stg|
     filter = () \n (p, xs) -> case xs () of
         Nil () -> Nil ();
@@ -155,3 +158,33 @@ repeat = [stg|
         letrec xs = (x, xs) \u () -> Cons (x,xs)
         in xs ()
     |]
+
+-- | UNTESTED!
+--
+-- That Haskell sort function often misleadingly referred to as "quicksort".
+--
+-- @
+-- sort : [Int] -> [Int]
+-- @
+sort = mconcat [leq, gt, filter, concat] <> [stgProgram|
+    sort = () \n (xs) -> case xs () of
+        Nil () -> Nil ();
+        Cons (x,xs') ->
+            letrec  smaller = (xs') \u () -> filter (leqP, xs');
+                    greater = (xs') \u () -> filter (gtP,  xs');
+                    leqP = (x) \n (y) -> case leq (x,y) of
+                        Int# (i) -> case i () of
+                            1# -> True ();
+                            default -> False ();
+                        def -> Error_sort_leqP (def);
+                    gtP = (x) \n (y) -> case gt (x,y) of
+                        Int# (i) -> case i () of
+                            1# -> True ();
+                            default -> False ();
+                        def -> Error_sort_gtP (def);
+                    greaterAndPivot = () \u () -> Cons (x, greater)
+            in concat (smaller, greaterAndPivot);
+        def -> Error_sort (def)
+    |]
+
+-- TODO: list :: [a] -> Program
