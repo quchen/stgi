@@ -61,8 +61,8 @@ main = do
 runStg :: (forall a. PrettyAnsi a => a -> Text) -> StgState -> IO ()
 runStg ppr initial =
     let states = evalsUntil 1000
-                            (const False)
-                            (PerformGc (const True) )
+                            (HaltIf (const False))
+                            (PerformGc (const True))
                             initial
     in do
         for_ states (\state -> do

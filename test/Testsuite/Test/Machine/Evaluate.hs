@@ -438,7 +438,7 @@ closureReductionTest testSpec = testCase (T.unpack (testName testSpec)) test
   where
     program = initialState "main" (source testSpec)
     finalState = evalUntil (maxSteps testSpec)
-                           (successPredicate testSpec)
+                           (HaltIf (successPredicate testSpec))
                            (PerformGc (const False))
                            program
     test = case stgInfo finalState of
