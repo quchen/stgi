@@ -137,34 +137,18 @@ program_map = closureReductionTest defSpec
     { testName = "map (+1) [1,2,3]"
     , source = Stg.add
             <> Stg.map
-            <> Stg.listOfNumbers "list" [1,2,3]
+            <> Stg.listOfNumbers "inputList" [1,2,3]
+            <> Stg.listOfNumbers "expectedResult" (map (+1) [1,2,3])
+            <> Stg.listIntEquals
             <> [stgProgram|
 
-        plusOne = () \u () ->
-            letrec  one = () \n () -> Int# (1#);
-                    plusOne' = (one) \n (n) -> add (n, one)
-            in plusOne' ();
-
-        main = () \u () -> case map (plusOne, list) of
-            Cons (x,xs) -> case xs () of
-                Cons (y, ys) -> case ys () of
-                    Cons (z, zs) -> case zs () of
-                        Nil () -> case x () of
-                            Int# (xPrim) -> case xPrim () of
-                                2# -> case y () of
-                                    Int# (yPrim) -> case yPrim () of
-                                        3# -> case z () of
-                                            Int# (zPrim) -> case zPrim () of
-                                                4# -> Success ()
-                                                default -> Error_Third_item_should_be_four ()
-                                            default -> Error_Third_item_should_be_a_number ()
-                                        default -> Error_Second_item_should_be_three ()
-                                    default -> Error_Second_item_should_be_a_number ()
-                                default -> Error_first_item_should_be_two ()
-                            default -> Error_first_item_should_be_a_number ()
-                        default -> Error_List_has_too_many_items ()
-                    default -> Error_List_has_only_two_items ()
-                default -> Error_List_has_only_one_item ()
-            default -> Error_List_is_empty_or_not_a_list ()
-
+        main = () \u () ->
+            letrec  plusOne = () \u () ->
+                        letrec  one = () \n () -> Int# (1#);
+                                plusOne' = (one) \n (n) -> add (n, one)
+                        in plusOne' ();
+                    actual = (plusOne) \u () -> map (plusOne, inputList)
+            in case listIntEquals (actual, expectedResult) of
+                True () -> Success ();
+                wrong   -> TestFail (wrong)
         |] }

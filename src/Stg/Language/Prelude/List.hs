@@ -17,6 +17,7 @@ module Stg.Language.Prelude.List (
     repeat,
     sort,
     map,
+    listIntEquals,
 
     -- * Convenience
     listOfNumbers,
@@ -38,7 +39,7 @@ import           Stg.Language.Prelude.Number as Num
 
 
 
-nil, concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat, sort, map :: Program
+nil, concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat, sort, map, listIntEquals :: Program
 
 nil = [stg| nil = () \n () -> Nil () |]
 
@@ -271,3 +272,26 @@ listOfNumbers name ints = nil <>
       where
         sign | i P.< 0 = "'"
              | P.otherwise = ""
+
+-- | Equality of lists of integers.
+--
+-- @
+-- map : [Int] -> [Int] -> Bool
+-- @
+listIntEquals = Num.eq <> [stgProgram|
+    listIntEquals = () \n (xs, ys) ->
+        case xs () of
+            Nil () -> case ys () of
+                Nil () -> True ();
+                Cons (y,ys') -> False ();
+                v -> Error_listEquals (v);
+            Cons (x,xs') -> case ys () of
+                Nil () -> False ();
+                Cons (y,ys') -> case eq (x,y) of
+                    Int# (eqResult) -> case eqResult () of
+                        1# -> listIntEquals (xs',ys');
+                        default -> False ()
+                    v -> Error_listEquals_1 (v);
+                v -> Error_listEquals_2 (v)
+            v -> Error_listEquals_3 (v)
+    |]

@@ -17,6 +17,7 @@ module Stg.Language.Prelude (
     repeat,
     sort,
     map,
+    listIntEquals,
 
     -- ** Convenience
     listOfNumbers,
@@ -24,6 +25,9 @@ module Stg.Language.Prelude (
     -- * Numbers
     add,
     numbers,
+    leq,
+    gt,
+    eq,
 
     -- * Other
     seq,

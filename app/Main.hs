@@ -26,7 +26,23 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog = Stg.add <> [stg| main = () \n () -> main () |]
+    let prog = Stg.add
+            <> Stg.map
+            <> Stg.listOfNumbers "inputList" [1,2,3]
+            <> Stg.listOfNumbers "expectedResult" (map (+1) [1,2,3])
+            <> Stg.listIntEquals
+            <> [stgProgram|
+
+        main = () \u () ->
+            letrec  plusOne = () \u () ->
+                        letrec  one = () \n () -> Int# (1#);
+                                plusOne' = (one) \n (n) -> add (n, one)
+                        in plusOne' ();
+                    actual = (plusOne) \u () -> map (plusOne, inputList)
+            in case listIntEquals (actual, expectedResult) of
+                True () -> Success ();
+                wrong   -> TestFail (wrong)
+        |]
         initial = initialState "main" prog
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True
