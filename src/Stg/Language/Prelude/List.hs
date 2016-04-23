@@ -8,6 +8,7 @@ module Stg.Language.Prelude.List (
     iterate,
     cycle,
     take,
+    filter,
     repeat,
 ) where
 
@@ -24,7 +25,7 @@ import           Stg.Language.Prelude.Number as Num
 
 
 
-concat, foldl, foldl', foldr, iterate, cycle, take, repeat :: Program
+concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat :: Program
 
 concat = [stg|
     concat = () \n (xs,ys) -> case xs () of
@@ -128,10 +129,17 @@ take = Num.add <> [stg|
         in take' ()
     |]
 
--- TODO doc
--- filter = [stg|
---     filter = () \n (p) ->
---     |]
+filter = [stg|
+    filter = () \n (p, xs) -> case xs () of
+        Nil () -> Nil ();
+        Cons (x,xs') -> case p (x) of
+            False () -> filter (p, xs');
+            True () ->
+                let rest = (p, xs') \u () -> filter (p, xs')
+                in Cons (x, rest);
+            def -> Error_filter (def)
+        def -> Error_filter (def)
+    |]
 
 -- | Repeat a single element infinitely.
 --

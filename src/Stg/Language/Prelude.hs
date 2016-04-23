@@ -12,6 +12,7 @@ module Stg.Language.Prelude (
     iterate,
     cycle,
     take,
+    filter,
     repeat,
 
     -- * Numbers
