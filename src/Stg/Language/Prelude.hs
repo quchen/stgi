@@ -13,6 +13,7 @@ module Stg.Language.Prelude (
     cycle,
     take,
     repeat,
+    map,
 
     -- * Numbers
     add,
