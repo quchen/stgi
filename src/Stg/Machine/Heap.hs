@@ -10,19 +10,14 @@ module Stg.Machine.Heap (
     alloc,
     allocMany,
 
-    -- * Garbage collection
-    garbageCollect,
-    Dead(..),
-    Alive(..),
 ) where
 
 
 
-import qualified Data.Map                           as M
-import           Data.Set                           (Set)
-import           Prelude                            hiding (lookup)
+import qualified Data.Map          as M
+import           Data.Set          (Set)
+import           Prelude           hiding (lookup)
 
-import           Stg.Machine.Heap.GarbageCollection
 import           Stg.Machine.Types
 
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -6,6 +7,8 @@ module Stg.Machine (
     initialState,
     evalStep,
     evalUntil,
+    evalsUntil,
+    terminated,
 
     -- * Garbage collection
     garbageCollect,
@@ -13,16 +16,17 @@ module Stg.Machine (
 
 
 
-import qualified Data.Map             as M
+import qualified Data.Map                      as M
 import           Data.Monoid
-import qualified Data.Set             as S
-import qualified Data.Text            as T
+import qualified Data.Text                     as T
 
 import           Stg.Language
+import           Stg.Language.Prettyprint
 import           Stg.Machine.Env
 import           Stg.Machine.Evaluate
-import           Stg.Machine.Heap     (Alive (..), Dead (..))
-import qualified Stg.Machine.Heap     as H
+import           Stg.Machine.GarbageCollection (Alive (..), Dead (..))
+import qualified Stg.Machine.GarbageCollection as GC
+import qualified Stg.Machine.Heap              as H
 import           Stg.Machine.Types
 import           Stg.Util
 
@@ -64,14 +68,80 @@ initialState mainVar (Program binds) = StgState
         in Closure lf freeVals
 
 garbageCollect :: StgState -> StgState
-garbageCollect s@StgState
-    { stgHeap    = dirtyHeap
-    , stgGlobals = globals }
+garbageCollect state
+  = let (Dead deadHeap, Alive cleanHeap) = GC.garbageCollect state
+        garbageAddresses = (T.intercalate ", " . foldMap (\addr -> [prettyprint addr]) . H.addresses) deadHeap
+        garbageWasCollected = H.size deadHeap > 0
 
-  = let (Dead deadHeap, Alive cleanHeap) = H.garbageCollect globals dirtyHeap
-        garbageAddresses = (T.intercalate ", " . (map show' . S.toList) . H.addresses) deadHeap
+    in if garbageWasCollected
+            then state { stgHeap  = cleanHeap
+                       , stgTicks = stgTicks state + 1
+                       , stgInfo  = Info GarbageCollection
+                                         ["Removed addresses: " <> garbageAddresses] }
+            else state
 
+-- | Evaluate the STG until a predicate holds, aborting if the maximum number of
+-- steps are exceeded.
+--
+-- @
+-- 'last' ('evalsUntil' ...) ≡ 'evalUntil'
+-- @
+evalUntil
+    :: Integer            -- ^ Maximum number of steps allowed
+    -> (StgState -> Bool) -- ^ Halting decision function
+    -> StgState           -- ^ Initial state
+    -> StgState           -- ^ Final state
+evalUntil maxSteps halt state = last (evalsUntil maxSteps halt state)
 
-    in s { stgHeap = cleanHeap
-         , stgInfo = Info GarbageCollection
-                          ["Removed addresses: " <> garbageAddresses] }
+-- | Evaluate the STG, and record all intermediate states.
+--
+-- * Stop when a predicate holds.
+-- * Stop if the maximum number of steps are exceeded.
+-- * Perform GC on every step.
+--
+-- @
+-- 'evalsUntil' ≈ 'unfoldr' 'evalUntil'
+-- @
+evalsUntil
+    :: Integer            -- ^ Maximum number of steps allowed
+    -> (StgState -> Bool) -- ^ Halting decision function
+    -> StgState           -- ^ Initial state
+    -> [StgState]         -- ^ All intermediate states
+evalsUntil maxSteps halt = go False
+  where
+    terminate = (:[])
+    go attemptGc = \case
+
+        state@StgState{ stgTicks = ticks } | ticks >= maxSteps
+            -> terminate (state { stgInfo = Info MaxStepsExceeded [] })
+
+        state | halt state
+            -> terminate (state { stgInfo = Info HaltedByPredicate [] })
+
+        state@StgState{ stgInfo = Info (StateTransiton{}) _ }
+            | attemptGc -> case garbageCollect state of
+                stateGc@StgState{stgInfo = Info GarbageCollection _} ->
+                    state : stateGc : go False (evalStep stateGc)
+                _otherwise -> state : go True (evalStep state)
+            | otherwise -> state : go True (evalStep state)
+
+        state@StgState{ stgInfo = Info StateInitial _ }
+            | attemptGc -> case garbageCollect state of
+                stateGc@StgState{stgInfo = Info GarbageCollection _} ->
+                    state : stateGc : go False (evalStep stateGc)
+                _otherwise -> state : go True (evalStep state)
+            | otherwise -> state : go True (evalStep state)
+
+        state@StgState{ stgInfo = Info GarbageCollection _ }
+            -> state : go False (evalStep state)
+
+        state
+            -> terminate state
+
+-- | Check whether a state is terminal.
+terminated :: StgState -> Bool
+terminated StgState{stgInfo = Info info _} = case info of
+    StateTransiton{}    -> False
+    StateInitial{}      -> False
+    GarbageCollection{} -> False
+    _otherwise          -> True
