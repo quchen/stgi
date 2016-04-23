@@ -33,7 +33,7 @@ leq, gt, eq :: Program
 -- ten      = 10
 -- @
 numbers = [stg|
-    -- minusOne = () \n () -> Int# (-1#);
+    minusOne = () \n () -> Int# (-1#);
     zero     = () \n () -> Int# (0#);
     one      = () \n () -> Int# (1#);
     two      = () \n () -> Int# (2#);
@@ -43,7 +43,7 @@ numbers = [stg|
 -- | Integer addition.
 --
 -- @
--- add : (Int, Int) -> Int
+-- add : Int -> Int -> Int
 -- @
 add = [stg|
     add = () \n (x,y) -> case x () of
@@ -57,7 +57,7 @@ add = [stg|
 -- | @<=@
 --
 -- @
--- leq : (Int, Int) -> Int
+-- leq : Int -> Int -> Int
 -- @
 leq = [stg|
     leq = () \n (x,y) -> case x () of
@@ -72,7 +72,7 @@ leq = [stg|
 -- | @>@
 --
 -- @
--- gt : (Int, Int) -> Int
+-- gt : Int -> Int -> Int
 -- @
 gt = [stg|
     gt = () \n (x,y) -> case x () of
@@ -88,7 +88,7 @@ gt = [stg|
 -- | @==@
 --
 -- @
--- eq : (Int, Int) -> Int
+-- eq : Int -> Int -> Int
 -- @
 eq = [stg|
     eq = () \n (x,y) -> case x () of

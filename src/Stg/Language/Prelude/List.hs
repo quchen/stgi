@@ -55,7 +55,7 @@ concat = [stg|
 -- | Lazy left list fold.
 --
 -- @
--- foldl : (b -> a -> b, b, [a]) -> b
+-- foldl : (b -> a -> b) -> b -> [a] -> b
 -- @
 foldl = [stg|
     foldl = () \n (f, acc, xs) -> case xs () of
@@ -69,7 +69,7 @@ foldl = [stg|
 -- | Strict left list fold.
 --
 -- @
--- foldl : (b -> a -> b, b, [a]) -> b
+-- foldl' : (b -> a -> b) -> b -> [a] -> b
 -- @
 foldl' = [stg|
     foldl' = () \n (f, acc, xs) -> case xs () of
@@ -82,7 +82,7 @@ foldl' = [stg|
 -- | Right list fold.
 --
 -- @
--- foldl : (a -> b -> b, b, [a]) -> b
+-- foldr : (a -> b -> b) -> b -> [a] -> b
 -- @
 foldr = [stg|
     foldr = () \n (f, z, xs) -> case xs () of
@@ -99,7 +99,7 @@ foldr = [stg|
 -- @
 --
 -- @
--- iterate : (a -> a, a) -> [a]
+-- iterate : (a -> a) -> a -> [a]
 -- @
 iterate = [stg|
     iterate = () \n (f,x) ->
@@ -207,7 +207,7 @@ sort = mconcat [leq, gt, filter, concat] <> [stgProgram|
 -- | Apply a function to each element of a list.
 --
 -- @
--- map : (a -> b, [a]) -> [b]
+-- map : (a -> b) -> [a] -> [b]
 -- @
 map = [stg|
     map = () \n (f, list) -> case list () of

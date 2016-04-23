@@ -33,14 +33,14 @@ id = [stg| id = () \n (x) -> x () |]
 -- | Constant function.
 --
 -- @
--- Const : (a, b) -> a
+-- Const : a -> b -> a
 -- @
 const = [stg| const = () \n (x,y) -> x () |]
 
 -- | Function composition.
 --
 -- @
--- compose : (b -> c, a -> b) -> a -> c
+-- compose : (b -> c) -> (a -> b) -> a -> c
 -- @
 compose = [stg|
     compose = () \n (f, g) ->
