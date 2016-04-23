@@ -11,6 +11,7 @@ module Stg.Language.Prelude.List (
     filter,
     repeat,
     sort,
+    map,
 ) where
 
 
@@ -26,7 +27,7 @@ import           Stg.Language.Prelude.Number as Num
 
 
 
-concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat, sort :: Program
+concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat, sort, map :: Program
 
 concat = [stg|
     concat = () \n (xs,ys) -> case xs () of
@@ -188,3 +189,17 @@ sort = mconcat [leq, gt, filter, concat] <> [stgProgram|
     |]
 
 -- TODO: list :: [a] -> Program
+
+-- | Apply a function to each element of a list.
+--
+-- @
+-- map : (a -> b, [a]) -> [b]
+-- @
+map = [stg|
+    map = () \n (f, list) -> case list () of
+        Nil ()       -> Nil ();
+        Cons (x, xs) -> let fx  = (f, x)  \u () -> f (x);
+                            fxs = (f, xs) \u () -> map (f, xs)
+                        in  Cons (fx, fxs);
+        default -> Error_Map ()
+    |]

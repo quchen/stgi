@@ -15,6 +15,7 @@ module Stg.Language.Prelude (
     filter,
     repeat,
     sort,
+    map,
 
     -- * Numbers
     add,

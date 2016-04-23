@@ -61,7 +61,8 @@ tests = testGroup "Evaluate"
         , testGroup "Programs"
             [ program_add3
             , program_foldrSum
-            , program_takeRepeat ]
+            , program_takeRepeat
+            , program_map ]
         ]
     ]
 
@@ -362,6 +363,48 @@ program_takeRepeat = closureReductionTest defClosureReductionSpec
                     default -> TestFailure ();
                 default -> TestFailure ();
             default -> TestFailure ()
+        |] }
+
+program_map :: TestTree
+program_map = closureReductionTest defClosureReductionSpec
+    { testName = "map (+1) [1,2,3]"
+    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , maxSteps = 200
+    , source = Stg.numbers
+            <> Stg.add
+            <> Stg.map
+            <> [stgProgram|
+
+        list = () \u () -> letrec nil = () \n () -> Nil ();
+                                  list3 = (nil) \u () -> Cons (three, nil);
+                                  list23 = (list3) \u () -> Cons (two, list3);
+                                  list123 = (list23) \u () -> Cons (one, list23)
+                           in list123 ();
+
+        plusOne = () \n (n) -> add (n, one);
+
+        main = () \u () -> case map (plusOne, list) of
+            Cons (x,xs) -> case xs () of
+                Cons (y, ys) -> case ys () of
+                    Cons (z, zs) -> case zs () of
+                        Nil () -> case x () of
+                            Int# (xPrim) -> case xPrim () of
+                                2# -> case y () of
+                                    Int# (yPrim) -> case yPrim () of
+                                        3# -> case z () of
+                                            Int# (zPrim) -> case zPrim () of
+                                                4# -> Success ()
+                                                default -> Error_Third_item_should_be_four ()
+                                            default -> Error_Third_item_should_be_a_number ()
+                                        default -> Error_Second_item_should_be_three ()
+                                    default -> Error_Second_item_should_be_a_number ()
+                                default -> Error_first_item_should_be_two ()
+                            default -> Error_first_item_should_be_a_number ()
+                        default -> Error_List_has_too_many_items ()
+                    default -> Error_List_has_only_two_items ()
+                default -> Error_List_has_only_one_item ()
+            default -> Error_List_is_empty_or_not_a_list ()
+
         |] }
 
 
