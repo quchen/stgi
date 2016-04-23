@@ -3,15 +3,10 @@
 -- | Common Haskell functions, translated to STG. Use the 'Monoid' instance
 -- for 'Program' to mix them.
 --
--- Each definition is written so that it can be used directly; for example,
--- 'iterate' includes the definition of 'cons', and you don't have to add it
--- manually.
---
 -- This module should be imported qualified, since it heavily conflicts with the
 -- standard Haskell "Prelude".
 module Stg.Language.Prelude (
     -- * Lists
-    listC,
     concat,
     foldl,
     foldl',
@@ -28,7 +23,7 @@ module Stg.Language.Prelude (
     -- * Other
     seq,
     id,
-    const,
+    Const,
     compose,
 ) where
 
@@ -45,25 +40,7 @@ import           Stg.Parser
 
 listC, concat, foldl, foldl', foldr, iterate, cycle, take, repeat :: Program
 numbers, add :: Program
-seq, id, const, compose :: Program
-
--- | List standard constructors.
---
--- @
--- nil : [a]
--- cons : (a, [a]) -> [a]
--- @
-listC = [stg|
-    nil = () \n () -> Nil ();
-    cons = () \n (x,xs) -> Cons (x,xs) |]
-
-concat = [stg|
-    concat = () \n (xs, ys) -> case xs () of
-        Nil () -> ys ();
-        Cons (x,xs') -> let rest = () \u () -> concat (xs', ys)
-                        in cons (x, rest)
-        default -> Error_concat ()
-    |]
+seq, id, Const, compose :: Program
 
 -- | Integer addition.
 --
@@ -128,11 +105,11 @@ foldr = [stg|
 -- @
 -- iterate : (a -> a, a) -> [a]
 -- @
-iterate = listC <> [stg|
+iterate = [stg|
     iterate = () \n (f,x) ->
         letrec fx = (f,x) \u () -> f (x);
                rest = (f,fx) \u () -> iterate (f,fx)
-        in cons (x,rest) |]
+        in Cons (x,rest) |]
 
 -- | Infinite list, created by repeating an initial (non-empty) list.
 --
@@ -154,37 +131,41 @@ cycle = concat <> [stg|
 -- @
 -- take : Int -> [a] -> [a]
 -- @
-take = listC <> add <> [stg|
+take = add <> [stg|
     take = () \u () ->
         letrec  minusOne = () \n () -> Int# (-1#);
                 take' = (minusOne) \n (n, xs) -> case n () of
                     Int# (nPrim) -> case nPrim () of
-                        0# -> nil ();
+                        0# -> Nil ();
                         default ->
                             let n' = (n, minusOne) \u () -> add (n, minusOne)
                             in case xs () of
-                               Nil () -> nil ();
+                               Nil () -> Nil ();
                                Cons (y,ys) ->
                                    let rest = (n', ys) \u () -> take (n', ys)
-                                   in cons (y, rest)
+                                   in Cons (y, rest)
                                default -> Error_take_not_a_list ()
                     default -> Error_take_not_an_int ()
         in take' ()
     |]
 
 -- TODO doc
--- filter = listC <> [stg|
+-- filter = [stg|
 --     filter = () \n (p) ->
 --     |]
 
 -- | Repeat a single element infinitely.
 --
 -- @
+-- repeat 1 = [1, 1, 1, ...]
+-- @
+--
+-- @
 -- repeat : a -> [a]
 -- @
-repeat = listC <> [stg|
+repeat = [stg|
     repeat = () \n (x) ->
-        letrec xs = (x, xs) \u () -> cons (x,xs)
+        letrec xs = (x, xs) \u () -> Cons (x,xs)
         in xs ()
     |]
 
@@ -222,9 +203,9 @@ id = [stg| id = () \n (x) -> x () |]
 -- | Constant function.
 --
 -- @
--- const : (a, b) -> a
+-- Const : (a, b) -> a
 -- @
-const = [stg| const = () \n (x,y) -> x () |]
+Const = [stg| Const = () \n (x,y) -> x () |]
 
 -- | Function composition.
 --
