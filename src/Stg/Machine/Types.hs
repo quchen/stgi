@@ -309,6 +309,9 @@ data InfoShort =
 
     | StateInitial
       -- ^ Used to mark the initial state of the machine.
+
+    | GarbageCollection
+      -- ^ A garbage collection step, in which no ordinary evaluation is done.
     deriving (Eq, Ord, Show)
 
 instance Pretty InfoShort where
@@ -318,6 +321,7 @@ instance Pretty InfoShort where
     pretty (StateError x) = "Errorenous state: " <+> pretty (T.unpack x)
     pretty (StateTransiton x) = "State transition:" <+> pretty (T.unpack x)
     pretty StateInitial = "Initial state"
+    pretty GarbageCollection = "Garbage collection"
 
 -- | Detailed information that may be useful to the user. Not used
 -- programmatically.

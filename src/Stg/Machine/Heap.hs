@@ -1,6 +1,10 @@
 -- | The STG heap maps memory addresses to closures.
 module Stg.Machine.Heap (
+    -- * Info
     size,
+    addresses,
+
+    -- * Management
     lookup,
     update,
     alloc,
@@ -8,11 +12,14 @@ module Stg.Machine.Heap (
 
     -- * Garbage collection
     garbageCollect,
+    Dead(..),
+    Alive(..),
 ) where
 
 
 
 import qualified Data.Map                           as M
+import           Data.Set                           (Set)
 import           Prelude                            hiding (lookup)
 
 import           Stg.Machine.Heap.GarbageCollection
@@ -49,3 +56,6 @@ allocMany (cl:cls) heap =
     let (addr, heap') = alloc cl heap
         (addrs, heap'') = allocMany cls heap'
     in (addr:addrs, heap'')
+
+addresses :: Heap -> Set MemAddr
+addresses (Heap h) = M.keysSet h

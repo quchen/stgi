@@ -6,16 +6,22 @@ module Stg.Machine (
     initialState,
     evalStep,
     evalUntil,
+
+    -- * Garbage collection
+    garbageCollect,
 ) where
 
 
 
 import qualified Data.Map             as M
+import           Data.Monoid
+import qualified Data.Set             as S
 import qualified Data.Text            as T
 
 import           Stg.Language
 import           Stg.Machine.Env
 import           Stg.Machine.Evaluate
+import           Stg.Machine.Heap     (Alive (..), Dead (..))
 import qualified Stg.Machine.Heap     as H
 import           Stg.Machine.Types
 import           Stg.Util
@@ -56,3 +62,16 @@ initialState mainVar (Program binds) = StgState
                 Success x -> x
                 Failure e -> (error ("liftClosure in initial state: " ++ T.unpack e))
         in Closure lf freeVals
+
+garbageCollect :: StgState -> StgState
+garbageCollect s@StgState
+    { stgHeap    = dirtyHeap
+    , stgGlobals = globals }
+
+  = let (Dead deadHeap, Alive cleanHeap) = H.garbageCollect globals dirtyHeap
+        garbageAddresses = (T.intercalate ", " . (map show' . S.toList) . H.addresses) deadHeap
+
+
+    in s { stgHeap = cleanHeap
+         , stgInfo = Info GarbageCollection
+                          ["Removed addresses: " <> garbageAddresses] }

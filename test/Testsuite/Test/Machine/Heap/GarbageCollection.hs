@@ -6,21 +6,20 @@ module Test.Machine.Heap.GarbageCollection (tests) where
 
 
 
-import qualified Data.Map                           as M
+import qualified Data.Map                 as M
 import           Data.Monoid
-import qualified Data.Set                           as S
-import           Data.Text                          (Text)
-import qualified Data.Text                          as T
+import qualified Data.Set                 as S
+import           Data.Text                (Text)
+import qualified Data.Text                as T
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Stg.Language.Prettyprint
 import           Stg.Machine.Heap
-import           Stg.Machine.Heap.GarbageCollection
 import           Stg.Machine.Types
 import           Stg.Parser
 
-import           Test.Orphans                       ()
+import           Test.Orphans             ()
 
 
 
