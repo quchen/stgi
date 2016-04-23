@@ -236,7 +236,7 @@ listOfNumbers
     :: T.Text      -- ^ Name of the list in the STG program
     -> [P.Integer] -- ^ Entries
     -> Program
-listOfNumbers _ [] = mempty
+listOfNumbers name [] = nil <> Program (Binds [(Var name, [stg| () \n () -> nil () |])])
 listOfNumbers name ints = nil <>
     Program (Binds [
         ( Var name
@@ -245,28 +245,22 @@ listOfNumbers name ints = nil <>
                 (Binds (M.fromList (intBinds <> listBinds)))
                 (AppF (Var (listBindName (P.head ints))) []) ))])
   where
-    intBinds = P.map integerBind ints
-    listBinds = P.zipWith listBind ints (P.tail ints) <> [lastListBind (P.last ints)]
+    intBinds = P.map intBind ints
+    listBinds = P.zipWith listBind
+                          ints
+                          (P.map listBindName (P.tail ints) <> ["nil"])
 
-    listBind i iNext =
+    listBind i tailName =
         ( Var (listBindName i)
-        , LambdaForm [Var (intName i), Var (listBindName iNext)]
+        , LambdaForm [Var (intName i), Var tailName]
                      Update
                      []
                      ((AppC (Constr "Cons")
-                            [AtomVar (Var (intName i)),AtomVar (Var (listBindName iNext))] )))
+                            [AtomVar (Var (intName i)),AtomVar (Var tailName)] )))
     listBindName i = "list_" <> intName i
 
-    lastListBind i =
-        ( Var (listBindName i)
-        , LambdaForm [Var (intName i), Var "nil"]
-                     Update
-                     []
-                     ((AppC (Constr "Cons")
-                            [AtomVar (Var (intName i)),AtomVar (Var "nil")] )))
-
-    integerBind :: P.Integer -> (Var, LambdaForm)
-    integerBind i =
+    intBind :: P.Integer -> (Var, LambdaForm)
+    intBind i =
         ( Var (intName i)
         , LambdaForm [] NoUpdate []
                      (AppC (Constr "Int#") [AtomLit (Literal i)]))
@@ -274,5 +268,5 @@ listOfNumbers name ints = nil <>
     intName :: P.Integer -> T.Text
     intName i = "int_" <> sign <> show' (P.abs i)
       where
-        sign | i P.< 0 = "neg"
+        sign | i P.< 0 = "'"
              | P.otherwise = ""
