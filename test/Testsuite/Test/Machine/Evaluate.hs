@@ -394,7 +394,10 @@ closureReductionTest :: ClosureReductionSpec -> TestTree
 closureReductionTest testSpec = testCase (T.unpack (testName testSpec)) test
   where
     program = initialState "main" (source testSpec)
-    finalState = evalUntil (maxSteps testSpec) (successPredicate testSpec) program
+    finalState = evalUntil (maxSteps testSpec)
+                           (successPredicate testSpec)
+                           (PerformGc (const False))
+                           program
     test = case stgInfo finalState of
         Info HaltedByPredicate _ -> pure ()
         _otherwise -> (assertFailure . T.unpack . T.unlines)

@@ -12,6 +12,7 @@ module Stg.Machine (
 
     -- * Garbage collection
     garbageCollect,
+    PerformGc(..)
 ) where
 
 
@@ -80,6 +81,9 @@ garbageCollect state
                                          ["Removed addresses: " <> garbageAddresses] }
             else state
 
+-- | Predicate to decide whether a garbage collection should be attempted
+newtype PerformGc = PerformGc (StgState -> Bool)
+
 -- | Evaluate the STG until a predicate holds, aborting if the maximum number of
 -- steps are exceeded.
 --
@@ -89,9 +93,11 @@ garbageCollect state
 evalUntil
     :: Integer            -- ^ Maximum number of steps allowed
     -> (StgState -> Bool) -- ^ Halting decision function
+    -> PerformGc          -- ^ Condition under which to perform GC
     -> StgState           -- ^ Initial state
     -> StgState           -- ^ Final state
-evalUntil maxSteps halt state = last (evalsUntil maxSteps halt state)
+evalUntil maxSteps halt performGc state
+    = last (evalsUntil maxSteps halt performGc state)
 
 -- | Evaluate the STG, and record all intermediate states.
 --
@@ -105,9 +111,10 @@ evalUntil maxSteps halt state = last (evalsUntil maxSteps halt state)
 evalsUntil
     :: Integer            -- ^ Maximum number of steps allowed
     -> (StgState -> Bool) -- ^ Halting decision function
+    -> PerformGc          -- ^ Condition under which to perform GC
     -> StgState           -- ^ Initial state
     -> [StgState]         -- ^ All intermediate states
-evalsUntil maxSteps halt = go False
+evalsUntil maxSteps halt (PerformGc performGc) = go False
   where
     terminate = (:[])
     go attemptGc = \case
@@ -119,14 +126,14 @@ evalsUntil maxSteps halt = go False
             -> terminate (state { stgInfo = Info HaltedByPredicate [] })
 
         state@StgState{ stgInfo = Info (StateTransiton{}) _ }
-            | attemptGc -> case garbageCollect state of
+            | attemptGc && performGc state -> case garbageCollect state of
                 stateGc@StgState{stgInfo = Info GarbageCollection _} ->
                     state : stateGc : go False (evalStep stateGc)
                 _otherwise -> state : go True (evalStep state)
             | otherwise -> state : go True (evalStep state)
 
         state@StgState{ stgInfo = Info StateInitial _ }
-            | attemptGc -> case garbageCollect state of
+            | attemptGc && performGc state -> case garbageCollect state of
                 stateGc@StgState{stgInfo = Info GarbageCollection _} ->
                     state : stateGc : go False (evalStep stateGc)
                 _otherwise -> state : go True (evalStep state)

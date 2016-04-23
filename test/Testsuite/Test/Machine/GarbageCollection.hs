@@ -2,24 +2,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-module Test.Machine.Heap.GarbageCollection (tests) where
+module Test.Machine.GarbageCollection (tests) where
 
 
 
-import qualified Data.Map                 as M
+import qualified Data.Map                      as M
 import           Data.Monoid
-import qualified Data.Set                 as S
-import           Data.Text                (Text)
-import qualified Data.Text                as T
+import qualified Data.Set                      as S
+import           Data.Text                     (Text)
+import qualified Data.Text                     as T
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Stg.Language.Prettyprint
-import           Stg.Machine.Heap
+import           Stg.Machine.GarbageCollection
 import           Stg.Machine.Types
 import           Stg.Parser
 
-import           Test.Orphans             ()
+import           Test.Orphans                  ()
 
 
 
@@ -49,6 +49,16 @@ minimal = testGroup "Minimal example"
     globals = Globals
         [ "main"  ~> Addr (MemAddr 0) ]
 
+    dummyState = StgState
+        { stgCode        = ReturnInt 1
+        , stgArgStack    = mempty
+        , stgReturnStack = mempty
+        , stgUpdateStack = mempty
+        , stgHeap        = dirtyHeap
+        , stgGlobals     = globals
+        , stgTicks       = 0
+        , stgInfo        = Info GarbageCollection [] }
+
     errorMsg cleanHeap = T.unlines
         [ "Globals:"
         , prettyIndented globals
@@ -60,7 +70,7 @@ minimal = testGroup "Minimal example"
     unusedIsCollected = testCase "Dead address is found" test
       where
         expectedDead = S.singleton (MemAddr 3)
-        (Dead (Heap actualDead), Alive cleanHeap) = garbageCollect globals dirtyHeap
+        (Dead (Heap actualDead), Alive cleanHeap) = garbageCollect dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedDead
                            (M.keysSet actualDead)
@@ -69,7 +79,7 @@ minimal = testGroup "Minimal example"
       where
         expectedHeap = let Heap h = dirtyHeap
                        in Heap (M.delete (MemAddr 3) h)
-        (_dead, Alive cleanHeap) = garbageCollect globals dirtyHeap
+        (_dead, Alive cleanHeap) = garbageCollect dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedHeap
                            cleanHeap
@@ -78,7 +88,7 @@ minimal = testGroup "Minimal example"
       where
         expected = dirtyHeap
         actual = dead <> cleanHeap
-        (Dead dead, Alive cleanHeap) = garbageCollect globals dirtyHeap
+        (Dead dead, Alive cleanHeap) = garbageCollect dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expected
                            actual
