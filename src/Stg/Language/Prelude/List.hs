@@ -1,6 +1,9 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedLists   #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 module Stg.Language.Prelude.List (
+    nil,
     concat,
     foldl,
     foldl',
@@ -12,22 +15,30 @@ module Stg.Language.Prelude.List (
     repeat,
     sort,
     map,
+
+    -- * Convenience
+    listOfNumbers,
 ) where
 
 
 
-import           Prelude                     ()
+import qualified Prelude                     as P
 
+import qualified Data.Map                    as M
 import           Data.Monoid
+import qualified Data.Text                   as T
 
-import           Stg.Language                (Program)
+import           Stg.Language
 import           Stg.Parser
+import           Stg.Util
 
 import           Stg.Language.Prelude.Number as Num
 
 
 
-concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat, sort, map :: Program
+nil, concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat, sort, map :: Program
+
+nil = [stg| nil = () \n () -> Nil () |]
 
 concat = [stg|
     concat = () \n (xs,ys) -> case xs () of
@@ -203,3 +214,65 @@ map = [stg|
                         in  Cons (fx, fxs);
         default -> Error_Map ()
     |]
+
+-- | Generate a list of numbers.
+--
+-- @
+-- listOfNumbers [1, -2, 3]
+-- @
+--
+-- @
+-- numbers = () \u () ->
+--     letrec  int_1 = () \n () -> Int\# (1\#);
+--             int_3 = () \n () -> Int\# (3\#);
+--             int_neg2 = () \n () -> Int\# (-2\#);
+--             list_int_1 = (int_1,list_int_neg2) \u () -> Cons (int_1,list_int_neg2);
+--             list_int_3 = (int_3,nil) \u () -> Cons (int_3,nil);
+--             list_int_neg2 = (int_neg2,list_int_3) \u () -> Cons (int_neg2,list_int_3);
+--             nil = () \n () -> Nil ()
+--     in list_int_1 ()
+-- @
+listOfNumbers
+    :: T.Text      -- ^ Name of the list in the STG program
+    -> [P.Integer] -- ^ Entries
+    -> Program
+listOfNumbers _ [] = mempty
+listOfNumbers name ints = nil <>
+    Program (Binds [
+        ( Var name
+        , LambdaForm [] Update []
+            (Let Recursive
+                (Binds (M.fromList (intBinds <> listBinds)))
+                (AppF (Var (listBindName (P.head ints))) []) ))])
+  where
+    intBinds = P.map integerBind ints
+    listBinds = P.zipWith listBind ints (P.tail ints) <> [lastListBind (P.last ints)]
+
+    listBind i iNext =
+        ( Var (listBindName i)
+        , LambdaForm [Var (intName i), Var (listBindName iNext)]
+                     Update
+                     []
+                     ((AppC (Constr "Cons")
+                            [AtomVar (Var (intName i)),AtomVar (Var (listBindName iNext))] )))
+    listBindName i = "list_" <> intName i
+
+    lastListBind i =
+        ( Var (listBindName i)
+        , LambdaForm [Var (intName i), Var "nil"]
+                     Update
+                     []
+                     ((AppC (Constr "Cons")
+                            [AtomVar (Var (intName i)),AtomVar (Var "nil")] )))
+
+    integerBind :: P.Integer -> (Var, LambdaForm)
+    integerBind i =
+        ( Var (intName i)
+        , LambdaForm [] NoUpdate []
+                     (AppC (Constr "Int#") [AtomLit (Literal i)]))
+
+    intName :: P.Integer -> T.Text
+    intName i = "int_" <> sign <> show' (P.abs i)
+      where
+        sign | i P.< 0 = "neg"
+             | P.otherwise = ""

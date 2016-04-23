@@ -5,6 +5,7 @@
 -- standard Haskell "Prelude".
 module Stg.Language.Prelude (
     -- * Lists
+    nil,
     concat,
     foldl,
     foldl',
@@ -16,6 +17,9 @@ module Stg.Language.Prelude (
     repeat,
     sort,
     map,
+
+    -- ** Convenience
+    listOfNumbers,
 
     -- * Numbers
     add,
