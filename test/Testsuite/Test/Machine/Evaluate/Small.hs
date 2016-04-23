@@ -106,7 +106,7 @@ algebraicCase_defaultUnboundMatch = closureReductionTest defSpec
     { testName = "Unbound default"
     , source = [stg|
         main = () \u () -> case Nothing () of
-            Just (x) -> TestFail ();
+            Just (x) -> TestFail (x);
             default  -> Success ()
         |] }
 
@@ -116,7 +116,7 @@ algebraicCase_defaultBoundMatch = closureReductionTest defSpec
     , source = [stg|
         main = () \u () -> case Nothing () of
             Just (x) -> TestFail ();
-            v -> v ()
+            v -> Success ()
 
         |] }
 

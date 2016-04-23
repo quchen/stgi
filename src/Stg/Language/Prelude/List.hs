@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
+-- TODO: list equality
+
 module Stg.Language.Prelude.List (
     nil,
     concat,
@@ -228,8 +230,7 @@ map = [stg|
 --             int_neg2 = () \n () -> Int\# (-2\#);
 --             list_int_1 = (int_1,list_int_neg2) \u () -> Cons (int_1,list_int_neg2);
 --             list_int_3 = (int_3,nil) \u () -> Cons (int_3,nil);
---             list_int_neg2 = (int_neg2,list_int_3) \u () -> Cons (int_neg2,list_int_3);
---             nil = () \n () -> Nil ()
+--             list_int_neg2 = (int_neg2,list_int_3) \u () -> Cons (int_neg2,list_int_3)
 --     in list_int_1 ()
 -- @
 listOfNumbers
@@ -252,7 +253,7 @@ listOfNumbers name ints = nil <>
 
     listBind i tailName =
         ( Var (listBindName i)
-        , LambdaForm [Var (intName i), Var tailName]
+        , LambdaForm ([Var (intName i)] <> [ Var tailName | tailName P./= "nil"])
                      Update
                      []
                      ((AppC (Constr "Cons")

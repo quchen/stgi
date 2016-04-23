@@ -26,32 +26,7 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog = Stg.numbers
-            <> Stg.take
-            <> Stg.repeat
-            <> Stg.foldr
-            <> Stg.seq
-            <> [stgProgram|
-
-        consBang = () \n (x,xs) -> case xs () of v -> Cons (x, v);
-        nil = () \n () -> Nil ();
-        forceSpine = () \n (xs) -> foldr (consBang, nil, xs);
-
-        twoUnits = () \u () ->
-            letrec  repeated = (unit) \u () -> repeat (unit);
-                    unit = () \n () -> Unit ();
-                    take2 = (repeated) \u () -> take (two, repeated)
-            in      forceSpine (take2);
-
-        main = () \u () -> case twoUnits () of
-            Cons (x,xs) -> case xs () of
-                Cons (y,ys) -> case ys () of
-                    Nil () -> Success ();
-                    default -> TestFailure ();
-                default -> TestFailure ();
-            default -> TestFailure ()
-        |]
-
+    let prog = Stg.add <> [stg| main = () \n () -> main () |]
         initial = initialState "main" prog
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True

@@ -135,18 +135,15 @@ program_takeRepeat = closureReductionTest defSpec
 program_map :: TestTree
 program_map = closureReductionTest defSpec
     { testName = "map (+1) [1,2,3]"
-    , source = Stg.numbers
-            <> Stg.add
+    , source = Stg.add
             <> Stg.map
+            <> Stg.listOfNumbers "list" [1,2,3]
             <> [stgProgram|
 
-        list = () \u () -> letrec nil = () \n () -> Nil ();
-                                  list3 = (nil) \u () -> Cons (three, nil);
-                                  list23 = (list3) \u () -> Cons (two, list3);
-                                  list123 = (list23) \u () -> Cons (one, list23)
-                           in list123 ();
-
-        plusOne = () \n (n) -> add (n, one);
+        plusOne = () \u () ->
+            letrec  one = () \n () -> Int# (1#);
+                    plusOne' = (one) \n (n) -> add (n, one)
+            in plusOne' ();
 
         main = () \u () -> case map (plusOne, list) of
             Cons (x,xs) -> case xs () of
