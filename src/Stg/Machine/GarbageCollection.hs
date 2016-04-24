@@ -123,7 +123,7 @@ instance Addresses MemAddr where
 
 instance Addresses Globals where
     addrs (Globals globals)
-        = S.fromList [ addr | (_, Addr addr) <- M.toList globals ]
+        = S.fromList [ addr | (_, Addr addr) <- M.assocs globals ]
 
 instance Addresses Locals where
     addrs (Locals locals) = addrs (Globals locals)

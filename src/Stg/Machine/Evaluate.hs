@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 -- | Evaluate STG 'Program's.
 module Stg.Machine.Evaluate (
@@ -13,6 +14,7 @@ import qualified Data.Foldable            as F
 import qualified Data.List                as L
 import qualified Data.Map                 as M
 import           Data.Monoid              hiding (Alt)
+import           Data.Text                (Text)
 import qualified Data.Text                as T
 
 import           Stack                    (Stack (..), (<>>))
@@ -22,6 +24,7 @@ import           Stg.Language.Prettyprint
 import           Stg.Machine.Env
 import qualified Stg.Machine.Heap         as H
 import           Stg.Machine.Types
+import           Stg.Parser
 import           Stg.Util
 
 
@@ -52,13 +55,23 @@ lookupAlt matchingAlt alts def = case L.find matchingAlt alts of
     Just alt -> Right alt
     _otherwise -> Left def
 
+liftLambdaToClosure :: Locals -> LambdaForm -> Validate Text Closure
+liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
+    case traverse (localVal localsLift) free of
+        Success freeVals -> Success (Closure lf freeVals)
+        Failure err -> Failure ("Could not lift lambda form to closure: " <> err)
+
 -- | Perform a single STG machine evaluation step.
 evalStep :: StgState -> StgState
 evalStep state = let state' = stgRule state
                  in state' { stgTicks = stgTicks state' + 1 }
 
+
+
 -- | Apply a single STG evaluation rule, as specified in the 1992 paper.
 stgRule :: StgState -> StgState
+
+
 
 -- (1) Function application
 stgRule s@StgState
@@ -82,6 +95,8 @@ stgRule s@StgState
                         [ " to arguments "
                         , T.intercalate ", " (foldMap (\arg -> [prettyprint arg]) xs) ]]]}
 
+
+
 -- (2) Enter non-updatable closure
 stgRule s@StgState
     { stgCode     = Enter a
@@ -99,45 +114,61 @@ stgRule s@StgState
          , stgInfo     = Info (StateTransiton "Enter non-updatable closure")
             ["Enter the closure stored at address " <> prettyprint a] }
 
+
+
 -- (3) let(rec)
 stgRule s@StgState
     { stgCode = Eval (Let rec (Binds binds) expr) locals
     , stgHeap = heap }
 
-  = let (addrs, heap') = H.allocMany (map liftClosure (M.elems binds)) heap
+    -- TODO: Refactor this fugly mess, apologies for writing it - David/quchen
+  = let (vars, lambdaForms) = unzip (M.assocs binds)
+        dummyClosures = takeMatchingLength
+            (repeat (Closure [stg| () \n () -> Let_rule_dummy () |] []))
+            vars
+        stuffNeeded =
+            let (addrsX, heapWithDummies) = H.allocMany dummyClosures heap
+                localsX' = makeLocals' vars addrsX
+                v'closures = makeClosures lambdaForms localsX'
+            in case v'closures of
+                Success closures ->
+                    let heapX' = H.updateMany addrsX closures heapWithDummies
+                    in Success (localsX', addrsX, heapX')
+                Failure err -> Failure err
+        infotext = case rec of
+            NonRecursive -> "let evaluation"
+            Recursive    -> "letrec evaluation"
+    in case stuffNeeded of
+        Success (locals', addrs, heap') ->
+            s { stgCode = Eval expr locals'
+              , stgHeap = heap'
+              , stgInfo = Info (StateTransiton infotext)
+                 [ T.unwords
+                     [ "Local environment extended by"
+                     , T.intercalate ", " (foldMap (\var -> [prettyprint var]) vars)]
+                 , T.unwords
+                     [ "Allocated new closures at"
+                     , T.intercalate ", " (foldMap (\addr -> [prettyprint addr]) addrs)
+                     , "on the heap" ]] }
+        Failure err ->
+            s { stgInfo = Info (StateError (infotext <> " failure: " <> err)) [] }
 
-        liftClosure :: LambdaForm -> Closure
-        liftClosure lf@(LambdaForm free _ _ _) =
-            let freeVals :: [Value]
-                freeVals = case traverse (localVal localsRhs) free of
-                    Success x -> x
-                    Failure e -> (error ("liftClosure in (3)/let(rec): " ++ T.unpack e))
-            in Closure lf freeVals
-
-         -- rho' in the paper
+  where
+    makeLocals' :: [Var] -> [MemAddr] -> Locals
+    makeLocals' vars addrs = locals'
+      where
         locals' = locals <> newLocals
-          where
-            newLocals = makeLocals (zipWith makeLocal (M.keys binds) addrs)
-            makeLocal n a = (n, Addr a)
+        newLocals = makeLocals (zipWith makeLocal vars addrs)
+        makeLocal n a = (n, Addr a)
 
+    makeClosures :: [LambdaForm] -> Locals -> Validate Text [Closure]
+    makeClosures lambdaForms locals' = traverse (liftLambdaToClosure localsRhs) lambdaForms
+      where
         localsRhs = case rec of
             NonRecursive -> locals
             Recursive    -> locals'
 
-        infotext = case rec of
-            NonRecursive -> "let evaluation"
-            Recursive    -> "letrec evaluation"
 
-    in s { stgCode = Eval expr locals'
-         , stgHeap = heap'
-         , stgInfo = Info (StateTransiton infotext)
-            [ T.unwords
-                [ "Local environment extended by"
-                , T.intercalate ", " (foldMap (\bind -> [prettyprint bind]) (M.keys binds))]
-            , T.unwords
-                [ "Allocated new closures at"
-                , T.intercalate ", " (foldMap (\bind -> [prettyprint bind]) addrs)
-                , "on the heap" ]] }
 
 -- (4) Case evaluation
 stgRule s@StgState
@@ -151,6 +182,8 @@ stgRule s@StgState
          , stgInfo        = Info (StateTransiton "case evaluation")
             [ "Push the alternatives and the local environment on the update stack" ] }
 
+
+
 -- (5) Constructor application
 stgRule s@StgState
     { stgCode    = Eval (AppC con xs) locals
@@ -159,6 +192,8 @@ stgRule s@StgState
 
   = s { stgCode = ReturnCon con valsXs
       , stgInfo = Info (StateTransiton "Constructor application") [] }
+
+
 
 -- (6) Algebraic constructor return, standard match found
 stgRule s@StgState
@@ -172,6 +207,8 @@ stgRule s@StgState
          , stgReturnStack = retS'
          , stgInfo        = Info (StateTransiton "Algebraic constructor return, standard match") [] }
 
+
+
 -- (7) Algebraic constructor return, unbound default match
 stgRule s@StgState
     { stgCode        = ReturnCon con _ws
@@ -181,6 +218,8 @@ stgRule s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
       , stgInfo        = Info (StateTransiton "Algebraic constructor return, unbound default match") [] }
+
+
 
 -- (8) Algebraic constructor return, bound default match
 stgRule s@StgState
@@ -200,10 +239,14 @@ stgRule s@StgState
          , stgHeap        = heap'
          , stgInfo        = Info (StateTransiton "Algebraic constructor return, bound default match") [] }
 
+
+
 -- (9) Literal evaluation
 stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = s { stgCode = ReturnInt k
       , stgInfo = Info (StateTransiton "Literal evaluation") [] }
+
+
 
 -- (10) Literal application
 stgRule s@StgState { stgCode = Eval (AppF f []) locals }
@@ -211,6 +254,8 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
 
   = s { stgCode = ReturnInt k
       , stgInfo = Info (StateTransiton "Literal application") [] }
+
+
 
 -- (11) Primitive constructor return, standard match found
 stgRule s@StgState
@@ -221,6 +266,8 @@ stgRule s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
       , stgInfo        = Info (StateTransiton "Primitive constructor return, standard match found") [] }
+
+
 
 -- (12) Primitive constructor return, bound default match
 stgRule s@StgState
@@ -234,6 +281,8 @@ stgRule s@StgState
          , stgReturnStack = retS'
          , stgInfo        = Info (StateTransiton "Primitive constructor return, bound default match") [] }
 
+
+
 -- (13) Primitive constructor return, unbound default match
 stgRule s@StgState
     { stgCode        = ReturnInt k
@@ -243,6 +292,8 @@ stgRule s@StgState
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
       , stgInfo        = Info (StateTransiton "Primitive constructor return, unbound default match") [] }
+
+
 
 -- (14) Primitive function application
 stgRule s@StgState
@@ -267,6 +318,8 @@ stgRule s@StgState
     in s { stgCode = ReturnInt (apply op xVal yVal)
          , stgInfo = Info (StateTransiton "Primitive function application") [] }
 
+
+
 -- (15) Enter updatable closure
 stgRule s@StgState
     { stgCode        = Enter addr
@@ -287,6 +340,8 @@ stgRule s@StgState
             [ "Push a new update frame with the entered address " <> prettyprint addr
             , "Save current argument and return stacks on that update frame"
             , "Argument and return stacks are now empty"  ] }
+
+
 
 -- (16) Algebraic constructor return, argument/return stacks empty -> update
 stgRule s@StgState
@@ -311,6 +366,8 @@ stgRule s@StgState
             [ "Trying to return " <> prettyprint con <> " without anything on argument/return stacks"
             , "Update closure at " <> prettyprint addrU <> " with returned constructor"
             , "Restore argument/return stacks from the update frame" ] }
+
+
 
 -- (17a) Enter partially applied closure
 stgRule s@StgState
@@ -338,6 +395,8 @@ stgRule s@StgState
          , stgHeap        = heap'
          , stgInfo        = Info (StateTransiton "Enter partially applied closure") [] }
 
+
+
 -- Page 39, 2nd paragraph: "[...] closures with non-emptyargument lists are
 -- never updatable [...]"
 stgRule s@StgState
@@ -345,6 +404,8 @@ stgRule s@StgState
     , stgHeap = heap }
     | Just (Closure (LambdaForm _ Update (_:_) _) _) <- H.lookup addr heap
   = s { stgInfo = Info (StateError "Closures with non-empty argument lists are never updatable") [] }
+
+
 
 -- Page 39, 4th paragraph: "It is not possible for the ReturnInt state to see an
 -- empty return stack, because that would imply that a closure should be updated
@@ -355,12 +416,16 @@ stgRule s@StgState
   = s { stgInfo = Info (StateError "ReturnInt state with empty return stack")
         ["No closure has primitive type, so we cannot update one with a primitive int"] }
 
+
+
 -- Function argument not in scope
 stgRule s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
     | Failure valLookupError <- vals locals globals (AtomVar f : xs)
   = s { stgInfo = Info (StateError valLookupError) [] }
+
+
 
 -- Constructor argument not in scope
 stgRule s@StgState
@@ -369,10 +434,14 @@ stgRule s@StgState
     | Failure valLookupError <- vals locals globals xs
   = s { stgInfo = Info (StateError valLookupError) [] }
 
+
+
 stgRule s@StgState
     { stgArgStack    = S.Empty
     , stgReturnStack = S.Empty
     , stgUpdateStack = S.Empty }
   = s { stgInfo = Info NoRulesApply [] }
+
+
 
 stgRule s = s { stgInfo = Info NoRulesApply ["Stacks are not empty; the program probably terminated early"] }

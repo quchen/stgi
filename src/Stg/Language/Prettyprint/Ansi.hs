@@ -85,7 +85,7 @@ instance PrettyAnsi Program where
 
 instance PrettyAnsi Binds where
     prettyAnsi (Binds bs) =
-        (align . vsep . punctuate (semicolon colour ";") . map prettyBinding . M.toList) bs
+        (align . vsep . punctuate (semicolon colour ";") . map prettyBinding . M.assocs) bs
       where
         prettyBinding (var, lambda) =
             prettyAnsi var <+> "=" <+> prettyAnsi lambda

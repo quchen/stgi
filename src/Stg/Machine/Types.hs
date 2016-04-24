@@ -241,14 +241,14 @@ prettyMap :: (Pretty k, Pretty v) => Map k v -> Doc
 prettyMap m | M.null m = "(empty)"
 prettyMap m = (align . vsep)
     [ pretty k <+> "->" <+> pretty v
-    | (k,v) <- M.toList m ]
+    | (k,v) <- M.assocs m ]
 
 -- | ANSI-prettyprint a 'Map', @key -> value@.
 prettyAnsiMap :: (PrettyAnsi k, PrettyAnsi v) => Map k v -> Doc
 prettyAnsiMap m | M.null m = "(empty)"
 prettyAnsiMap m = (align . vsep)
     [ prettyAnsi k <+> "->" <+> prettyAnsi v
-    | (k,v) <- M.toList m ]
+    | (k,v) <- M.assocs m ]
 
 -- | The global environment consists of the mapping from top-level definitions
 -- to their respective values.

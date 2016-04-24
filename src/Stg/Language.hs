@@ -69,7 +69,7 @@ instance Monoid Binds where
     Binds x `mappend` Binds y = Binds (x <> y)
 
 instance Show Binds where
-    show (Binds binds) = "(Binds " <> show (M.toList binds) <> ")"
+    show (Binds binds) = "(Binds " <> show (M.assocs binds) <> ")"
 
 -- | A lambda form unifies free and bound variables associated with a function
 -- body.
@@ -163,7 +163,7 @@ deriveLiftMany [ ''Program, ''Literal, ''LambdaForm , ''UpdateFlag, ''Rec
                , ''Atom ]
 
 instance Lift Binds where
-    lift (Binds binds) = [| Binds (M.fromList $(lift (M.toList binds))) |]
+    lift (Binds binds) = [| Binds (M.fromList $(lift (M.assocs binds))) |]
 
 instance Lift Constr where
     lift (Constr con) = [| Constr (T.pack $(lift (T.unpack con))) |]
@@ -181,7 +181,7 @@ instance Pretty Program where
 
 instance Pretty Binds where
     pretty (Binds bs) =
-        (align . vsep . punctuate ";" . map prettyBinding . M.toList) bs
+        (align . vsep . punctuate ";" . map prettyBinding . M.assocs) bs
       where
         prettyBinding (var, lambda) =
             pretty var <+> "=" <+> pretty lambda

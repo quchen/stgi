@@ -7,9 +7,9 @@ module Stg.Machine.Heap (
     -- * Management
     lookup,
     update,
+    updateMany,
     alloc,
     allocMany,
-
 ) where
 
 
@@ -21,6 +21,7 @@ import           Data.Set          (Set)
 import           Prelude           hiding (lookup)
 
 import           Stg.Machine.Types
+import           Stg.Util
 
 
 
@@ -35,6 +36,11 @@ lookup addr (Heap heap) = M.lookup addr heap
 -- | Update a value on the heap.
 update :: MemAddr -> Closure -> Heap -> Heap
 update addr cl (Heap h) = Heap (M.adjust (const cl) addr h)
+
+-- | Update many values on the heap.
+updateMany :: [MemAddr] -> [Closure] -> Heap -> Heap
+updateMany addrs cls heap =
+    L.foldl' (\h (addr, cl) -> update addr cl h) heap (zip addrs cls)
 
 -- | Store a value in the heap at an unused address.
 alloc :: Closure -> Heap -> (MemAddr, Heap)
@@ -55,9 +61,3 @@ allocMany closures (Heap heap) = (addrs, heap')
 -- | All addresses allocated on the heap.
 addresses :: Heap -> Set MemAddr
 addresses (Heap h) = M.keysSet h
-
--- | Take as many elements from one list as there are in another.
---
--- This is just a lazier version of @\xs ys -> take (length ys) xs@.
-takeMatchingLength :: [a] -> [b] -> [a]
-takeMatchingLength xs ys = zipWith const xs ys
