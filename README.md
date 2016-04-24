@@ -27,16 +27,13 @@ To do
     - Rule 18/19 on page 65: Better primitive case
     - Test the stepper
     - Write lots of test cases
-    - Remove all `error`s
     - Unify the stacks to one; should be more instructional. For example, an
       update frame is very clearly flattened into the argument and return
       frames it contains when an update is triggered. Should also reduce the
       nesting of stacks in the overview.
 - Nice to have
-    - Explain steps better
+    - Refactor the fugly let rule
     - Command line options (in particular to control colouring)
-    - Convenience functions for Prelude, for example to generate a list of
-      numbers
     - Unify Pretty and PrettyAnsi instances by calling parametrized generic
       prettyprinters. A member definition would then look like
       `pretty = prettyLambda pretty pretty`
