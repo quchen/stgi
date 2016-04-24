@@ -3,34 +3,6 @@
 
 module Test.Parser.Parser (tests) where
 
-
--- FIXME  Uh oh, this happened in the ParserInverse for algebraic alternatives test:
---     *** Failed!  (after 980 tests and 15 shrinks):
---     AlgebraicAlts [AlgebraicAlt (Constr "D") [] (Let Recursive (Binds [(Var "s",LambdaForm [Var "sYQ"] Update [Var "aS"] (AppF (Var "o") [AtomLit (Literal (-36))])),(Var "y",LambdaForm [] Update [] (AppF (Var "let") []))]) (AppP Add (AtomLit (Literal 0)) (AtomVar (Var "w"))))] (DefaultBound (Var "t") (AppF (Var "j") []))
---     Input AST:
---     D () -> letrec s = (sYQ) \u (aS) -> o (-36#);
---                    y = () \u () -> let ()              -- WAT.
---             in +# 0# w;
---     t -> j ()
---     Parse error:
---     (string):2:36:
---     unexpected '('
---     expecting in or list of free variables
---
---
--- FIXME  Uh oh, this happened in the ParserInverse for primitive alternatives test:
---     *** Failed!  (after 573 tests and 11 shrinks):
---     PrimitiveAlts [PrimitiveAlt (Literal 0) (Case (AppF (Var "i") []) (Alts (AlgebraicAlts [] (DefaultBound (Var "d") (Let NonRecursive (Binds [(Var "hD7G",LambdaForm [] Update [] (AppF (Var "let") []))]) (AppP Mul (AtomLit (Literal 0)) (AtomLit (Literal 0))))))))] (DefaultBound (Var "f") (AppP Mul (AtomLit (Literal 0)) (AtomVar (Var "s"))))
---     Input AST:
---     0# -> case i () of
---               d -> let hD7G = () \u () -> let ()              -- WAT.
---                    in *# 0# 0#;
---     f -> *# 0# s
---     Parse error:
---     (string):2:43:
---     unexpected '('
---     expecting in or list of free variables
-
 import           Data.Monoid
 import           Data.Text                (Text)
 import qualified Data.Text                as T

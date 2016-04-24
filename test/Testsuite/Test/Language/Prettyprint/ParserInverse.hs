@@ -20,14 +20,14 @@ import           Test.Orphans             ()
 
 tests :: TestTree
 tests = testGroup "Inverse of parser"
-    [ inverseOfParser "Full program"             Parser.program
-    , inverseOfParser "Bindings"                 Parser.binds
-    , inverseOfParser "Lambda form"              Parser.lambdaForm
-    , inverseOfParser "Expression"               Parser.expr
-    , inverseOfParser "Case alternatives"        Parser.alts
-    , inverseOfParser "Literal"                  Parser.literal
-    , inverseOfParser "Primop"                   Parser.primOp
-    , inverseOfParser "Atom"                     Parser.atom ]
+    [ inverseOfParser "Full program"      Parser.program
+    , inverseOfParser "Bindings"          Parser.binds
+    , inverseOfParser "Lambda form"       Parser.lambdaForm
+    , inverseOfParser "Expression"        Parser.expr
+    , inverseOfParser "Case alternatives" Parser.alts
+    , inverseOfParser "Literal"           Parser.literal
+    , inverseOfParser "Primop"            Parser.primOp
+    , inverseOfParser "Atom"              Parser.atom ]
 
 inverseOfParser
     :: (Arbitrary ast, Show ast, Eq ast, PrettyParserInverse ast)
