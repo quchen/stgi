@@ -338,18 +338,22 @@ stgRule s@StgState
          , stgHeap        = heap'
          , stgInfo        = Info (StateTransiton "Enter partially applied closure") [] }
 
--- TODO: Why this rule? Citation!
-stgRule s@StgState
-    { stgCode        = ReturnInt{}
-    , stgUpdateStack = Empty }
-  = s { stgInfo = Info (StateError "ReturnInt state with empty update stack") [] }
-
--- Page 39, 2nd paragraph
+-- Page 39, 2nd paragraph: "[...] closures with non-emptyargument lists are
+-- never updatable [...]"
 stgRule s@StgState
     { stgCode = Enter addr
     , stgHeap = heap }
     | Just (Closure (LambdaForm _ Update (_:_) _) _) <- H.lookup addr heap
   = s { stgInfo = Info (StateError "Closures with non-empty argument lists are never updatable") [] }
+
+-- Page 39, 4th paragraph: "It is not possible for the ReturnInt state to see an
+-- empty return stack, because that would imply that a closure should be updated
+-- with a primitive value; but no closure has a primitive type.
+stgRule s@StgState
+    { stgCode        = ReturnInt{}
+    , stgUpdateStack = Empty }
+  = s { stgInfo = Info (StateError "ReturnInt state with empty return stack")
+        ["No closure has primitive type, so we cannot update one with a primitive int"] }
 
 -- Function argument not in scope
 stgRule s@StgState
