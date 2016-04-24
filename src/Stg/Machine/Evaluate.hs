@@ -9,17 +9,18 @@ module Stg.Machine.Evaluate (
 
 
 
-import qualified Data.Foldable     as F
-import qualified Data.List         as L
-import qualified Data.Map          as M
-import           Data.Monoid       hiding (Alt)
-import qualified Data.Text         as T
+import qualified Data.Foldable            as F
+import qualified Data.List                as L
+import qualified Data.Map                 as M
+import           Data.Monoid              hiding (Alt)
+import qualified Data.Text                as T
 
-import           Stack             (Stack (..), (<>>))
-import qualified Stack             as S
+import           Stack                    (Stack (..), (<>>))
+import qualified Stack                    as S
 import           Stg.Language
+import           Stg.Language.Prettyprint
 import           Stg.Machine.Env
-import qualified Stg.Machine.Heap  as H
+import qualified Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 import           Stg.Util
 
@@ -71,7 +72,15 @@ stgRule s@StgState
 
     in s { stgCode     = Enter a
          , stgArgStack = argS'
-         , stgInfo     = Info (StateTransiton "Function application") [] }
+         , stgInfo = Info (StateTransiton "Function application")
+            [ T.unwords
+                [ "Applying function"
+                , prettyprint f
+                , case xs of
+                    [] -> "without arguments"
+                    _  -> T.unwords
+                        [ " to arguments "
+                        , T.intercalate ", " (foldMap (\arg -> [prettyprint arg]) xs) ]]]}
 
 -- (2) Enter non-updatable closure
 stgRule s@StgState
@@ -87,7 +96,8 @@ stgRule s@StgState
 
     in s { stgCode     = Eval body locals
          , stgArgStack = argS'
-         , stgInfo     = Info (StateTransiton "Enter non-updatable closure") [] }
+         , stgInfo     = Info (StateTransiton "Enter non-updatable closure")
+            ["Enter the closure stored at address " <> prettyprint a] }
 
 -- (3) let(rec)
 stgRule s@StgState
@@ -120,7 +130,14 @@ stgRule s@StgState
 
     in s { stgCode = Eval expr locals'
          , stgHeap = heap'
-         , stgInfo = Info (StateTransiton infotext) [] }
+         , stgInfo = Info (StateTransiton infotext)
+            [ T.unwords
+                [ "Local environment extended by"
+                , T.intercalate ", " (foldMap (\bind -> [prettyprint bind]) (M.keys binds))]
+            , T.unwords
+                [ "Allocated new closures at"
+                , T.intercalate ", " (foldMap (\bind -> [prettyprint bind]) addrs)
+                , "on the heap" ]] }
 
 -- (4) Case evaluation
 stgRule s@StgState
@@ -131,7 +148,8 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals
          , stgReturnStack = retS'
-         , stgInfo        = Info (StateTransiton "case evaluation") [] }
+         , stgInfo        = Info (StateTransiton "case evaluation")
+            [ "Push the alternatives and the local environment on the update stack" ] }
 
 -- (5) Constructor application
 stgRule s@StgState
@@ -265,7 +283,10 @@ stgRule s@StgState
          , stgArgStack    = Empty
          , stgReturnStack = Empty
          , stgUpdateStack = updS'
-         , stgInfo        = Info (StateTransiton "Enter updatable closure") [] }
+         , stgInfo        = Info (StateTransiton "Enter updatable closure")
+            [ "Push a new update frame with the entered address " <> prettyprint addr
+            , "Save current argument and return stacks on that update frame"
+            , "Argument and return stacks are now empty"  ] }
 
 -- (16) Algebraic constructor return, argument/return stacks empty -> update
 stgRule s@StgState
@@ -286,7 +307,10 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = Info (StateTransiton "Algebraic constructor return, argument/return stacks empty. Triggering update") [] }
+         , stgInfo        = Info (StateTransiton "Update by constructor return")
+            [ "Trying to return " <> prettyprint con <> " without anything on argument/return stacks"
+            , "Update closure at " <> prettyprint addrU <> " with returned constructor"
+            , "Restore argument/return stacks from the update frame" ] }
 
 -- (17a) Enter partially applied closure
 stgRule s@StgState
