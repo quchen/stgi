@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 -- | A parser for the STG language, modeled after the grammar given in the
 -- description in the 1992 paper
 -- <http://research.microsoft.com/apps/pubs/default.aspx?id=67083 (link)>
@@ -205,9 +207,16 @@ lambdaForm = lf >>= validateLambda
          <*  arrowTok
          <*> expr
          <?> "lambda form"
-    validateLambda (LambdaForm _ Update (_:_) _) =
-        fail "Lambda forms with non-empty argument lists are never updatable"
-    validateLambda x = pure x
+    validateLambda = \case
+        LambdaForm _ Update (_:_) _ ->
+            fail "Lambda forms with non-empty argument lists are never updatable"
+        LambdaForm _ _ _ (Lit{}) ->
+            fail "No lambda form has primitive type like 1#;\
+                 \ primitives must be boxed, e.g. Int# (1#)"
+        LambdaForm _ _ _ (AppP{}) ->
+            fail "No lambda form has primitive type like \"+# a b\";\
+                 \ only \"case\" can evaluate them"
+        x -> pure x
 
 -- | Parse an expression, which can be
 --

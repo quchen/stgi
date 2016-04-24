@@ -77,19 +77,17 @@ defaultOnlyCase_boundAlgebraic = closureReductionTest defSpec
 defaultOnlyCase_unboundPrimitive :: TestTree
 defaultOnlyCase_unboundPrimitive = closureReductionTest defSpec
     { testName = "Unbound, primitive scrutinee"
-    , source = [stg|
-        main = () \u () -> case x () of
-            default -> Success ();
-        x = () \n () -> 1#
+    , source = [stgProgram|
+        main = () \u () -> case 1# of
+            default -> Success ()
         |] }
 
 defaultOnlyCase_boundPrimitive :: TestTree
 defaultOnlyCase_boundPrimitive = closureReductionTest defSpec
     { testName = "Bound, primitive scrutinee"
     , source = [stg|
-        main = () \u () -> case x () of
-            x -> Success ();
-        x = () \n () -> 1#
+        main = () \u () -> case 1# of
+            x -> Success ()
         |] }
 
 algebraicCase_normalMatch :: TestTree

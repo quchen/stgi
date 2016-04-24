@@ -76,10 +76,10 @@ shouldParseToSuccess testName input output = testCase (T.unpack testName) test
 
 simpleParses :: TestTree
 simpleParses = testGroup "Well-written programs"
-    [ shouldParseToSuccess "Simple binding with literal"
-        "one = () \\u () -> 1#"
+    [ shouldParseToSuccess "Simple binding to boxed literal"
+        "one = () \\u () -> Int# (1#)"
         (Binds [("one", LambdaForm [] Update []
-                          (Lit 1) )])
+                          (AppC "Int#" [AtomLit 1]) )])
 
     , shouldParseToSuccess "Constructor application"
         "con = () \\n () -> Maybe (b, 1#)"
@@ -94,9 +94,11 @@ simpleParses = testGroup "Well-written programs"
                                 (Alts [] (DefaultBound "y" (AppF "y" []))) ))])
 
     , shouldParseToSuccess "Primitive function application"
-        "add1 = () \\n (n) -> +# n 1#"
+        "add1 = () \\n (n) -> case +# n 1# of n' -> Int# (n')"
         (Binds [("add1", LambdaForm [] NoUpdate ["n"]
-                             (AppP Add (AtomVar "n") (AtomLit 1)) )])
+                            (Case (AppP Add (AtomVar "n") (AtomLit 1))
+                                (Alts [] (DefaultBound "n'" (AppC "Int#" [AtomVar "n'"])))))])
+
 
     , shouldParseToSuccess "Let"
         "a = () \\n () ->\n\
@@ -119,21 +121,36 @@ simpleParses = testGroup "Well-written programs"
                              (AppF "x" [])))])
 
     , shouldParseToSuccess "factorial"
-        "fac = () \\n (n) ->                                                 \n\
-        \   case n () of                                                     \n\
-        \       0#      -> 1#;                                               \n\
-        \       default -> let n' = () \\u () -> -# n 1#                     \n\
-        \                  in fac (n')                                         "
+        "fac = () \\n (n) ->                                                  \n\
+        \   case n () of                                                      \n\
+        \       0#      -> Int# (1#);                                         \n\
+        \       default -> case -# n 1# of                                    \n\
+        \           nMinusOne ->                                              \n\
+        \                let fac' = (nMinusOne) \\u () -> fac (nMinusOne)     \n\
+        \                in case fac' () of                                   \n\
+        \                    Int# (facNMinusOne) -> case *# n facNMinusOne of \n\
+        \                        result -> Int# (result);                     \n\
+        \                    err -> Error_fac (err)                           "
         (Binds
-            [ ("fac", LambdaForm [] NoUpdate ["n"]
-                  (Case (AppF "n" []) (Alts
-                      [ PrimitiveAlt 0 (Lit 1) ]
-                      (DefaultNotBound
-                          (Let NonRecursive
-                              (Binds
-                                  [ ("n'", LambdaForm [] Update []
-                                               (AppP Sub (AtomVar "n") (AtomLit 1)) )])
-                              (AppF "fac" [AtomVar "n'"]) )))))])
+            [(Var "fac",LambdaForm [] NoUpdate [Var "n"]
+                (Case (AppF (Var "n") []) (Alts
+                    [PrimitiveAlt (Literal 0)
+                                  (AppC (Constr "Int#")
+                                        [AtomLit (Literal 1)] )]
+                    (DefaultNotBound
+                        (Case (AppP Sub (AtomVar (Var "n")) (AtomLit (Literal 1))) (Alts
+                            []
+                            (DefaultBound (Var "nMinusOne")
+                                (Let NonRecursive
+                                    (Binds
+                                        [(Var "fac'",LambdaForm [Var "nMinusOne"] Update []
+                                            (AppF (Var "fac") [AtomVar (Var "nMinusOne")]) )])
+                                    (Case (AppF (Var "fac'") []) (Alts
+                                        [AlgebraicAlt (Constr "Int#") [Var "facNMinusOne"]
+                                            (Case (AppP Mul (AtomVar (Var "n")) (AtomVar (Var "facNMinusOne"))) (Alts
+                                                []
+                                                (DefaultBound (Var "result") (AppC (Constr "Int#") [AtomVar (Var "result")])) ))]
+                                        (DefaultBound (Var "err") (AppC (Constr "Error_fac") [AtomVar (Var "err")])) ))))))))))])
 
    , shouldParseToSuccess "map with comment"
         "-- Taken from the 1992 STG paper, page 21.                          \n\
