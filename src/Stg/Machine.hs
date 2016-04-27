@@ -5,6 +5,8 @@
 -- | User-facing API to work with STG programs.
 module Stg.Machine (
     initialState,
+
+    -- * Evaluation
     evalStep,
     evalUntil,
     evalsUntil,
@@ -13,20 +15,14 @@ module Stg.Machine (
 
     -- * Garbage collection
     garbageCollect,
-    PerformGc(..)
+    PerformGc(..),
 ) where
 
 
 
-import           Data.Monoid
-import qualified Data.Text                     as T
-
 import           Stg.Language
-import           Stg.Language.Prettyprint
 import           Stg.Machine.Evaluate
-import           Stg.Machine.GarbageCollection (Alive (..), Dead (..))
-import qualified Stg.Machine.GarbageCollection as GC
-import qualified Stg.Machine.Heap              as H
+import           Stg.Machine.GarbageCollection
 import           Stg.Machine.Types
 
 
@@ -69,20 +65,6 @@ initialState mainVar (Program binds) = initializedState
             , stgInfo    = Info StateInitial [] }
         badState -> badState
             { stgInfo = Info (StateError "Initial state creation failed") [] }
-
-
-garbageCollect :: StgState -> StgState
-garbageCollect state
-  = let (Dead deadHeap, Alive cleanHeap) = GC.garbageCollect state
-        garbageAddresses = (T.intercalate ", " . foldMap (\addr -> [prettyprint addr]) . H.addresses) deadHeap
-        garbageWasCollected = H.size deadHeap > 0
-
-    in if garbageWasCollected
-            then state { stgHeap  = cleanHeap
-                       , stgTicks = stgTicks state + 1
-                       , stgInfo  = Info GarbageCollection
-                                         ["Removed addresses: " <> garbageAddresses] }
-            else state
 
 
 -- | Predicate to decide whether the machine should halt.

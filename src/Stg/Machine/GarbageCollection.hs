@@ -1,29 +1,46 @@
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedLists            #-}
-
-{-# OPTIONS_GHC -fdefer-typed-holes #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 -- | Remove unused heap objects.
 module Stg.Machine.GarbageCollection (
     garbageCollect,
+
+    -- * Low-level
+    splitHeap,
     Dead(..),
     Alive(..),
 ) where
 
 
 
-import           Data.Map          (Map)
-import qualified Data.Map          as M
-import           Data.Monoid       hiding (Alt)
-import           Data.Set          (Set)
-import qualified Data.Set          as S
+import qualified Data.Map                 as M
+import           Data.Monoid              hiding (Alt)
+import           Data.Set                 (Set)
+import qualified Data.Set                 as S
+import qualified Data.Text                as T
 
-import           Stack
 import           Stg.Language
+import           Stg.Language.Prettyprint
+import qualified Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 
 
+
+garbageCollect :: StgState -> StgState
+garbageCollect state
+  = let (Dead deadHeap, Alive cleanHeap) = splitHeap state
+        garbageAddresses = (T.intercalate ", " . foldMap (\addr -> [prettyprint addr]) . H.addresses) deadHeap
+        garbageWasCollected = H.size deadHeap > 0
+
+    in if garbageWasCollected
+        then state { stgHeap  = cleanHeap
+                   , stgTicks = stgTicks state + 1
+                   , stgInfo  = Info GarbageCollection
+                                     ["Removed addresses: " <> garbageAddresses] }
+        else state
 
 -- | Alive objects.
 newtype Alive a = Alive a
@@ -33,8 +50,10 @@ newtype Alive a = Alive a
 newtype Dead a = Dead a
     deriving (Eq, Ord, Show, Monoid)
 
-garbageCollect :: StgState -> (Dead Heap, Alive Heap)
-garbageCollect StgState
+-- | Split the heap of an 'StgState' into dead (can be discarded) and alive
+-- (are still used) components.
+splitHeap :: StgState -> (Dead Heap, Alive Heap)
+splitHeap StgState
     { stgCode        = code
     , stgHeap        = heap
     , stgGlobals     = globals
@@ -42,7 +61,7 @@ garbageCollect StgState
     , stgReturnStack = retS
     , stgUpdateStack = updS }
   = let GcState {aliveHeap = alive, oldHeap = dead}
-            = until everythingCollected splitHeap start
+            = until everythingCollected gcStep start
 
         start = GcState
             { aliveHeap     = mempty
@@ -69,8 +88,8 @@ data GcState = GcState
         --   and not-yet-found alive closures.
     } deriving (Eq, Ord, Show)
 
-splitHeap :: GcState -> GcState
-splitHeap GcState
+gcStep :: GcState -> GcState
+gcStep GcState
     { aliveHeap = oldAlive@(Alive (Heap alive))
     , evacuate  = Alive (evacuateAddrs)
     , oldHeap   = Heap oldRest }
@@ -94,13 +113,7 @@ splitHeap GcState
 class Addresses a where
     addrs :: a -> Set MemAddr
 
-instance Addresses a => Addresses [a] where
-    addrs = foldMap addrs
-
-instance Addresses a => Addresses (Map k a) where
-    addrs = foldMap addrs
-
-instance Addresses a => Addresses (Stack a) where
+instance (Foldable f, Addresses a) => Addresses (f a) where
     addrs = foldMap addrs
 
 instance Addresses Code where

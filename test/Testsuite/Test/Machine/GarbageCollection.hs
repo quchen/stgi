@@ -25,14 +25,14 @@ import           Test.Orphans                  ()
 
 tests :: TestTree
 tests = testGroup "Garbage collection"
-    [ minimal
+    [ splitHeapTest
     ]
 
 prettyIndented :: PrettyAnsi a => a -> Text
 prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprintAnsi
 
-minimal :: TestTree
-minimal = testGroup "Minimal example"
+splitHeapTest :: TestTree
+splitHeapTest = testGroup "Split heap in dead/alive"
     [ unusedIsCollected
     , usedIsNotCollected
     , heapSplit
@@ -70,7 +70,7 @@ minimal = testGroup "Minimal example"
     unusedIsCollected = testCase "Dead address is found" test
       where
         expectedDead = S.singleton (MemAddr 3)
-        (Dead (Heap actualDead), Alive cleanHeap) = garbageCollect dummyState
+        (Dead (Heap actualDead), Alive cleanHeap) = splitHeap dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedDead
                            (M.keysSet actualDead)
@@ -79,7 +79,7 @@ minimal = testGroup "Minimal example"
       where
         expectedHeap = let Heap h = dirtyHeap
                        in Heap (M.delete (MemAddr 3) h)
-        (_dead, Alive cleanHeap) = garbageCollect dummyState
+        (_dead, Alive cleanHeap) = splitHeap dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedHeap
                            cleanHeap
@@ -88,7 +88,7 @@ minimal = testGroup "Minimal example"
       where
         expected = dirtyHeap
         actual = dead <> cleanHeap
-        (Dead dead, Alive cleanHeap) = garbageCollect dummyState
+        (Dead dead, Alive cleanHeap) = splitHeap dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expected
                            actual
