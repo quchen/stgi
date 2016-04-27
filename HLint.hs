@@ -1,3 +1,5 @@
+import "hlint" HLint.Default
+
 -- Naming can be useful
 ignore "Avoid Lambda"
 ignore "Eta reduce"
