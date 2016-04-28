@@ -1,4 +1,4 @@
-import "hlint" HLint.Default
+import "hint" HLint.Default
 
 -- Naming can be useful
 ignore "Avoid Lambda"
