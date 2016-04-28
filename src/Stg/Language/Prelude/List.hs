@@ -64,7 +64,7 @@ foldl = [stg|
             let acc' = (f,acc,y) \u () -> case f (acc, y) of
                     v -> v ()
             in foldl (f, acc', ys);
-        default -> Error_foldl () |]
+        badList -> Error_foldl (badList) |]
 
 -- | Strict left list fold.
 --
@@ -76,7 +76,7 @@ foldl' = [stg|
         Nil () -> acc ();
         Cons (y,ys) -> case f (acc, y) of
             acc' -> foldl' (f, acc', ys);
-        default -> Error_foldl' ()
+        badList -> Error_foldl' (badList)
     |]
 
 -- | Right list fold.
@@ -90,7 +90,7 @@ foldr = [stg|
         Cons (y,ys) ->
             let rest = (f,z,ys) \u () -> foldr (f,z,ys)
             in f (y, rest);
-        default -> Error_foldr () |]
+        badList -> Error_foldr (badList) |]
 
 -- | Build a list by repeatedly applying a function to an initial value.
 --
@@ -140,8 +140,8 @@ take = Num.add <> [stgProgram|
                                Cons (y,ys) ->
                                    let rest = (n', ys) \u () -> take (n', ys)
                                    in Cons (y, rest);
-                               default -> Error_take_not_a_list ();
-                    default -> Error_take_not_an_int ()
+                               badList -> Error_take_not_a_list (badList);
+                    badInt -> Error_take_not_an_int (badInt)
         in take' ()
     |]
 
@@ -162,8 +162,8 @@ filter = [stg|
             True () ->
                 let rest = (p, xs') \u () -> filter (p, xs')
                 in Cons (x, rest);
-            def -> Error_filter_1 (def);
-        def -> Error_filter_2 (def)
+            badBool -> Error_filter_1 (badBool);
+        badList -> Error_filter_2 (badList)
     |]
 
 -- | Repeat a single element infinitely.
@@ -219,7 +219,7 @@ map = [stg|
         Cons (x, xs) -> let fx  = (f, x)  \u () -> f (x);
                             fxs = (f, xs) \u () -> map (f, xs)
                         in  Cons (fx, fxs);
-        default -> Error_Map ()
+        badList -> Error_map (badList)
     |]
 
 -- | Generate a list of numbers.
@@ -290,13 +290,13 @@ listIntEquals = Num.eq <> [stgProgram|
             Nil () -> case ys () of
                 Nil () -> True ();
                 Cons (y,ys') -> False ();
-                v -> Error_listEquals (v);
+                badList -> Error_listEquals (badList);
             Cons (x,xs') -> case ys () of
                 Nil () -> False ();
                 Cons (y,ys') -> case eq_Int (x,y) of
                     True () -> listIntEquals (xs',ys');
                     False () -> False ();
                     default -> Error_listEquals_1 ();
-                v -> Error_listEquals_2 (v);
-            v -> Error_listEquals_3 (v)
+                badList -> Error_listEquals_2 (badList);
+            badList -> Error_listEquals_3 (badList)
     |]
