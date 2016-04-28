@@ -239,7 +239,7 @@ letrecMultiBinding = closureReductionTest defSpec
 
 addition :: TestTree
 addition = closureReductionTest defSpec
-    { testName = "Addition +#"
+    { testName = "Addition       +#"
     , source = [stg|
         op = () \n (x,y) -> case +# x y of
             v  -> Int# (v);
@@ -252,7 +252,7 @@ addition = closureReductionTest defSpec
 
 subtraction :: TestTree
 subtraction = closureReductionTest defSpec
-    { testName = "Subtraction -#"
+    { testName = "Subtraction    -#"
     , source = [stg|
         op = () \n (x,y) -> case -# x y of
             v  -> Int# (v);
@@ -278,7 +278,7 @@ multiplication = closureReductionTest defSpec
 
 division :: TestTree
 division = closureReductionTest defSpec
-    { testName = "Division /#"
+    { testName = "Division       /#"
     , source = [stg|
         op = () \n (x,y) -> case /# x y of
             v  -> Int# (v);
@@ -291,7 +291,7 @@ division = closureReductionTest defSpec
 
 modulo :: TestTree
 modulo = closureReductionTest defSpec
-    { testName = "Modulo %#"
+    { testName = "Modulo         %#"
     , source = [stg|
         op = () \n (x,y) -> case %# x y of
             v  -> Int# (v);
@@ -304,7 +304,7 @@ modulo = closureReductionTest defSpec
 
 less :: TestTree
 less = closureReductionTest defSpec
-    { testName = "Less than <#"
+    { testName = "Less than        <#"
     , source = [stg|
         op = () \n (x,y) -> case <# x y of
             v  -> Int# (v);
@@ -317,7 +317,7 @@ less = closureReductionTest defSpec
 
 lessOrEqual :: TestTree
 lessOrEqual = closureReductionTest defSpec
-    { testName = "Less or equal <=#"
+    { testName = "Less or equal    <=#"
     , source = [stg|
         op = () \n (x,y) -> case <=# x y of
             v  -> Int# (v);
@@ -330,7 +330,7 @@ lessOrEqual = closureReductionTest defSpec
 
 equal :: TestTree
 equal = closureReductionTest defSpec
-    { testName = "Equality ==#"
+    { testName = "Equality         ==#"
     , source = [stg|
         op = () \n (x,y) -> case ==# x y of
             v  -> Int# (v);
@@ -343,7 +343,7 @@ equal = closureReductionTest defSpec
 
 unequal :: TestTree
 unequal = closureReductionTest defSpec
-    { testName = "Inequality /=#"
+    { testName = "Inequality       /=#"
     , source = [stg|
         op = () \n (x,y) -> case /=# x y of
             v  -> Int# (v);
@@ -369,7 +369,7 @@ greaterOrEqual = closureReductionTest defSpec
 
 greater :: TestTree
 greater = closureReductionTest defSpec
-    { testName = "Greater than >#"
+    { testName = "Greater than     >#"
     , source = [stg|
         op = () \n (x,y) -> case ># x y of
             v  -> Int# (v);
