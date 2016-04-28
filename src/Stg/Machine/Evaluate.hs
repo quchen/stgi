@@ -394,11 +394,18 @@ stgRule s@StgState
          , stgHeap        = heap'
          , stgInfo        = Info (StateTransiton "Enter partially applied closure") [] }
 
+stgRule s = noRuleApplies s
 
+
+
+-- | When there are no rules, the machine halts. But there are many different
+-- ways this state can be reached, so it's helpful to the user to distinguish
+-- them from each other.
+noRuleApplies :: StgState -> StgState
 
 -- Page 39, 2nd paragraph: "[...] closures with non-emptyargument lists are
 -- never updatable [...]"
-stgRule s@StgState
+noRuleApplies s@StgState
     { stgCode = Enter addr
     , stgHeap = heap }
     | Just (Closure (LambdaForm _ Update (_:_) _) _) <- H.lookup addr heap
@@ -409,7 +416,7 @@ stgRule s@StgState
 -- Page 39, 4th paragraph: "It is not possible for the ReturnInt state to see an
 -- empty return stack, because that would imply that a closure should be updated
 -- with a primitive value; but no closure has a primitive type.
-stgRule s@StgState
+noRuleApplies s@StgState
     { stgCode        = ReturnInt{}
     , stgUpdateStack = Empty }
   = s { stgInfo = Info (StateError "ReturnInt state with empty return stack")
@@ -418,14 +425,14 @@ stgRule s@StgState
 
 
 -- Function argument not in scope
-stgRule s@StgState
+noRuleApplies s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
     | Failure (NotInScope notInScope) <- vals locals globals (AtomVar f : xs)
   = s { stgInfo = Info (StateError (T.intercalate ", " (map (\(Var var) -> var) notInScope) <> " not in scope")) [] }
 
 -- Constructor argument not in scope
-stgRule s@StgState
+noRuleApplies s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
     | Failure (NotInScope notInScope) <- vals locals globals xs
@@ -434,20 +441,21 @@ stgRule s@StgState
 
 
 -- Algebraic constructor return, but primitive alternative on return frame
-stgRule s@StgState
+noRuleApplies s@StgState
     { stgCode        = ReturnCon{}
     , stgReturnStack = ReturnFrame (Alts (AlgebraicAlt{}:_) _) _ :< _ }
   = s { stgInfo = Info (StateError "Algebraic constructor return to primitive alternatives") [] }
 
 -- Primitive return, but algebraic alternative on return frame
-stgRule s@StgState
+noRuleApplies s@StgState
     { stgCode        = ReturnInt _
     , stgReturnStack = ReturnFrame (Alts (PrimitiveAlt{}:_) _) _ :< _ }
   = s { stgInfo = Info (StateError "Primitive return to algebraic alternatives") [] }
 
 
 
-stgRule s@StgState
+-- Successful, ordinary termination
+noRuleApplies s@StgState
     { stgArgStack    = S.Empty
     , stgReturnStack = S.Empty
     , stgUpdateStack = S.Empty }
@@ -455,4 +463,7 @@ stgRule s@StgState
 
 
 
-stgRule s = s { stgInfo = Info NoRulesApply ["Stacks are not empty; the program probably terminated early"] }
+noRuleApplies s = s { stgInfo = Info NoRulesApply
+    [ "Stacks are not empty; the program terminated unexpectedly."
+    , "The lack of a better description is a bug in the STG evaluator."
+    , "Please report this to the project maintainers!" ] }
