@@ -424,14 +424,26 @@ stgRule s@StgState
     | Failure (NotInScope notInScope) <- vals locals globals (AtomVar f : xs)
   = s { stgInfo = Info (StateError (T.intercalate ", " (map (\(Var var) -> var) notInScope) <> " not in scope")) [] }
 
-
-
 -- Constructor argument not in scope
 stgRule s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
     | Failure (NotInScope notInScope) <- vals locals globals xs
   = s { stgInfo = Info (StateError (T.intercalate ", " (map (\(Var var) -> var) notInScope) <> " not in scope")) [] }
+
+
+
+-- Algebraic constructor return, but primitive alternative on return frame
+stgRule s@StgState
+    { stgCode        = ReturnCon{}
+    , stgReturnStack = ReturnFrame (Alts (AlgebraicAlt{}:_) _) _ :< _ }
+  = s { stgInfo = Info (StateError "Algebraic constructor return to primitive alternatives") [] }
+
+-- Primitive return, but algebraic alternative on return frame
+stgRule s@StgState
+    { stgCode        = ReturnInt _
+    , stgReturnStack = ReturnFrame (Alts (PrimitiveAlt{}:_) _) _ :< _ }
+  = s { stgInfo = Info (StateError "Primitive return to algebraic alternatives") [] }
 
 
 
