@@ -119,7 +119,7 @@ instance PrettyAnsi Expr where
 
 instance PrettyAnsi Alts where
     prettyAnsi (Alts alts def) =
-        (align . vsep . punctuate ";") (map prettyAnsi alts ++ [prettyAnsi def])
+        (align . vsep . punctuate (semicolon colour ";")) (map prettyAnsi alts ++ [prettyAnsi def])
 
 instance PrettyAnsi Alt where
     prettyAnsi (AlgebraicAlt con args expr) =

@@ -12,7 +12,7 @@ module Test.Machine.Evaluate.ClosureReductionTest (
 
 
 import           Data.Monoid
-import           Data.Text
+import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -53,7 +53,7 @@ closureReductionTest testSpec = testCase (T.unpack (testName testSpec)) test
     program = initialState "main" (source testSpec)
     finalState = evalUntil (maxSteps testSpec)
                            (HaltIf (successPredicate testSpec))
-                           (PerformGc (const False))
+                           (performGc testSpec)
                            program
     test = case stgInfo finalState of
         Info HaltedByPredicate _ -> pure ()
@@ -81,7 +81,7 @@ data VarLookupResult =
 varLookup :: StgState -> Var -> VarLookupResult
 varLookup state var =
     case globalVal (stgGlobals state) var of
-        Failure err -> VarLookupError ("not found in globals - " <> err)
+        Failure (NotInScope notInScope) -> VarLookupError (T.intercalate ", " (map (\(Var v) -> v) notInScope) <> " not in global scope")
         Success (Addr addr) -> case H.lookup addr (stgHeap state) of
             Just closure -> VarLookupClosure closure
             Nothing -> VarLookupError "not found on heap"

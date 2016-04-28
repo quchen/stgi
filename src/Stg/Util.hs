@@ -7,9 +7,10 @@ module Stg.Util (
 
 
 
+import           Data.Bifunctor
 import           Data.Monoid
-import           Data.Text   (Text)
-import qualified Data.Text   as T
+import           Data.Text      (Text)
+import qualified Data.Text      as T
 
 
 
@@ -29,6 +30,13 @@ data Validate err a = Failure err | Success a
 instance Functor (Validate a) where
     fmap _ (Failure err) = Failure err
     fmap f (Success x)   = Success (f x)
+
+instance Bifunctor Validate where
+    first _ (Success x)   = Success x
+    first f (Failure err) = Failure (f err)
+    second = fmap
+    bimap f _ (Failure l) = Failure (f l)
+    bimap _ g (Success r) = Success (g r)
 
 -- ^ Return success or the accumulation of all failures
 instance Monoid a => Applicative (Validate a) where

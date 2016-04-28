@@ -145,8 +145,15 @@ take = Num.add <> [stgProgram|
         in take' ()
     |]
 
--- TODO Doc
--- | UNTESTED!
+-- | Keep only the elements for which a predicate holds.
+--
+-- @
+-- filter even [1..] = [2, 4, 6, ...]
+-- @
+--
+-- @
+-- filter : (a -> Bool) -> [a] -> [a]
+-- @
 filter = [stg|
     filter = () \n (p, xs) -> case xs () of
         Nil () -> Nil ();
@@ -155,8 +162,8 @@ filter = [stg|
             True () ->
                 let rest = (p, xs') \u () -> filter (p, xs')
                 in Cons (x, rest);
-            def -> Error_filter (def);
-        def -> Error_filter (def)
+            def -> Error_filter_1 (def);
+        def -> Error_filter_2 (def)
     |]
 
 -- | Repeat a single element infinitely.
@@ -174,9 +181,7 @@ repeat = [stg|
         in xs ()
     |]
 
--- | UNTESTED!
---
--- That Haskell sort function often misleadingly referred to as "quicksort".
+-- | That Haskell sort function often misleadingly referred to as "quicksort".
 --
 -- @
 -- sort : [Int] -> [Int]
@@ -184,22 +189,21 @@ repeat = [stg|
 sort = mconcat [leq, gt, filter, concat] <> [stgProgram|
     sort = () \n (xs) -> case xs () of
         Nil () -> Nil ();
-        Cons (x,xs') ->
-            letrec  smaller = (xs') \u () -> filter (leqP, xs');
-                    greater = (xs') \u () -> filter (gtP,  xs');
-                    leqP = (x) \n (y) -> case leq (x,y) of
-                        Int# (i) -> case i () of
-                            1# -> True ();
-                            default -> False ();
-                        def -> Error_sort_leqP (def);
-                    gtP = (x) \n (y) -> case gt (x,y) of
-                        Int# (i) -> case i () of
-                            1# -> True ();
-                            default -> False ();
-                        def -> Error_sort_gtP (def);
-                    greaterAndPivot = () \u () -> Cons (x, greater)
-            in concat (smaller, greaterAndPivot);
-        def -> Error_sort (def)
+        Cons (pivot,xs') ->
+            let beforePivotSorted = (pivot, xs') \u () ->
+                    letrec
+                        atMostPivot = (pivot) \n (y) -> leq_Int (y,pivot);
+                        beforePivot = (xs', atMostPivot) \u () -> filter (atMostPivot, xs')
+                    in sort (beforePivot);
+
+                afterPivotSorted = (pivot, xs') \u () ->
+                    letrec
+                        moreThanPivot = (pivot) \n (y) -> gt_Int (y,pivot);
+                        afterPivot    = (xs', moreThanPivot) \u () -> filter (moreThanPivot,  xs')
+                    in sort (afterPivot)
+            in  let fromPivotOn = (pivot, afterPivotSorted) \u () -> Cons (pivot, afterPivotSorted)
+                in concat (beforePivotSorted, fromPivotOn);
+        badList -> Error_sort (badList)
     |]
 
 -- TODO: list :: [a] -> Program
@@ -238,6 +242,8 @@ listOfNumbers
     :: T.Text      -- ^ Name of the list in the STG program
     -> [P.Integer] -- ^ Entries
     -> Program
+-- TODO: The paper mentions a more efficient construction of literal source
+-- lists that is "usually superior".
 listOfNumbers name [] = nil <> Program (Binds [(Var name, [stg| () \n () -> nil () |])])
 listOfNumbers name ints = nil <>
     Program (Binds [
@@ -287,11 +293,10 @@ listIntEquals = Num.eq <> [stgProgram|
                 v -> Error_listEquals (v);
             Cons (x,xs') -> case ys () of
                 Nil () -> False ();
-                Cons (y,ys') -> case eq (x,y) of
-                    Int# (eqResult) -> case eqResult () of
-                        1# -> listIntEquals (xs',ys');
-                        default -> False ();
-                    v -> Error_listEquals_1 (v);
+                Cons (y,ys') -> case eq_Int (x,y) of
+                    True () -> listIntEquals (xs',ys');
+                    False () -> False ();
+                    default -> Error_listEquals_1 ();
                 v -> Error_listEquals_2 (v);
             v -> Error_listEquals_3 (v)
     |]

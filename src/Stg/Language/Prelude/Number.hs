@@ -1,100 +1,110 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedLists   #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 module Stg.Language.Prelude.Number (
-    numbers,
+    -- * Convenience
+    int,
+
+    -- * Arithmetic
     add,
+    sub,
+    mul,
+    div,
+    mod,
+
+    -- * Comparisons
+    eq,
+    lt,
     leq,
     gt,
-    eq,
+    geq,
+    neq,
 ) where
 
 
 
-import           Prelude      ()
+import           Prelude      (Integer)
 
-import           Stg.Language (Program)
+import           Data.Monoid  ((<>))
+import           Data.Text    (Text)
+
+import           Stg.Language
 import           Stg.Parser
 
+-- $setup
+-- >>> :set -XOverloadedStrings
+-- >>> :set -XQuasiQuotes
+-- >>> :module +Stg.Language.Prettyprint
 
 
-numbers, add :: Program
-leq, gt, eq :: Program
 
-
-
--- | Various common numbers.
+-- | Boxed int generator to abbreviate simple number generation.
 --
--- @
--- minusOne = -1
--- zero     =  0
--- one      =  1
--- two      =  2
--- three    =  3
--- ten      = 10
--- @
-numbers = [stg|
-    minusOne = () \n () -> Int# (-1#);
-    zero     = () \n () -> Int# (0#);
-    one      = () \n () -> Int# (1#);
-    two      = () \n () -> Int# (2#);
-    three    = () \n () -> Int# (3#);
-    ten      = () \n () -> Int# (10#) |]
-
--- | Integer addition.
---
--- @
--- add : Int -> Int -> Int
--- @
-add = [stg|
-    add = () \n (x,y) -> case x () of
-        Int# (x') -> case y () of
-            Int# (y') -> case +# x' y' of
-                1# -> Int# (1#); -- FIXME type hint
-                v -> Int# (v);
-            default -> Error_add ();
-        default -> Error_add () |]
-
--- | @<=@
---
--- @
--- leq : Int -> Int -> Int
--- @
-leq = [stg|
-    leq = () \n (x,y) -> case x () of
-        Int# (x') -> case y () of
-            Int# (y') -> case <=# x' y' of
-                1# -> Int# (1#); -- FIXME type hint
-                v  -> Int# (v);
-            default -> Error_leq ();
-        default -> Error_leq () |]
-
-
--- | @>@
---
--- @
--- gt : Int -> Int -> Int
--- @
-gt = [stg|
-    gt = () \n (x,y) -> case x () of
-        Int# (x') -> case y () of
-            Int# (y') -> case ># x' y' of
-                1# -> Int# (1#); -- FIXME type hint
-                v  -> Int# (v);
-            default -> Error_gt ();
-        default -> Error_gt () |]
+-- >>> prettyprint (int "one" 1)
+-- "one = () \\n () -> Int# (1#)"
+int :: Text -> Integer -> Program
+int name i = Program (Binds [(Var name, LambdaForm [] NoUpdate []
+    (AppC (Constr "Int#") [AtomLit (Literal i)]) )])
 
 
 
--- | @==@
---
--- @
--- eq : Int -> Int -> Int
--- @
-eq = [stg|
-    eq = () \n (x,y) -> case x () of
-        Int# (x') -> case y () of
-            Int# (y') -> case ==# x' y' of
-                1# -> Int# (1#); -- FIXME type hint
-                v  -> Int# (v);
-            v -> Error_eq (v);
-        v -> Error_gt (v) |]
+binaryOp :: Text -> PrimOp -> Alts -> Program
+binaryOp name op primAlts =
+    Program (Binds
+        [(Var name, LambdaForm [] NoUpdate [Var "x", Var "y"]
+            (Case (AppF (Var "x") []) (Alts
+                [AlgebraicAlt (Constr "Int#") [Var "x'"]
+                    (Case (AppF (Var "y") []) (Alts
+                        [AlgebraicAlt (Constr "Int#") [Var "y'"]
+                            (Case (AppP op (AtomVar (Var "x'")) (AtomVar (Var "y'")))
+                                primAlts) ]
+                        (DefaultBound (Var "err") (AppC (Constr ("Error_" <> name <> "_1")) [AtomVar (Var "err")])) ))]
+                (DefaultBound (Var "err") (AppC (Constr ("Error_" <> name <> "_2")) [AtomVar (Var "err")])) )))])
+
+
+
+primToBool :: Alts
+primToBool = [stgAlts| 1# -> True (); default -> False () |]
+
+add, sub, mul, div, mod :: Program
+
+-- |
+eq  = binaryOp "eq_Int"  Eq  primToBool
+
+-- |
+lt  = binaryOp "lt_Int"  Lt  primToBool
+
+-- |
+leq = binaryOp "leq_Int" Leq primToBool
+
+-- |
+gt  = binaryOp "gt_Int"  Gt  primToBool
+
+-- |
+geq = binaryOp "geq_Int" Geq primToBool
+
+-- |
+neq = binaryOp "neq_Int" Neq primToBool
+
+
+
+primIdInt :: Alts
+primIdInt = [stgAlts| v -> Int# (v) |]
+
+eq, lt, leq, gt, geq, neq :: Program
+
+-- |
+add = binaryOp "add" Add primIdInt
+
+-- |
+sub = binaryOp "sub" Sub primIdInt
+
+-- |
+mul = binaryOp "mul" Mul primIdInt
+
+-- |
+div = binaryOp "div" Div primIdInt
+
+-- |
+mod = binaryOp "mod" Mod primIdInt

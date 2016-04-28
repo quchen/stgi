@@ -23,11 +23,21 @@ module Stg.Language.Prelude (
     listOfNumbers,
 
     -- * Numbers
+    -- ** Convenience
+    int,
+    -- ** Arithmetic
     add,
-    numbers,
+    sub,
+    mul,
+    div,
+    mod,
+    -- ** Comparisons
+    eq,
+    lt,
     leq,
     gt,
-    eq,
+    geq,
+    neq,
 
     -- * Other
     seq,

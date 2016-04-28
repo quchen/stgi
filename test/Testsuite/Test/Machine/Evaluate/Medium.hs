@@ -2,9 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
--- | Tests of medium size. These tests will be run with garbage collection
--- enabled, and should have the scope of small functions a Haskell beginner
--- might play around with.
+-- | Tests of medium size, defined by terminating within a certain number of
+-- steps (configured in 'defSpec').
+
+-- These tests will be run with garbage collection enabled, and should have the
+-- scope of small functions a Haskell beginner might play around with.
 module Test.Machine.Evaluate.Medium (tests) where
 
 
@@ -26,14 +28,16 @@ tests = testGroup "Medium-sized, with GC"
     [ program_add3
     , program_foldrSum
     , program_takeRepeat
-    , program_map ]
+    , program_map
+    , program_filter
+    , program_sort ]
 
 defSpec :: ClosureReductionSpec
 defSpec = ClosureReductionSpec
     { testName         = "Default medium closure reduction test template"
     , successPredicate = "main" ==> [stg| () \n () -> Success () |]
     , source           = [stg| main = () \n () -> Success () |]
-    , maxSteps         = 256
+    , maxSteps         = 1024
     , performGc        = PerformGc (const True) }
 
 program_add3 :: TestTree
@@ -63,47 +67,25 @@ program_add3 = closureReductionTest defSpec
 program_foldrSum :: TestTree
 program_foldrSum = closureReductionTest defSpec
     { testName = "Sum of list via foldr"
-    , source = [stgProgram|
-        foldr = () \n (f, z, xs) -> case xs () of
-            Nil () -> z ();
-            Cons (y,ys) ->
-                let rest = (f,z,ys) \n () -> foldr (f,z,ys)
-                in f (y, rest);
-            default -> Error ();
-
-        add2 = () \n (x,y) -> case x () of
-            Int# (x') -> case y () of
-                Int# (y') -> case +# x' y' of
-                    v -> Int# (v);
-                default -> Error ();
-            default -> Error ();
-
-        zero = () \n () -> Int# (0#);
-
-        sum = () \n (xs) -> foldr (add2, zero, xs);
-
-        list = () \u () ->
-            letrec one   = () \n () -> Int# (1#);
-                   two   = () \n () -> Int# (2#);
-                   three = () \n () -> Int# (3#);
-                   nil      = () \n () -> Nil ();
-                   list3    = (three, nil)     \n () -> Cons (three, nil);
-                   list23   = (two, list3)     \n () -> Cons (two,   list3);
-                   list123  = (one, list23)    \n () -> Cons (one,   list23);
-                   list3123 = (three, list123) \n () -> Cons (three, list123)
-            in list3123 ();
-
-        main = () \u () -> case sum (list) of
-            Int# (i) -> case i () of
-                9# -> Success ();
-                wrongResult -> TestFail (wrongResult);
-            default -> Error ()
+    , source = Stg.foldr
+            <> Stg.add
+            <> Stg.int "zero" 0
+            <> Stg.eq
+            <> Stg.listOfNumbers "list" [1..5]
+            <> Stg.int "expected" (sum [1..5])
+            <> [stgProgram|
+        sum = () \n (xs) -> foldr (add, zero, xs);
+        main = () \u () ->
+            let actual = () \u () -> sum (list)
+            in case eq_Int (actual, expected) of
+                True () -> Success ();
+                default -> TestFail ()
         |] }
 
 program_takeRepeat :: TestTree
 program_takeRepeat = closureReductionTest defSpec
     { testName = "take 2 (repeat ())"
-    , source = Stg.numbers
+    , source = Stg.int "two" 2
             <> Stg.take
             <> Stg.repeat
             <> Stg.foldr
@@ -146,6 +128,41 @@ program_map = closureReductionTest defSpec
                         in plusOne' ();
                     actual = (plusOne) \u () -> map (plusOne, inputList)
             in case listIntEquals (actual, expectedResult) of
+                True () -> Success ();
+                wrong   -> TestFail (wrong)
+        |] }
+
+program_filter :: TestTree
+program_filter = closureReductionTest defSpec
+    { testName = "filter list"
+    , source = Stg.listOfNumbers "inputList" [1,-1,2,-2,-3,3]
+            <> Stg.listOfNumbers "expectedResult" (filter (> 0) [1,-1,2,-2,-3,3])
+            <> Stg.int "zero" 0
+            <> Stg.gt
+            <> Stg.listIntEquals
+            <> Stg.filter
+            <> [stgProgram|
+
+        main = () \u () ->
+            letrec  positive = () \n (x) -> gt_Int (x, zero);
+                    filtered = (positive) \n () -> filter (positive, inputList)
+            in case listIntEquals (expectedResult, filtered) of
+                True () -> Success ();
+                wrong   -> TestFail (wrong)
+        |] }
+
+program_sort :: TestTree
+program_sort = closureReductionTest defSpec
+    { testName = "sort"
+    , source = Stg.listOfNumbers "inputList" (reverse [3,1,2,4])
+            <> Stg.listOfNumbers "expectedResult" [1,2,3,4]
+            <> Stg.listIntEquals
+            <> Stg.sort
+            <> [stgProgram|
+
+        main = () \u () ->
+            let sorted = () \u () -> sort (inputList)
+            in case listIntEquals (expectedResult, sorted) of
                 True () -> Success ();
                 wrong   -> TestFail (wrong)
         |] }

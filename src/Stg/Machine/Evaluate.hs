@@ -10,11 +10,11 @@ module Stg.Machine.Evaluate (
 
 
 
+import           Data.Bifunctor
 import qualified Data.Foldable            as F
 import qualified Data.List                as L
 import qualified Data.Map                 as M
 import           Data.Monoid              hiding (Alt)
-import           Data.Text                (Text)
 import qualified Data.Text                as T
 
 import           Stack                    (Stack (..), (<>>))
@@ -55,11 +55,11 @@ lookupAlt matchingAlt alts def = case L.find matchingAlt alts of
     Just alt -> Right alt
     _otherwise -> Left def
 
-liftLambdaToClosure :: Locals -> LambdaForm -> Validate Text Closure
+liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure
 liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
-    case traverse (localVal localsLift) free of
-        Success freeVals -> Success (Closure lf freeVals)
-        Failure err -> Failure ("Could not lift lambda form to closure: " <> err)
+    case traverse (first (:[]) . localVal localsLift) free of
+        Success freeVals    -> Success (Closure lf freeVals)
+        Failure notInScope -> Failure (mconcat notInScope)
 
 -- | Perform a single STG machine evaluation step.
 evalStep :: StgState -> StgState
@@ -87,7 +87,7 @@ stgRule s@StgState
          , stgArgStack = argS'
          , stgInfo = Info (StateTransiton "Function application")
             [ T.unwords
-                [ "Applying function"
+                [ "Apply function"
                 , prettyprint f
                 , case xs of
                     [] -> "without arguments"
@@ -112,7 +112,7 @@ stgRule s@StgState
     in s { stgCode     = Eval body locals
          , stgArgStack = argS'
          , stgInfo     = Info (StateTransiton "Enter non-updatable closure")
-            ["Enter the closure stored at address " <> prettyprint a] }
+            ["Enter closure at " <> prettyprint a] }
 
 
 
@@ -135,9 +135,6 @@ stgRule s@StgState
                     let heapX' = H.updateMany addrsX closures heapWithDummies
                     in Success (localsX', addrsX, heapX')
                 Failure err -> Failure err
-        infotext = case rec of
-            NonRecursive -> "let evaluation"
-            Recursive    -> "letrec evaluation"
     in case stuffNeeded of
         Success (locals', addrs, heap') ->
             s { stgCode = Eval expr locals'
@@ -147,12 +144,11 @@ stgRule s@StgState
                      [ "Local environment extended by"
                      , T.intercalate ", " (foldMap (\var -> [prettyprint var]) vars)]
                  , T.unwords
-                     [ "Allocated new closures at"
+                     [ "Allocate new closures at"
                      , T.intercalate ", " (foldMap (\addr -> [prettyprint addr]) addrs)
                      , "on the heap" ]] }
-        Failure err ->
-            s { stgInfo = Info (StateError (infotext <> " failure: " <> err)) [] }
-
+        Failure (NotInScope notInScope) ->
+            s { stgInfo = Info (StateError (infotext <> " failure: " <> T.intercalate ", " (map (\(Var v) -> v) notInScope) <> " not in scope")) [] }
   where
     makeLocals' :: [Var] -> [MemAddr] -> Locals
     makeLocals' vars addrs = locals'
@@ -161,12 +157,15 @@ stgRule s@StgState
         newLocals = makeLocals (zipWith makeLocal vars addrs)
         makeLocal n a = (n, Addr a)
 
-    makeClosures :: [LambdaForm] -> Locals -> Validate Text [Closure]
+    makeClosures :: [LambdaForm] -> Locals -> Validate NotInScope [Closure]
     makeClosures lambdaForms locals' = traverse (liftLambdaToClosure localsRhs) lambdaForms
       where
         localsRhs = case rec of
             NonRecursive -> locals
             Recursive    -> locals'
+    infotext = case rec of
+        NonRecursive -> "let evaluation"
+        Recursive    -> "letrec evaluation"
 
 
 
@@ -422,8 +421,8 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
-    | Failure valLookupError <- vals locals globals (AtomVar f : xs)
-  = s { stgInfo = Info (StateError valLookupError) [] }
+    | Failure (NotInScope notInScope) <- vals locals globals (AtomVar f : xs)
+  = s { stgInfo = Info (StateError (T.intercalate ", " (map (\(Var var) -> var) notInScope) <> " not in scope")) [] }
 
 
 
@@ -431,8 +430,8 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
-    | Failure valLookupError <- vals locals globals xs
-  = s { stgInfo = Info (StateError valLookupError) [] }
+    | Failure (NotInScope notInScope) <- vals locals globals xs
+  = s { stgInfo = Info (StateError (T.intercalate ", " (map (\(Var var) -> var) notInScope) <> " not in scope")) [] }
 
 
 

@@ -92,7 +92,7 @@ colour = StgStateColours
     }
 
 instance Pretty StgState where
-    pretty state = nest 4 (vsep ["STG state", align (vsep
+    pretty state = align (vsep
         [ "Code:" <+> pretty (stgCode state)
         , nest 4 (vsep
             [ "Stacks"
@@ -102,10 +102,10 @@ instance Pretty StgState where
                 , "Upd:" <+> prettyStack (stgUpdateStack state) ])])
         , nest 4 (vsep [ "Heap", pretty (stgHeap state)])
         , nest 4 (vsep [ "Globals", pretty (stgGlobals state)])
-        , nest 4 ("Step:" <+> pretty (stgTicks state)) ])])
+        , nest 4 ("Step:" <+> pretty (stgTicks state)) ])
 
 instance PrettyAnsi StgState where
-    prettyAnsi state = nest 4 (vsep ["STG state", align (vsep
+    prettyAnsi state = align (vsep
         [ headline colour "Code:" <+> prettyAnsi (stgCode state)
         , nest 4 (vsep
             [headline colour "Stacks"
@@ -115,7 +115,7 @@ instance PrettyAnsi StgState where
                 , headline colour "Upd:" <+> prettyStackAnsi (stgUpdateStack state) ])])
         , nest 4 (vsep [headline colour "Heap", prettyAnsi (stgHeap state)])
         , nest 4 (vsep [headline colour "Globals", prettyAnsi (stgGlobals state)])
-        , nest 4 (headline colour "Step:" <+> pretty (stgTicks state)) ])])
+        , nest 4 (headline colour "Step:" <+> pretty (stgTicks state)) ])
 
 -- | Prettyprint a 'Stack'.
 prettyStack :: Pretty a => Stack a -> Doc

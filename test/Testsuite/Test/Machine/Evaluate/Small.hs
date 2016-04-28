@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
--- | Tests of medium size. Attempt to limit them to testing a single reduction
--- step as much as possible.
+-- | Tests of small size, defined by terminating within a certain number of
+-- steps (configured in 'defSpec').
 --
 -- These tests will be run without garbage collection.
 module Test.Machine.Evaluate.Small (tests) where
@@ -24,28 +24,45 @@ tests :: TestTree
 tests = testGroup "Small, no GC"
     [ testGroup "Function application"
         [ funcapp_simple ]
-    , testGroup "Default-only case"
-        [ defaultOnlyCase_unboundAlgebraic
-        , defaultOnlyCase_boundAlgebraic
-        , defaultOnlyCase_unboundPrimitive
-        , defaultOnlyCase_boundPrimitive ]
-    , testGroup "Algebraic case"
-        [ algebraicCase_normalMatch
-        , algebraicCase_defaultUnboundMatch
-        , algebraicCase_defaultBoundMatch ]
-    , testGroup "Primitive case"
-        [ primitiveCase_normalMatch
-        , primitiveCase_defaultUnboundMatch
-        , primitiveCase_defaultBoundMatch
+    , testGroup "Case"
+        [ testGroup "Default-only"
+            [ defaultOnlyCase_unboundAlgebraic
+            , defaultOnlyCase_boundAlgebraic
+            , defaultOnlyCase_unboundPrimitive
+            , defaultOnlyCase_boundPrimitive ]
+        , testGroup "Algebraic alternatives"
+            [ algebraicCase_normalMatch
+            , algebraicCase_defaultUnboundMatch
+            , algebraicCase_defaultBoundMatch ]
+        , testGroup "Primitive alternatives"
+            [ primitiveCase_normalMatch
+            , primitiveCase_defaultUnboundMatch
+            , primitiveCase_defaultBoundMatch ]
         ]
     , testGroup "Let"
-        [ letBinding
-        , letrecBinding
-        , letMultiBinding
-        , letNestedBinding
-        , letrecMultiBinding ]
+        [ testGroup "Non-recursive"
+            [ letBinding
+            , letMultiBinding
+            , letNestedBinding ]
+        , testGroup "Recursive"
+            [ letrecBinding
+            , letrecMultiBinding ]
+        ]
     , testGroup "Primitive functions"
-        [ addition ]
+        [ testGroup "Integer arithmetic"
+            [ addition
+            , subtraction
+            , multiplication
+            , division
+            , modulo ]
+        , testGroup "Integer comparisons"
+            [ less
+            , lessOrEqual
+            , equal
+            , unequal
+            , greaterOrEqual
+            , greater ]
+        ]
     ]
 
 defSpec :: ClosureReductionSpec
@@ -55,6 +72,17 @@ defSpec = ClosureReductionSpec
     , source           = [stg| main = () \n () -> Success () |]
     , maxSteps         = 32
     , performGc        = PerformGc (const False) }
+
+funcapp_simple :: TestTree
+funcapp_simple = closureReductionTest defSpec
+    { testName = "Simple function application"
+    , source = [stg|
+        main = () \u () -> case id (unit) of
+            Unit () -> Success ();
+            default -> TestFail ();
+        id = () \n (x) -> x ();
+        unit = () \n () -> Unit ()
+        |] }
 
 defaultOnlyCase_unboundAlgebraic :: TestTree
 defaultOnlyCase_unboundAlgebraic = closureReductionTest defSpec
@@ -150,23 +178,15 @@ primitiveCase_defaultBoundMatch = closureReductionTest defSpec
 
 letBinding :: TestTree
 letBinding = closureReductionTest defSpec
-    { testName = "let with a single binding"
+    { testName = "Single binding"
     , source = [stg|
         main = () \u () -> let x = () \n () -> Success ()
                            in x ()
         |] }
 
-letrecBinding :: TestTree
-letrecBinding = closureReductionTest defSpec
-    { testName = "letrec with a single binding"
-    , source = [stg|
-        main = () \u () -> letrec x = () \n () -> Success ()
-                           in x ()
-        |] }
-
 letMultiBinding :: TestTree
 letMultiBinding = closureReductionTest defSpec
-    { testName = "let with two bindings"
+    { testName = "Multiple bindings"
     , source = [stg|
         main = () \u () ->
             let id = () \n (x) -> x ();
@@ -180,7 +200,7 @@ letMultiBinding = closureReductionTest defSpec
 
 letNestedBinding :: TestTree
 letNestedBinding = closureReductionTest defSpec
-    { testName = "let with nested bindings"
+    { testName = "Nested bindings"
     , source = [stg|
         main = () \u () ->
             let id = () \n (x) -> x ();
@@ -194,9 +214,17 @@ letNestedBinding = closureReductionTest defSpec
                    default -> Error ()
         |] }
 
+letrecBinding :: TestTree
+letrecBinding = closureReductionTest defSpec
+    { testName = "Single binding"
+    , source = [stg|
+        main = () \u () -> letrec x = () \n () -> Success ()
+                           in x ()
+        |] }
+
 letrecMultiBinding :: TestTree
 letrecMultiBinding = closureReductionTest defSpec
-    { testName = "letrec with nested bindings"
+    { testName = "Cross-referencing bindings"
     , source = [stg|
         main = () \u () -> letrec id = () \n (x) -> x ();
                                   idOne = (id, one) \n () -> case id (one) of
@@ -211,24 +239,143 @@ letrecMultiBinding = closureReductionTest defSpec
 
 addition :: TestTree
 addition = closureReductionTest defSpec
-    { testName = "Adding primitive numbers"
+    { testName = "Addition +#"
     , source = [stg|
-        add = () \n (x,y) -> case +# x y of
+        op = () \n (x,y) -> case +# x y of
             v  -> Int# (v);
-        main = () \u () -> case add (1#, 2#) of
+        main = () \u () -> case op (1#, 2#) of
             Int# (x) -> case x () of
                 3# -> Success ();
                 v  -> TestFail (v);
             default -> Error ()
         |] }
 
-funcapp_simple :: TestTree
-funcapp_simple = closureReductionTest defSpec
-    { testName = "Simple function application"
+subtraction :: TestTree
+subtraction = closureReductionTest defSpec
+    { testName = "Subtraction -#"
     , source = [stg|
-        main = () \u () -> case id (unit) of
-            Unit () -> Success ();
-            default -> TestFail ();
-        id = () \n (x) -> x ();
-        unit = () \n () -> Unit ()
+        op = () \n (x,y) -> case -# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (3#, 2#) of
+            Int# (x) -> case x () of
+                1# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+multiplication :: TestTree
+multiplication = closureReductionTest defSpec
+    { testName = "Multiplication *#"
+    , source = [stg|
+        op = () \n (x,y) -> case *# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (3#, 2#) of
+            Int# (x) -> case x () of
+                6# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+division :: TestTree
+division = closureReductionTest defSpec
+    { testName = "Division /#"
+    , source = [stg|
+        op = () \n (x,y) -> case /# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (6#, 2#) of
+            Int# (x) -> case x () of
+                3# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+modulo :: TestTree
+modulo = closureReductionTest defSpec
+    { testName = "Modulo %#"
+    , source = [stg|
+        op = () \n (x,y) -> case %# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (5#, 2#) of
+            Int# (x) -> case x () of
+                1# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+less :: TestTree
+less = closureReductionTest defSpec
+    { testName = "Less than <#"
+    , source = [stg|
+        op = () \n (x,y) -> case <# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (1#, 2#) of
+            Int# (x) -> case x () of
+                1# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+lessOrEqual :: TestTree
+lessOrEqual = closureReductionTest defSpec
+    { testName = "Less or equal <=#"
+    , source = [stg|
+        op = () \n (x,y) -> case <=# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (1#, 2#) of
+            Int# (x) -> case x () of
+                1# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+equal :: TestTree
+equal = closureReductionTest defSpec
+    { testName = "Equality ==#"
+    , source = [stg|
+        op = () \n (x,y) -> case ==# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (2#, 2#) of
+            Int# (x) -> case x () of
+                1# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+unequal :: TestTree
+unequal = closureReductionTest defSpec
+    { testName = "Inequality /=#"
+    , source = [stg|
+        op = () \n (x,y) -> case /=# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (1#, 2#) of
+            Int# (x) -> case x () of
+                1# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+greaterOrEqual :: TestTree
+greaterOrEqual = closureReductionTest defSpec
+    { testName = "Greater or equal >=#"
+    , source = [stg|
+        op = () \n (x,y) -> case >=# x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (2#, 1#) of
+            Int# (x) -> case x () of
+                1# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
+        |] }
+
+greater :: TestTree
+greater = closureReductionTest defSpec
+    { testName = "Greater than >#"
+    , source = [stg|
+        op = () \n (x,y) -> case ># x y of
+            v  -> Int# (v);
+        main = () \u () -> case op (2#, 1#) of
+            Int# (x) -> case x () of
+                1# -> Success ();
+                v  -> TestFail (v);
+            default -> Error ()
         |] }
