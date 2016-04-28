@@ -102,6 +102,9 @@ data Expr =
     deriving (Eq, Ord, Show, Generic)
 
 -- | List of possible alternatives in a 'Case' expression.
+--
+-- The list of alts has to be homogeneous. This is not ensured by the type
+-- system, and should be handled by the parser instead.
 data Alts = Alts [Alt] DefaultAlt
     deriving (Eq, Ord, Show, Generic)
 
