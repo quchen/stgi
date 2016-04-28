@@ -1,18 +1,38 @@
 STG interpreter
 ===============
 
+About the machine
+-----------------
+
 The spineless tagless graph reduction machine, STG for short, is an automaton
 used to map non-strict functional languages onto stock hardware. It was
 developed for, and is heavily used in, [the Haskell compiler GHC][ghc].
 
 This project implements an interpreter for the STG as it is [described in the
-1992 paper on the subject][stg1992], considering readability and staying close
-to the source above all other considerations.
+1992 paper on the subject][stg1992], considering readable code and staying close
+to the source paper above all other considerations.
+
+
+Useful applications
+-------------------
+
+These are some of the questions the STG answers:
+
+1. Does this leak memory? If yes, then on the heap or on the stack, and why?
+2. I heard GHC doesn't have a call stack. How does that work?
+
+
+GHC's current STG
+-----------------
 
 Since 1992, the STG has undergone one notable revision, documented in [the 2004
-paper *How to make a fast curry*][fastcurry]. The plan is to migrate to this
-more modern implementation, which treats function application a bit different,
-once I'm satisfied with the code, and still curious about the STG.
+paper *How to make a fast curry*][fastcurry], which treats function application
+a bit different. Due to the large change necessary to adapt to this change, and
+the small amount of knowledge to be gained compared to having an actual working
+STG, I currently have no plans to migrate. The most important questions are
+answered by both versions of the machine alike; it merely turned out that one of
+them is more efficient as an actual high-performance Haskell compiler backend
+language.
 
 [ghc]: https://www.haskell.org/ghc/
 [stg1992]: http://research.microsoft.com/apps/pubs/default.aspx?id=67083
