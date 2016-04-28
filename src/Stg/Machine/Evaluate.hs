@@ -86,14 +86,22 @@ stgRule s@StgState
     in s { stgCode     = Enter a
          , stgArgStack = argS'
          , stgInfo = Info (StateTransiton "Function application")
-            [ T.unwords
-                [ "Apply function"
-                , prettyprint f
-                , case xs of
-                    [] -> "without arguments"
-                    _  -> T.unwords
-                        [ " to arguments "
-                        , T.intercalate ", " (foldMap (\arg -> [prettyprint arg]) xs) ]]]}
+            ((InfoDetail . mconcat)
+                [ [ T.unwords
+                    [ "Apply function"
+                    , prettyprint f
+                    , case xs of
+                        [] -> "without arguments"
+                        _  -> T.unwords
+                            [ " to arguments "
+                            , T.intercalate ", " (foldMap (\arg -> [prettyprint arg]) xs) ]]]
+                , let Locals loc = locals
+                      used = M.fromList [ (var, ()) | AtomVar var <- xs ]
+                      discarded = loc `M.difference` used
+                  in if M.null discarded
+                      then []
+                      else ["Unused local variables discarded: " <> T.intercalate ", " (foldMap (\var -> [prettyprint var]) discarded) ]])}
+                            -- TODO: Show variable names here, not addresses
 
 
 
