@@ -67,9 +67,13 @@ instance Arbitrary InfoShort where
     arbitrary = oneof [ pure NoRulesApply
                       , pure MaxStepsExceeded
                       , pure HaltedByPredicate
-                      , arbitrary1 (StateError . T.pack)
-                      , arbitrary1 (StateTransiton . T.pack)
+                      , arbitrary1 StateTransiton
+                      , arbitrary1 StateError
                       , pure StateInitial ]
 
 instance Arbitrary InfoDetail where
     arbitrary = arbitrary1 (InfoDetail . map T.pack)
+
+instance Arbitrary StateTransition
+
+instance Arbitrary StateError

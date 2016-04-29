@@ -85,7 +85,7 @@ stgRule s@StgState
 
     in s { stgCode     = Enter a
          , stgArgStack = argS'
-         , stgInfo = Info (StateTransiton "Function application")
+         , stgInfo = Info (StateTransiton Eval_FunctionApplication)
             ((InfoDetail . mconcat)
                 [ [ T.unwords
                     [ "Apply function"
@@ -119,7 +119,7 @@ stgRule s@StgState
 
     in s { stgCode     = Eval body locals
          , stgArgStack = argS'
-         , stgInfo     = Info (StateTransiton "Enter non-updatable closure")
+         , stgInfo     = Info (StateTransiton Enter_NonUpdatableClosure)
             ["Enter closure at " <> prettyprint a] }
 
 
@@ -147,7 +147,7 @@ stgRule s@StgState
         Success (locals', addrs, heap') ->
             s { stgCode = Eval expr locals'
               , stgHeap = heap'
-              , stgInfo = Info (StateTransiton infotext)
+              , stgInfo = Info (StateTransiton (Eval_Let rec))
                  [ T.unwords
                      [ "Local environment extended by"
                      , T.intercalate ", " (foldMap (\var -> [prettyprint var]) vars)]
@@ -156,7 +156,7 @@ stgRule s@StgState
                      , T.intercalate ", " (foldMap (\addr -> [prettyprint addr]) addrs)
                      , "on the heap" ]] }
         Failure (NotInScope notInScope) ->
-            s { stgInfo = Info (StateError (infotext <> " failure: " <> T.intercalate ", " (map (\(Var v) -> v) notInScope) <> " not in scope")) [] }
+            s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
   where
     makeLocals' :: [Var] -> [MemAddr] -> Locals
     makeLocals' vars addrs = locals'
@@ -171,9 +171,6 @@ stgRule s@StgState
         localsRhs = case rec of
             NonRecursive -> locals
             Recursive    -> locals'
-    infotext = case rec of
-        NonRecursive -> "let evaluation"
-        Recursive    -> "letrec evaluation"
 
 
 
@@ -186,7 +183,7 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals
          , stgReturnStack = retS'
-         , stgInfo        = Info (StateTransiton "case evaluation")
+         , stgInfo        = Info (StateTransiton Eval_Case)
             [ "Push the alternatives and the local environment on the update stack" ] }
 
 
@@ -198,7 +195,7 @@ stgRule s@StgState
     | Success valsXs <- vals locals globals xs
 
   = s { stgCode = ReturnCon con valsXs
-      , stgInfo = Info (StateTransiton "Constructor application") [] }
+      , stgInfo = Info (StateTransiton Eval_AppC) [] }
 
 
 
@@ -212,7 +209,7 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
-         , stgInfo        = Info (StateTransiton "Algebraic constructor return, standard match") [] }
+         , stgInfo        = Info (StateTransiton ReturnCon_Match) [] }
 
 
 
@@ -224,7 +221,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = Info (StateTransiton "Algebraic constructor return, unbound default match") [] }
+      , stgInfo        = Info (StateTransiton ReturnCon_DefUnbound) [] }
 
 
 
@@ -244,14 +241,14 @@ stgRule s@StgState
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
          , stgHeap        = heap'
-         , stgInfo        = Info (StateTransiton "Algebraic constructor return, bound default match") [] }
+         , stgInfo        = Info (StateTransiton ReturnCon_DefBound) [] }
 
 
 
 -- (9) Literal evaluation
 stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = s { stgCode = ReturnInt k
-      , stgInfo = Info (StateTransiton "Literal evaluation") [] }
+      , stgInfo = Info (StateTransiton Eval_Lit) [] }
 
 
 
@@ -260,7 +257,7 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
     | Success (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k
-      , stgInfo = Info (StateTransiton "Literal application") [] }
+      , stgInfo = Info (StateTransiton Eval_LitApp) [] }
 
 
 
@@ -272,7 +269,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = Info (StateTransiton "Primitive constructor return, standard match found") [] }
+      , stgInfo        = Info (StateTransiton ReturnInt_Match) [] }
 
 
 
@@ -286,7 +283,7 @@ stgRule s@StgState
 
     in s { stgCode        = Eval expr locals'
          , stgReturnStack = retS'
-         , stgInfo        = Info (StateTransiton "Primitive constructor return, bound default match") [] }
+         , stgInfo        = Info (StateTransiton ReturnInt_DefBound) [] }
 
 
 
@@ -298,7 +295,7 @@ stgRule s@StgState
 
   = s { stgCode        = Eval expr locals
       , stgReturnStack = retS'
-      , stgInfo        = Info (StateTransiton "Primitive constructor return, unbound default match") [] }
+      , stgInfo        = Info (StateTransiton ReturnInt_DefUnbound) [] }
 
 
 
@@ -323,7 +320,7 @@ stgRule s@StgState
             Neq -> boolToPrim (/=)
 
     in s { stgCode = ReturnInt (apply op xVal yVal)
-         , stgInfo = Info (StateTransiton "Primitive function application") [] }
+         , stgInfo = Info (StateTransiton Eval_AppP) [] }
 
 
 
@@ -343,7 +340,7 @@ stgRule s@StgState
          , stgArgStack    = Empty
          , stgReturnStack = Empty
          , stgUpdateStack = updS'
-         , stgInfo        = Info (StateTransiton "Enter updatable closure")
+         , stgInfo        = Info (StateTransiton Enter_UpdatableClosure)
             [ "Push a new update frame with the entered address " <> prettyprint addr
             , "Save current argument and return stacks on that update frame"
             , "Argument and return stacks are now empty"  ] }
@@ -369,7 +366,7 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = Info (StateTransiton "Update by constructor return")
+         , stgInfo        = Info (StateTransiton ReturnCon_Update)
             [ "Trying to return " <> prettyprint con <> " without anything on argument/return stacks"
             , "Update closure at " <> prettyprint addrU <> " with returned constructor"
             , "Restore argument/return stacks from the update frame" ] }
@@ -400,7 +397,7 @@ stgRule s@StgState
          , stgReturnStack = retSU
          , stgUpdateStack = updS'
          , stgHeap        = heap'
-         , stgInfo        = Info (StateTransiton "Enter partially applied closure") [] }
+         , stgInfo        = Info (StateTransiton Enter_PartiallyAppliedUpdate) [] }
 
 stgRule s = noRuleApplies s
 
@@ -417,7 +414,7 @@ noRuleApplies s@StgState
     { stgCode = Enter addr
     , stgHeap = heap }
     | Just (Closure (LambdaForm _ Update (_:_) _) _) <- H.lookup addr heap
-  = s { stgInfo = Info (StateError "Closures with non-empty argument lists are never updatable") [] }
+  = s { stgInfo = Info (StateError UpdatableClosureWithArgs) [] }
 
 
 
@@ -427,7 +424,7 @@ noRuleApplies s@StgState
 noRuleApplies s@StgState
     { stgCode        = ReturnInt{}
     , stgUpdateStack = Empty }
-  = s { stgInfo = Info (StateError "ReturnInt state with empty return stack")
+  = s { stgInfo = Info (StateError ReturnIntWithEmptyReturnStack)
         ["No closure has primitive type, so we cannot update one with a primitive int"] }
 
 
@@ -437,14 +434,14 @@ noRuleApplies s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
     | Failure (NotInScope notInScope) <- vals locals globals (AtomVar f : xs)
-  = s { stgInfo = Info (StateError (T.intercalate ", " (map (\(Var var) -> var) notInScope) <> " not in scope")) [] }
+  = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
 
 -- Constructor argument not in scope
 noRuleApplies s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
     | Failure (NotInScope notInScope) <- vals locals globals xs
-  = s { stgInfo = Info (StateError (T.intercalate ", " (map (\(Var var) -> var) notInScope) <> " not in scope")) [] }
+  = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
 
 
 
@@ -452,13 +449,13 @@ noRuleApplies s@StgState
 noRuleApplies s@StgState
     { stgCode        = ReturnCon{}
     , stgReturnStack = ReturnFrame (Alts (AlgebraicAlt{}:_) _) _ :< _ }
-  = s { stgInfo = Info (StateError "Algebraic constructor return to primitive alternatives") [] }
+  = s { stgInfo = Info (StateError AlgReturnToPrimAlts) [] }
 
 -- Primitive return, but algebraic alternative on return frame
 noRuleApplies s@StgState
     { stgCode        = ReturnInt _
     , stgReturnStack = ReturnFrame (Alts (PrimitiveAlt{}:_) _) _ :< _ }
-  = s { stgInfo = Info (StateError "Primitive return to algebraic alternatives") [] }
+  = s { stgInfo = Info (StateError PrimReturnToAlgAlts) [] }
 
 
 

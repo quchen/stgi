@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedLists            #-}
@@ -17,11 +18,15 @@ module Stg.Machine.Types (
     Code(..),
     Globals(..),
     Locals(..),
+    Closure(..),
+    Heap(..),
+
+    -- * State information
     Info(..),
     InfoShort(..),
     InfoDetail(..),
-    Closure(..),
-    Heap(..),
+    StateTransition(..),
+    StateError(..),
 ) where
 
 
@@ -33,6 +38,7 @@ import           Data.Monoid
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import qualified GHC.Exts                      as Exts
+import           GHC.Generics
 import           Text.PrettyPrint.ANSI.Leijen  hiding ((<>))
 import           Text.Printf
 
@@ -73,7 +79,7 @@ data StgState = StgState
     , stgInfo        :: Info
         -- ^ Information about the current state
     }
-    deriving (Show)
+    deriving (Eq, Ord, Show)
 
 -- | Package of colour definitions used in this module.
 data StgStateColours = StgStateColours
@@ -136,7 +142,7 @@ prettyStackAnsi stack = (align . vsep) prettyFrames
 -- | Argument frames store values on the argument stack, so that they can
 -- later be retrieved when the calling function can be applied to them.
 newtype ArgumentFrame = ArgumentFrame Value
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Pretty ArgumentFrame where
     pretty (ArgumentFrame val) = pretty val
@@ -147,7 +153,7 @@ instance PrettyAnsi ArgumentFrame where
 -- | Return frames are used when the scrutinee of a case expression is done
 -- being evaluated, and the branch to continue on has to be decided.
 data ReturnFrame = ReturnFrame Alts Locals
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Pretty ReturnFrame where
     pretty (ReturnFrame alts locals) =
@@ -163,7 +169,7 @@ instance PrettyAnsi ReturnFrame where
 -- updateable closure was entered, so that they can help update it once it is
 -- evaluated.
 data UpdateFrame = UpdateFrame (Stack ArgumentFrame) (Stack ReturnFrame) MemAddr
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Pretty UpdateFrame where
     pretty (UpdateFrame upd ret addr) =
@@ -181,7 +187,7 @@ instance PrettyAnsi UpdateFrame where
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 
 
@@ -197,7 +203,7 @@ instance PrettyAnsi MemAddr where
 
 -- | A value of the STG machine.
 data Value = Addr MemAddr | PrimInt Integer
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Pretty Value where
     pretty = \case
@@ -216,7 +222,7 @@ data Code = Eval Expr Locals
           | Enter MemAddr
           | ReturnCon Constr [Value]
           | ReturnInt Integer
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Pretty Code where
     pretty = \case
@@ -275,7 +281,7 @@ instance PrettyAnsi Locals where
 
 -- | User-facing information about the current state of the STG.
 data Info = Info InfoShort InfoDetail
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Pretty Info where
     pretty (Info short []) = pretty short
@@ -297,14 +303,14 @@ data InfoShort =
       -- ^ The machine halted because a user-specified halting predicate
       -- held.
 
-    | StateError Text
+    | StateError StateError
       -- ^ The machine halted in a state that is known to be invalid, there is
       -- no valid state transition to continue with.
       --
       -- An example of this would be a 'ReturnCon' state with an empty
       -- return stack.
 
-    | StateTransiton Text
+    | StateTransiton StateTransition
       -- ^ Description of the state transition that lead to the current state.
 
     | StateInitial
@@ -312,21 +318,94 @@ data InfoShort =
 
     | GarbageCollection
       -- ^ A garbage collection step, in which no ordinary evaluation is done.
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Pretty InfoShort where
-    pretty HaltedByPredicate = "Halting predicate held"
-    pretty NoRulesApply = "No further rules apply"
-    pretty MaxStepsExceeded = "Maximum number of steps exceeded"
-    pretty (StateError x) = "Errorenous state: " <+> pretty (T.unpack x)
-    pretty (StateTransiton x) = "State transition:" <+> pretty (T.unpack x)
-    pretty StateInitial = "Initial state"
-    pretty GarbageCollection = "Garbage collection"
+    pretty = \case
+        HaltedByPredicate -> "Halting predicate held"
+        NoRulesApply      -> "No further rules apply"
+        MaxStepsExceeded  -> "Maximum number of steps exceeded"
+        StateError err    -> "Errorenous state: " <+> pretty err
+        StateTransiton t  -> "State transition:" <+> pretty t
+        StateInitial      -> "Initial state"
+        GarbageCollection -> "Garbage collection"
+
+data StateTransition =
+      Eval_FunctionApplication
+    | Enter_NonUpdatableClosure
+    | Eval_Let Rec
+    | Eval_Case
+    | Eval_AppC
+    | ReturnCon_Match
+    | ReturnCon_DefUnbound
+    | ReturnCon_DefBound
+    | Eval_Lit
+    | Eval_LitApp
+    | ReturnInt_Match
+    | ReturnInt_DefBound
+    | ReturnInt_DefUnbound
+    | Eval_AppP
+    | Enter_UpdatableClosure
+    | ReturnCon_Update
+    | Enter_PartiallyAppliedUpdate
+    deriving (Eq, Ord, Show, Generic)
+
+instance Pretty StateTransition where
+    pretty = \case
+        Eval_FunctionApplication     -> "Function application"
+        Enter_NonUpdatableClosure    -> "Enter non-updatable closure"
+        Eval_Let rec                 -> case rec of
+                                            NonRecursive -> "let evaluation"
+                                            Recursive -> "letrec evaluation"
+        Eval_Case                    -> "case evaluation"
+        Eval_AppC                    -> "Constructor application"
+        ReturnCon_Match              -> "Algebraic constructor return, standard match"
+        ReturnCon_DefUnbound         -> "Algebraic constructor return, unbound default match"
+        ReturnCon_DefBound           -> "Algebraic constructor return, bound default match"
+        Eval_Lit                     -> "Literal evaluation"
+        Eval_LitApp                  -> "Literal application"
+        ReturnInt_Match              -> "Primitive constructor return, standard match found"
+        ReturnInt_DefBound           -> "Primitive constructor return, bound default match"
+        ReturnInt_DefUnbound         -> "Primitive constructor return, unbound default match"
+        Eval_AppP                    -> "Primitive function application"
+        Enter_UpdatableClosure       -> "Enter updatable closure"
+        ReturnCon_Update             -> "Update by constructor return"
+        Enter_PartiallyAppliedUpdate -> "Enter partially applied closure"
+
+instance PrettyAnsi StateTransition
+
+data StateError =
+      VariablesNotInScope [Var]
+    | UpdatableClosureWithArgs
+    | ReturnIntWithEmptyReturnStack
+    | AlgReturnToPrimAlts
+    | PrimReturnToAlgAlts
+    | InitialStateCreationFailed
+    deriving (Eq, Ord, Show, Generic)
+
+-- | @[a,b,c]  ==>  a, b, c@
+commaSep :: [Doc] -> Doc
+commaSep = encloseSep mempty mempty (comma <> space)
+
+instance Pretty StateError where
+    pretty = \case
+        VariablesNotInScope vars
+            -> commaSep (map pretty vars) <+> "not in scope"
+        UpdatableClosureWithArgs
+            -> "Closures with non-empty argument lists are never updatable"
+        ReturnIntWithEmptyReturnStack
+            -> "ReturnInt state with empty return stack"
+        AlgReturnToPrimAlts
+            -> "Algebraic constructor return to primitive alternatives"
+        PrimReturnToAlgAlts
+            -> "Primitive return to algebraic alternatives"
+        InitialStateCreationFailed
+            -> "Initial state creation failed"
 
 -- | Detailed information that may be useful to the user. Not used
 -- programmatically.
 newtype InfoDetail = InfoDetail [Text]
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Exts.IsList InfoDetail where
     type Item InfoDetail = Text
@@ -345,7 +424,11 @@ instance Pretty InfoDetail where
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
+
+-- | Like 'tupled', but comma-space separated.
+tupled' :: [Doc] -> Doc
+tupled' = encloseSep lparen rparen (comma <> space)
 
 instance Pretty Closure where
     pretty (Closure (lambdaForm) []) = pretty lambdaForm
@@ -357,7 +440,6 @@ instance Pretty Closure where
                      pretty
                      lambda
       where
-        tupled' = encloseSep lparen rparen (comma <> space)
         prettyFree vars = tupled' (zipWith
             (\var val -> pretty var <+> "->" <+> pretty val)
             vars
@@ -373,7 +455,6 @@ instance PrettyAnsi Closure where
                      prettyAnsi
                      lambda
       where
-        tupled' = encloseSep lparen rparen (comma <> space)
         prettyFree vars = tupled' (zipWith
             (\var val -> prettyAnsi var <+> "->" <+> prettyAnsi val)
             vars

@@ -64,7 +64,7 @@ initialState mainVar (Program binds) = initializedState
             , stgGlobals = Globals locals
             , stgInfo    = Info StateInitial [] }
         badState -> badState
-            { stgInfo = Info (StateError "Initial state creation failed") [] }
+            { stgInfo = Info (StateError InitialStateCreationFailed) [] }
 
 
 -- | Predicate to decide whether the machine should halt.
