@@ -346,6 +346,8 @@ data StateTransition =
     | Eval_AppC
     | Eval_AppP
     | Eval_Case
+    | Eval_Case_Primop_Normal
+    | Eval_Case_Primop_DefaultBound
     | Eval_FunctionApplication
     | Eval_Let Rec
     | Eval_Lit
@@ -361,24 +363,26 @@ data StateTransition =
 
 instance Pretty StateTransition where
     pretty = \case
-        Enter_NonUpdatableClosure    -> "Enter non-updatable closure"
-        Enter_PartiallyAppliedUpdate -> "Enter partially applied closure"
-        Enter_UpdatableClosure       -> "Enter updatable closure"
-        Eval_AppC                    -> "Constructor application"
-        Eval_AppP                    -> "Primitive function application"
-        Eval_Case                    -> "case evaluation"
-        Eval_FunctionApplication     -> "Function application"
-        Eval_Let NonRecursive        -> "let evaluation"
-        Eval_Let Recursive           -> "letrec evaluation"
-        Eval_Lit                     -> "Literal evaluation"
-        Eval_LitApp                  -> "Literal application"
-        ReturnCon_DefBound           -> "Algebraic constructor return, bound default match"
-        ReturnCon_DefUnbound         -> "Algebraic constructor return, unbound default match"
-        ReturnCon_Match              -> "Algebraic constructor return, standard match"
-        ReturnCon_Update             -> "Update by constructor return"
-        ReturnInt_DefBound           -> "Primitive constructor return, bound default match"
-        ReturnInt_DefUnbound         -> "Primitive constructor return, unbound default match"
-        ReturnInt_Match              -> "Primitive constructor return, standard match found"
+        Enter_NonUpdatableClosure     -> "Enter non-updatable closure"
+        Enter_PartiallyAppliedUpdate  -> "Enter partially applied closure"
+        Enter_UpdatableClosure        -> "Enter updatable closure"
+        Eval_AppC                     -> "Constructor application"
+        Eval_AppP                     -> "Primitive function application"
+        Eval_Case                     -> "case evaluation"
+        Eval_Case_Primop_Normal       -> "case evaluation of primop: taking a shortcut, standard match"
+        Eval_Case_Primop_DefaultBound -> "case evaluation of primop: taking a shortcut, bound default match"
+        Eval_FunctionApplication      -> "Function application"
+        Eval_Let NonRecursive         -> "let evaluation"
+        Eval_Let Recursive            -> "letrec evaluation"
+        Eval_Lit                      -> "Literal evaluation"
+        Eval_LitApp                   -> "Literal application"
+        ReturnCon_DefBound            -> "Algebraic constructor return, bound default match"
+        ReturnCon_DefUnbound          -> "Algebraic constructor return, unbound default match"
+        ReturnCon_Match               -> "Algebraic constructor return, standard match"
+        ReturnCon_Update              -> "Update by constructor return"
+        ReturnInt_DefBound            -> "Primitive constructor return, bound default match"
+        ReturnInt_DefUnbound          -> "Primitive constructor return, unbound default match"
+        ReturnInt_Match               -> "Primitive constructor return, standard match found"
 
 instance PrettyAnsi StateTransition
 

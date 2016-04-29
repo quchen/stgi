@@ -60,6 +60,23 @@ liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
         Success freeVals   -> Success (Closure lf freeVals)
         Failure notInScope -> Failure (mconcat notInScope)
 
+boolToPrim :: (a -> b -> Bool) -> a -> b -> Integer
+boolToPrim p a b = if p a b then 1 else 0
+
+applyPrimOp :: PrimOp -> Integer -> Integer -> Integer
+applyPrimOp = \case
+    Add -> (+)
+    Sub -> (-)
+    Mul -> (*)
+    Div -> quot
+    Mod -> rem
+    Eq  -> boolToPrim (==)
+    Lt  -> boolToPrim (<)
+    Leq -> boolToPrim (<=)
+    Gt  -> boolToPrim (>)
+    Geq -> boolToPrim (>=)
+    Neq -> boolToPrim (/=)
+
 -- | Perform a single STG machine evaluation step.
 evalStep :: StgState -> StgState
 evalStep state = let state' = stgRule state
@@ -150,6 +167,43 @@ stgRule s@StgState
         localsRhs = case rec of
             NonRecursive -> locals
             Recursive    -> locals'
+
+
+
+-- (18) Shortcut for matching primops, given before the general case rule (4)
+-- so it takes precedence.
+--
+-- This rule, along with (19), allows evaluating primops without the overhead
+-- of allocating an intermediate return stack frame.
+--
+-- When reading the source here for educational purposes, you should skip this
+-- rule until you've seen the normal case rule (4) and the normal
+-- primop rule (14).
+stgRule s@StgState
+    { stgCode = Eval (Case (AppP op (AtomVar x) (AtomVar y)) alts) locals }
+    | Success (PrimInt xVal) <- localVal locals x
+    , Success (PrimInt yVal) <- localVal locals y
+    , opXY <- applyPrimOp op xVal yVal
+    , Left (DefaultBound pat expr) <- lookupPrimitiveAlt alts (Literal opXY)
+
+  = let locals' = addLocals [(pat, PrimInt opXY)] locals
+
+    in s { stgCode = Eval expr locals'
+         , stgInfo = Info (StateTransiton Eval_Case_Primop_DefaultBound) [] }
+
+
+
+-- (19) Like (18) a shortcut for evaluating primops. See (18) for more
+-- information.
+stgRule s@StgState
+    { stgCode = Eval (Case (AppP op (AtomVar x) (AtomVar y)) alts) locals }
+    | Success (PrimInt xVal) <- localVal locals x
+    , Success (PrimInt yVal) <- localVal locals y
+    , opXY <- applyPrimOp op xVal yVal
+    , Right (PrimitiveAlt _opXY expr) <- lookupPrimitiveAlt alts (Literal opXY)
+
+  = s { stgCode = Eval expr locals
+      , stgInfo = Info (StateTransiton Eval_Case_Primop_Normal) [] }
 
 
 
@@ -286,23 +340,9 @@ stgRule s@StgState
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
 
-  = let boolToPrim p a b = if p a b then 1 else 0
-        apply = \case
-            Add -> (+)
-            Sub -> (-)
-            Mul -> (*)
-            Div -> quot
-            Mod -> rem
-            Eq  -> boolToPrim (==)
-            Lt  -> boolToPrim (<)
-            Leq -> boolToPrim (<=)
-            Gt  -> boolToPrim (>)
-            Geq -> boolToPrim (>=)
-            Neq -> boolToPrim (/=)
-
-    in s { stgCode = ReturnInt (apply op xVal yVal)
-         , stgInfo = Info (StateTransiton Eval_AppP)
-                          (InfoDetail.unusedLocals [x,y] locals) }
+  = s { stgCode = ReturnInt (applyPrimOp op xVal yVal)
+      , stgInfo = Info (StateTransiton Eval_AppP)
+                       (InfoDetail.unusedLocals [x,y] locals) }
 
 
 
