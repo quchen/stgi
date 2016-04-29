@@ -68,8 +68,8 @@ test-suite stg-test
   main-is:             Main.hs
   other-modules:       Test.Language
                      , Test.Language.Prettyprint
+                     , Test.Language.Prettyprint.Ansi
                      , Test.Language.Prettyprint.ParserInverse
-                     , Test.Language.Prettyprint.ParserInverseAnsi
                      , Test.Machine
                      , Test.Machine.Evaluate
                      , Test.Machine.Evaluate.ClosureReductionTest
