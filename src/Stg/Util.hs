@@ -2,14 +2,19 @@
 module Stg.Util (
     show',
     Validate(..),
+
+    -- * Prettyprinter extensions
+    commaSep,
+    tupled',
 ) where
 
 
 
 import           Data.Bifunctor
 import           Data.Monoid
-import           Data.Text      (Text)
-import qualified Data.Text      as T
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
 
 
@@ -44,3 +49,11 @@ instance Monoid a => Applicative (Validate a) where
     Success _ <*> Failure x = Failure x
     Failure x <*> Failure y = Failure (x <> y)
     Failure x <*> Success _ = Failure x
+
+-- | @[a,b,c]  ==>  a, b, c@
+commaSep :: [Doc] -> Doc
+commaSep = encloseSep mempty mempty (comma <> space)
+
+-- | Like 'tupled', but comma-space separated.
+tupled' :: [Doc] -> Doc
+tupled' = encloseSep lparen rparen (comma <> space)

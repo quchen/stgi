@@ -45,6 +45,7 @@ import           Text.Printf
 import           Stack
 import           Stg.Language
 import           Stg.Language.Prettyprint.Ansi
+import           Stg.Util
 
 
 
@@ -390,10 +391,6 @@ data StateError =
     | InitialStateCreationFailed
     deriving (Eq, Ord, Show, Generic)
 
--- | @[a,b,c]  ==>  a, b, c@
-commaSep :: [Doc] -> Doc
-commaSep = encloseSep mempty mempty (comma <> space)
-
 instance Pretty StateError where
     pretty = \case
         VariablesNotInScope vars
@@ -438,10 +435,6 @@ instance Pretty InfoDetail where
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]
     deriving (Eq, Ord, Show, Generic)
-
--- | Like 'tupled', but comma-space separated.
-tupled' :: [Doc] -> Doc
-tupled' = encloseSep lparen rparen (comma <> space)
 
 instance Pretty Closure where
     pretty (Closure (lambdaForm) []) = pretty lambdaForm

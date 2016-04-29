@@ -12,38 +12,36 @@ module Stg.Machine.InfoDetails where
 
 import qualified Data.Map                     as M
 import           Data.Monoid                  hiding (Alt)
-import qualified Data.Text                    as T
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
 import           Stg.Language
 import           Stg.Language.Prettyprint
 import           Stg.Machine.Types
+import           Stg.Util
 
 
 
 appF :: Var -> [Atom] -> InfoDetail
-appF function args =
-    InfoDetail
-         [ T.unwords
-            [ "Apply function"
-            , prettyprint function
-            , case args of
-                [] -> "without arguments"
-                _  -> T.unwords
-                    [ " to arguments "
-                    , T.intercalate ", " (foldMap (\arg -> [prettyprint arg]) args) ]]]
+appF val [] = InfoDetail ["Inspect value " <> prettyprint val]
+appF function args = InfoDetail
+    [ (prettyprint . hsep)
+        [ "Apply function"
+        , pretty function
+        , "to arguments"
+        , commaSep (map pretty args) ]]
+
 
 
 unusedLocals :: [Var] -> Locals -> InfoDetail
-unusedLocals vars locals = InfoDetail (
-    let Locals loc = locals
-        used = M.fromList (map (,()) vars)
-        discarded = loc `M.difference` used
-        prettyDiscardedBind var val = [prettyprint (pretty var <+> lparen <> pretty val <> rparen)]
-    in if M.null discarded
+unusedLocals vars (Locals locals) = InfoDetail (
+    let used   = M.fromList (map (,()) vars)
+        unused = locals `M.difference` used
+        prettyDiscardedBind var val = [(pretty var <+> lparen <> pretty val <> rparen)]
+    in if M.null unused
         then []
-        else [ "Unused local variables discarded: "
-            <> T.intercalate ", " (M.foldMapWithKey prettyDiscardedBind discarded) ])
+        else [ prettyprint (
+                "Unused local variables discarded:"
+                <+> commaSep (M.foldMapWithKey prettyDiscardedBind unused) )])
 
 
 
@@ -53,13 +51,13 @@ enterNonUpdatable addr = InfoDetail ["Enter closure at " <> prettyprint addr]
 
 
 evalLet :: [Var] -> [MemAddr] -> InfoDetail
-evalLet vars addrs = InfoDetail
-    [ T.unwords
+evalLet vars addrs = (InfoDetail . map prettyprint)
+    [ hsep
         [ "Local environment extended by"
-        , T.intercalate ", " (foldMap (\var -> [prettyprint var]) vars) ]
-    , T.unwords
+        , commaSep (foldMap (\var -> [pretty var]) vars) ]
+    , hsep
         [ "Allocate new closures at"
-        , T.intercalate ", " (foldMap (\addr -> [prettyprint addr]) addrs)
+        , commaSep (foldMap (\addr -> [pretty addr]) addrs)
         , "on the heap" ]]
 
 
