@@ -15,14 +15,13 @@ import qualified Data.Foldable            as F
 import qualified Data.List                as L
 import qualified Data.Map                 as M
 import           Data.Monoid              hiding (Alt)
-import qualified Data.Text                as T
 
 import           Stack                    (Stack (..), (<>>))
 import qualified Stack                    as S
 import           Stg.Language
-import           Stg.Language.Prettyprint
 import           Stg.Machine.Env
 import qualified Stg.Machine.Heap         as H
+import qualified Stg.Machine.InfoDetails  as InfoDetail
 import           Stg.Machine.Types
 import           Stg.Parser
 import           Stg.Util
@@ -86,22 +85,7 @@ stgRule s@StgState
     in s { stgCode     = Enter a
          , stgArgStack = argS'
          , stgInfo = Info (StateTransiton Eval_FunctionApplication)
-            ((InfoDetail . mconcat)
-                [ [ T.unwords
-                    [ "Apply function"
-                    , prettyprint f
-                    , case xs of
-                        [] -> "without arguments"
-                        _  -> T.unwords
-                            [ " to arguments "
-                            , T.intercalate ", " (foldMap (\arg -> [prettyprint arg]) xs) ]]]
-                , let Locals loc = locals
-                      used = M.fromList [ (var, ()) | AtomVar var <- xs ]
-                      discarded = loc `M.difference` used
-                  in if M.null discarded
-                      then []
-                      else ["Unused local variables discarded: " <> T.intercalate ", " (foldMap (\var -> [prettyprint var]) discarded) ]])}
-                            -- TODO: Show variable names here, not addresses
+                          (InfoDetail.appF f xs locals)}
 
 
 
@@ -120,7 +104,7 @@ stgRule s@StgState
     in s { stgCode     = Eval body locals
          , stgArgStack = argS'
          , stgInfo     = Info (StateTransiton Enter_NonUpdatableClosure)
-            ["Enter closure at " <> prettyprint a] }
+                              (InfoDetail.enterNonUpdatable a) }
 
 
 
@@ -148,13 +132,7 @@ stgRule s@StgState
             s { stgCode = Eval expr locals'
               , stgHeap = heap'
               , stgInfo = Info (StateTransiton (Eval_Let rec))
-                 [ T.unwords
-                     [ "Local environment extended by"
-                     , T.intercalate ", " (foldMap (\var -> [prettyprint var]) vars)]
-                 , T.unwords
-                     [ "Allocate new closures at"
-                     , T.intercalate ", " (foldMap (\addr -> [prettyprint addr]) addrs)
-                     , "on the heap" ]] }
+                               (InfoDetail.evalLet vars addrs) }
         Failure (NotInScope notInScope) ->
             s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
   where
@@ -184,7 +162,7 @@ stgRule s@StgState
     in s { stgCode        = Eval expr locals
          , stgReturnStack = retS'
          , stgInfo        = Info (StateTransiton Eval_Case)
-            [ "Push the alternatives and the local environment on the update stack" ] }
+                                 InfoDetail.evalCase }
 
 
 
@@ -341,9 +319,7 @@ stgRule s@StgState
          , stgReturnStack = Empty
          , stgUpdateStack = updS'
          , stgInfo        = Info (StateTransiton Enter_UpdatableClosure)
-            [ "Push a new update frame with the entered address " <> prettyprint addr
-            , "Save current argument and return stacks on that update frame"
-            , "Argument and return stacks are now empty"  ] }
+                                 (InfoDetail.enterUpdatable addr) }
 
 
 
@@ -367,9 +343,7 @@ stgRule s@StgState
          , stgUpdateStack = updS'
          , stgHeap        = heap'
          , stgInfo        = Info (StateTransiton ReturnCon_Update)
-            [ "Trying to return " <> prettyprint con <> " without anything on argument/return stacks"
-            , "Update closure at " <> prettyprint addrU <> " with returned constructor"
-            , "Restore argument/return stacks from the update frame" ] }
+                                 (InfoDetail.conUpdate con addrU) }
 
 
 
@@ -425,7 +399,7 @@ noRuleApplies s@StgState
     { stgCode        = ReturnInt{}
     , stgUpdateStack = Empty }
   = s { stgInfo = Info (StateError ReturnIntWithEmptyReturnStack)
-        ["No closure has primitive type, so we cannot update one with a primitive int"] }
+                       InfoDetail.returnIntCannotUpdate}
 
 
 
@@ -468,7 +442,4 @@ noRuleApplies s@StgState
 
 
 
-noRuleApplies s = s { stgInfo = Info NoRulesApply
-    [ "Stacks are not empty; the program terminated unexpectedly."
-    , "The lack of a better description is a bug in the STG evaluator."
-    , "Please report this to the project maintainers!" ] }
+noRuleApplies s = s { stgInfo = Info NoRulesApply InfoDetail.stacksNotEmpty }
