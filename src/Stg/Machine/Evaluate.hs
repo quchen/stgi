@@ -85,7 +85,7 @@ stgRule s@StgState
     in s { stgCode     = Enter a
          , stgArgStack = argS'
          , stgInfo = Info (StateTransiton Eval_FunctionApplication)
-                          (InfoDetail.appF f xs locals)}
+                          (InfoDetail.appF f (AtomVar f : xs) locals)}
 
 
 
