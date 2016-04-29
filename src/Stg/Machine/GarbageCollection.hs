@@ -20,10 +20,9 @@ import qualified Data.Map                 as M
 import           Data.Monoid              hiding (Alt)
 import           Data.Set                 (Set)
 import qualified Data.Set                 as S
-import qualified Data.Text                as T
 
 import           Stg.Language
-import           Stg.Language.Prettyprint
+import qualified Stg.Machine.InfoDetails as InfoDetail
 import qualified Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 
@@ -32,14 +31,11 @@ import           Stg.Machine.Types
 garbageCollect :: StgState -> StgState
 garbageCollect state
   = let (Dead deadHeap, Alive cleanHeap) = splitHeap state
-        garbageAddresses = (T.intercalate ", " . foldMap (\addr -> [prettyprint addr]) . H.addresses) deadHeap
-        garbageWasCollected = H.size deadHeap > 0
-
-    in if garbageWasCollected
+    in if H.size deadHeap > 0
         then state { stgHeap  = cleanHeap
                    , stgTicks = stgTicks state + 1
                    , stgInfo  = Info GarbageCollection
-                                     ["Removed addresses: " <> garbageAddresses] }
+                                     (InfoDetail.garbageCollected (H.addresses deadHeap)) }
         else state
 
 -- | Alive objects.

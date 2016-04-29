@@ -94,3 +94,8 @@ stacksNotEmpty = InfoDetail
     [ "Stacks are not empty; the program terminated unexpectedly."
     , "The lack of a better description is a bug in the STG evaluator."
     , "Please report this to the project maintainers!" ]
+
+garbageCollected :: Foldable f => f MemAddr -> InfoDetail
+garbageCollected addrs = InfoDetail ["Removed addresses: " <> prettyAddrs addrs]
+  where
+    prettyAddrs = prettyprint . commaSep . foldMap (\addr -> [pretty addr])
