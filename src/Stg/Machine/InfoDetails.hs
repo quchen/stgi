@@ -10,9 +10,10 @@ module Stg.Machine.InfoDetails where
 
 
 
-import qualified Data.Map                 as M
-import           Data.Monoid              hiding (Alt)
-import qualified Data.Text                as T
+import qualified Data.Map                     as M
+import           Data.Monoid                  hiding (Alt)
+import qualified Data.Text                    as T
+import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
 import           Stg.Language
 import           Stg.Language.Prettyprint
@@ -36,8 +37,8 @@ appF function args locals =
               discarded = loc `M.difference` used
           in if M.null discarded
               then []
-              else ["Unused local variables discarded: " <> T.intercalate ", " (foldMap (\var -> [prettyprint var]) discarded) ]]
-                                        -- TODO: Show variable names here, not addresses
+              else [ "Unused local variables discarded: "
+                    <> T.intercalate ", " (M.foldMapWithKey (\var val -> [prettyprint (pretty var <+> lparen <> pretty val <> rparen)]) discarded) ]]
 
 
 

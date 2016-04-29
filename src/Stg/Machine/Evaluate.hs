@@ -11,17 +11,17 @@ module Stg.Machine.Evaluate (
 
 
 import           Data.Bifunctor
-import qualified Data.Foldable            as F
-import qualified Data.List                as L
-import qualified Data.Map                 as M
-import           Data.Monoid              hiding (Alt)
+import qualified Data.Foldable           as F
+import qualified Data.List               as L
+import qualified Data.Map                as M
+import           Data.Monoid             hiding (Alt)
 
-import           Stack                    (Stack (..), (<>>))
-import qualified Stack                    as S
+import           Stack                   (Stack (..), (<>>))
+import qualified Stack                   as S
 import           Stg.Language
 import           Stg.Machine.Env
-import qualified Stg.Machine.Heap         as H
-import qualified Stg.Machine.InfoDetails  as InfoDetail
+import qualified Stg.Machine.Heap        as H
+import qualified Stg.Machine.InfoDetails as InfoDetail
 import           Stg.Machine.Types
 import           Stg.Parser
 import           Stg.Util
