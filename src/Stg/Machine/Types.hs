@@ -418,7 +418,7 @@ instance PrettyAnsi StateError where
 -- | Detailed information that may be useful to the user. Not used
 -- programmatically.
 newtype InfoDetail = InfoDetail [Text]
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Monoid)
 
 instance Exts.IsList InfoDetail where
     type Item InfoDetail = Text

@@ -85,7 +85,8 @@ stgRule s@StgState
     in s { stgCode     = Enter a
          , stgArgStack = argS'
          , stgInfo = Info (StateTransiton Eval_FunctionApplication)
-                          (InfoDetail.appF f (AtomVar f : xs) locals)}
+                          (mconcat [ InfoDetail.appF f (AtomVar f : xs)
+                                   , InfoDetail.unusedLocals (f : [ var | AtomVar var <- xs ]) locals ])}
 
 
 
@@ -173,7 +174,8 @@ stgRule s@StgState
     | Success valsXs <- vals locals globals xs
 
   = s { stgCode = ReturnCon con valsXs
-      , stgInfo = Info (StateTransiton Eval_AppC) [] }
+      , stgInfo = Info (StateTransiton Eval_AppC)
+                       (InfoDetail.unusedLocals [ var | AtomVar var <- xs ] locals) }
 
 
 
@@ -235,7 +237,8 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
     | Success (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k
-      , stgInfo = Info (StateTransiton Eval_LitApp) [] }
+      , stgInfo = Info (StateTransiton Eval_LitApp)
+                       (InfoDetail.unusedLocals [f] locals)}
 
 
 
@@ -298,7 +301,8 @@ stgRule s@StgState
             Neq -> boolToPrim (/=)
 
     in s { stgCode = ReturnInt (apply op xVal yVal)
-         , stgInfo = Info (StateTransiton Eval_AppP) [] }
+         , stgInfo = Info (StateTransiton Eval_AppP)
+                          (InfoDetail.unusedLocals [x,y] locals) }
 
 
 

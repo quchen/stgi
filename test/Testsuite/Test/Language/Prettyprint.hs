@@ -4,8 +4,8 @@ module Test.Language.Prettyprint (tests) where
 
 import           Test.Tasty
 
-import qualified Test.Language.Prettyprint.ParserInverse     as PrettyInv
-import qualified Test.Language.Prettyprint.ParserInverseAnsi as PrettyAnsi
+import qualified Test.Language.Prettyprint.Ansi          as PrettyAnsi
+import qualified Test.Language.Prettyprint.ParserInverse as PrettyInv
 
 
 
