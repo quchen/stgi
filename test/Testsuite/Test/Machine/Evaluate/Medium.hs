@@ -154,7 +154,7 @@ program_filter = closureReductionTest defSpec
 program_sort :: TestTree
 program_sort = closureReductionTest defSpec
     { testName = "sort"
-    , source = Stg.listOfNumbers "inputList" (reverse [3,1,2,4])
+    , source = Stg.listOfNumbers "inputList" [3,1,2,4]
             <> Stg.listOfNumbers "expectedResult" [1,2,3,4]
             <> Stg.listIntEquals
             <> Stg.sort

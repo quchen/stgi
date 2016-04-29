@@ -218,10 +218,18 @@ instance PrettyAnsi Value where
     prettyAnsiList = tupled . map prettyAnsi
 
 -- | The different code states the STG can be in.
-data Code = Eval Expr Locals
-          | Enter MemAddr
-          | ReturnCon Constr [Value]
-          | ReturnInt Integer
+data Code =
+          -- | Evaluate an expression within a local environment
+          Eval Expr Locals
+
+          -- | Load the closure at a certain heap address
+        | Enter MemAddr
+
+          -- | Sub-computation terminated with algebraic constructor
+        | ReturnCon Constr [Value]
+
+          -- | Sub-computation terminated with a primitive integer
+        | ReturnInt Integer
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty Code where
@@ -331,46 +339,45 @@ instance Pretty InfoShort where
         GarbageCollection -> "Garbage collection"
 
 data StateTransition =
-      Eval_FunctionApplication
-    | Enter_NonUpdatableClosure
-    | Eval_Let Rec
-    | Eval_Case
+      Enter_NonUpdatableClosure
+    | Enter_PartiallyAppliedUpdate
+    | Enter_UpdatableClosure
     | Eval_AppC
-    | ReturnCon_Match
-    | ReturnCon_DefUnbound
-    | ReturnCon_DefBound
+    | Eval_AppP
+    | Eval_Case
+    | Eval_FunctionApplication
+    | Eval_Let Rec
     | Eval_Lit
     | Eval_LitApp
-    | ReturnInt_Match
+    | ReturnCon_DefBound
+    | ReturnCon_DefUnbound
+    | ReturnCon_Match
+    | ReturnCon_Update
     | ReturnInt_DefBound
     | ReturnInt_DefUnbound
-    | Eval_AppP
-    | Enter_UpdatableClosure
-    | ReturnCon_Update
-    | Enter_PartiallyAppliedUpdate
+    | ReturnInt_Match
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty StateTransition where
     pretty = \case
-        Eval_FunctionApplication     -> "Function application"
         Enter_NonUpdatableClosure    -> "Enter non-updatable closure"
-        Eval_Let rec                 -> case rec of
-                                            NonRecursive -> "let evaluation"
-                                            Recursive -> "letrec evaluation"
-        Eval_Case                    -> "case evaluation"
+        Enter_PartiallyAppliedUpdate -> "Enter partially applied closure"
+        Enter_UpdatableClosure       -> "Enter updatable closure"
         Eval_AppC                    -> "Constructor application"
-        ReturnCon_Match              -> "Algebraic constructor return, standard match"
-        ReturnCon_DefUnbound         -> "Algebraic constructor return, unbound default match"
-        ReturnCon_DefBound           -> "Algebraic constructor return, bound default match"
+        Eval_AppP                    -> "Primitive function application"
+        Eval_Case                    -> "case evaluation"
+        Eval_FunctionApplication     -> "Function application"
+        Eval_Let NonRecursive        -> "let evaluation"
+        Eval_Let Recursive           -> "letrec evaluation"
         Eval_Lit                     -> "Literal evaluation"
         Eval_LitApp                  -> "Literal application"
-        ReturnInt_Match              -> "Primitive constructor return, standard match found"
+        ReturnCon_DefBound           -> "Algebraic constructor return, bound default match"
+        ReturnCon_DefUnbound         -> "Algebraic constructor return, unbound default match"
+        ReturnCon_Match              -> "Algebraic constructor return, standard match"
+        ReturnCon_Update             -> "Update by constructor return"
         ReturnInt_DefBound           -> "Primitive constructor return, bound default match"
         ReturnInt_DefUnbound         -> "Primitive constructor return, unbound default match"
-        Eval_AppP                    -> "Primitive function application"
-        Enter_UpdatableClosure       -> "Enter updatable closure"
-        ReturnCon_Update             -> "Update by constructor return"
-        Enter_PartiallyAppliedUpdate -> "Enter partially applied closure"
+        ReturnInt_Match              -> "Primitive constructor return, standard match found"
 
 instance PrettyAnsi StateTransition
 

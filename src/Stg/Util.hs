@@ -2,7 +2,6 @@
 module Stg.Util (
     show',
     Validate(..),
-    takeMatchingLength,
 ) where
 
 
@@ -45,9 +44,3 @@ instance Monoid a => Applicative (Validate a) where
     Success _ <*> Failure x = Failure x
     Failure x <*> Failure y = Failure (x <> y)
     Failure x <*> Success _ = Failure x
-
--- | Take as many elements from one list as there are in another.
---
--- This is just a lazier version of @\xs ys -> take (length ys) xs@.
-takeMatchingLength :: [a] -> [b] -> [a]
-takeMatchingLength xs ys = zipWith const xs ys

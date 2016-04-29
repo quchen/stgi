@@ -37,7 +37,7 @@ lookupAlgebraicAlt
 lookupAlgebraicAlt (Alts alts def) constr  = lookupAlt matchingAlt alts def
   where
     matchingAlt (AlgebraicAlt c _ _) = c == constr
-    matchingAlt (PrimitiveAlt{}) = False
+    matchingAlt (PrimitiveAlt{})     = False
 
 -- | 'lookupPrimitiveAlt' for primitive literals.
 lookupPrimitiveAlt
@@ -47,7 +47,7 @@ lookupPrimitiveAlt
 lookupPrimitiveAlt (Alts alts def) lit = lookupAlt matchingAlt alts def
   where
     matchingAlt (PrimitiveAlt lit' _) = lit' == lit
-    matchingAlt (AlgebraicAlt{}) = False
+    matchingAlt (AlgebraicAlt{})      = False
 
 lookupAlt :: (alt -> Bool) -> [alt] -> def -> Either def alt
 lookupAlt matchingAlt alts def = case L.find matchingAlt alts of
@@ -57,7 +57,7 @@ lookupAlt matchingAlt alts def = case L.find matchingAlt alts of
 liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure
 liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
     case traverse (first (:[]) . localVal localsLift) free of
-        Success freeVals    -> Success (Closure lf freeVals)
+        Success freeVals   -> Success (Closure lf freeVals)
         Failure notInScope -> Failure (mconcat notInScope)
 
 -- | Perform a single STG machine evaluation step.
@@ -115,8 +115,8 @@ stgRule s@StgState
 
     -- TODO: Refactor this fugly mess, apologies for writing it - David/quchen
   = let (vars, lambdaForms) = unzip (M.assocs binds)
-        dummyClosures = takeMatchingLength
-            (repeat (Closure [stg| () \n () -> Let_rule_dummy () |] []))
+        dummyClosures = map
+            (const (Closure [stg| () \n () -> Let_rule_dummy () |] []))
             vars
         stuffNeeded =
             let (addrsX, heapWithDummies) = H.allocMany dummyClosures heap

@@ -25,8 +25,8 @@ tests = testGroup "Inverse of parser"
     , inverseOfParser "Lambda form"       Parser.lambdaForm
     , inverseOfParser "Expression"        Parser.expr
     , inverseOfParser "Case alternatives" Parser.alts
-    , inverseOfParser "Literal"           Parser.literal
-    , inverseOfParser "Primop"            Parser.primOp
+    , inverseOfParser "Literal"           Parser.literal -- TODO: Use Smallcheck for this
+    , inverseOfParser "Primop"            Parser.primOp  -- TODO: Use Smallcheck for this
     , inverseOfParser "Atom"              Parser.atom ]
 
 inverseOfParser

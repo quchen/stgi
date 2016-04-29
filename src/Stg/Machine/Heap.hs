@@ -21,7 +21,6 @@ import           Data.Set          (Set)
 import           Prelude           hiding (lookup)
 
 import           Stg.Machine.Types
-import           Stg.Util
 
 
 
@@ -57,6 +56,12 @@ allocMany closures (Heap heap) = (addrs, heap')
         (L.filter (\i -> M.notMember i heap) (map MemAddr [0..]))
         closures
     heap' = Heap (heap <> M.fromList (zip addrs closures))
+
+-- | Take as many elements from one list as there are in another.
+--
+-- This is just a lazier version of @\xs ys -> take (length ys) xs@.
+takeMatchingLength :: [a] -> [b] -> [a]
+takeMatchingLength xs ys = zipWith const xs ys
 
 -- | All addresses allocated on the heap.
 addresses :: Heap -> Set MemAddr
