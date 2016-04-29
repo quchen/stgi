@@ -402,6 +402,12 @@ instance Pretty StateError where
         InitialStateCreationFailed
             -> "Initial state creation failed"
 
+instance PrettyAnsi StateError where
+    prettyAnsi = \case
+        VariablesNotInScope vars
+            -> commaSep (map prettyAnsi vars) <+> "not in scope"
+        x -> pretty x
+
 -- | Detailed information that may be useful to the user. Not used
 -- programmatically.
 newtype InfoDetail = InfoDetail [Text]
