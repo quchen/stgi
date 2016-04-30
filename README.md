@@ -1,6 +1,7 @@
 STG interpreter
 ===============
 
+
 About the machine
 -----------------
 
@@ -44,7 +45,6 @@ To do
 =====
 
 - Main functionality
-    - Rule 18/19 on page 65: Better primitive case
     - Test the stepper
     - Write lots of test cases
     - Unify the stacks to one; should be more instructional. For example, an
@@ -63,3 +63,5 @@ To do
     - Highlight error location in input
     - HTML prettyprinter
 - Small stuff
+
+[![Build Status](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
