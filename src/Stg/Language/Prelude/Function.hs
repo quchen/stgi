@@ -5,6 +5,7 @@ module Stg.Language.Prelude.Function (
     id,
     const,
     compose,
+    fix,
 ) where
 
 
@@ -16,7 +17,7 @@ import           Stg.Parser
 
 
 
-seq, id, const, compose :: Program
+seq, id, const, compose, fix :: Program
 
 
 
@@ -48,4 +49,10 @@ compose = [stg|
                 let gx = (g,x) \n () -> g (x) -- TODO: \u or \n?
                 in f (gx)
         in fgx ()
+    |]
+
+fix = [stgProgram|
+    fix = () \n (f) ->
+        letrec x = (f, x) \u () -> f (x)
+        in x ()
     |]

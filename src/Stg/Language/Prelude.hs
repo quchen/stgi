@@ -44,11 +44,12 @@ module Stg.Language.Prelude (
     geq,
     neq,
 
-    -- * Other
+    -- * Functions
     seq,
     id,
     const,
     compose,
+    fix,
 ) where
 
 
