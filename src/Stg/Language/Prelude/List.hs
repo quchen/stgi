@@ -18,6 +18,9 @@ module Stg.Language.Prelude.List (
     sort,
     map,
     listIntEquals,
+    length,
+    zip,
+    zipWith,
 
     -- * Convenience
     listOfNumbers,
@@ -39,7 +42,8 @@ import           Stg.Language.Prelude.Number as Num
 
 
 
-nil, concat, foldl, foldl', foldr, iterate, cycle, take, filter, repeat, sort, map, listIntEquals :: Program
+nil, concat, foldl, foldl', foldr, iterate, cycle, take, filter :: Program
+repeat, sort, map, listIntEquals, length, zip, zipWith :: Program
 
 nil = [stg| nil = () \n () -> Nil () |]
 
@@ -299,4 +303,72 @@ listIntEquals = Num.eq <> [stgProgram|
                     default -> Error_listEquals_1 ();
                 badList -> Error_listEquals_2 (badList);
             badList -> Error_listEquals_3 (badList)
+    |]
+
+-- | Length of a list.
+-- UNTESTED
+--
+-- @
+-- length : [a] -> [a] -> Bool
+-- @
+length = [stgProgram|
+    length = () \u () ->
+        letrec  length' = () \n (n, xs) -> case xs () of
+            Nil () -> Int# (n);
+            Cons (y,ys) -> case +# n 1# of
+                n' -> length' (n', ys);
+            badList -> Error_length (badList)
+        in length' (0#)
+    |]
+
+-- | Zip two lists into one. If one list is longer than the other, ignore the
+-- exceeding elements.
+-- UNTESTED
+--
+-- @
+-- zip [1,2,3,4,5] [10,20,30] ==> [(1,10),(2,20),(3,30)]
+--
+-- zip xs ys = zipWith Tuple xs ys
+-- @
+--
+-- @
+-- zip : [a] -> [b] -> [(a,b)]
+-- @
+zip = [stgProgram|
+    zip = () \n (xs,ys) -> case xs () of
+        Nil () -> Nil ();
+        Cons (x,xs') -> case ys () of
+            Nil () -> Nil ();
+            Cons (y,ys') ->
+                let tup  = (x,y)     \u () -> Tuple (x,y);
+                    rest = (xs',ys') \u () -> zip (xs',ys')
+                in Cons (tup, rest);
+            badList -> Error_zip (badList);
+        badList -> Error_zip (badList)
+    |]
+
+-- | Zip two lists into one, using a user-specified combining function.
+-- If one list is longer than the other, ignore the exceeding elements.
+-- UNTESTED
+--
+-- @
+-- zipWith (+) [1,2,3,4,5] [10,20,30] ==> [11,22,33]
+--
+-- zipWith f xs ys = map f (zip xs ys)
+-- @
+--
+-- @
+-- zipWith : (a -> b -> c) -> [a] -> [b] -> [c]
+-- @
+zipWith = [stgProgram|
+    zipWith = () \n (f,xs,ys) -> case xs () of
+        Nil () -> Nil ();
+        Cons (x,xs') -> case ys () of
+            Nil () -> Nil ();
+            Cons (y,ys') ->
+                let fxy  = (f,x,y)   \u () -> f (x,y);
+                    rest = (xs',ys') \u () -> zip (xs',ys')
+                in Cons (tup, rest);
+            badList -> Error_zipWith (badList);
+        badList -> Error_zipWith (badList)
     |]
