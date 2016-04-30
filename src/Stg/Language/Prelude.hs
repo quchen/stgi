@@ -19,6 +19,11 @@ module Stg.Language.Prelude (
     map,
     listIntEquals,
 
+    -- * Boolean
+    and2,
+    or2,
+    not,
+
     -- ** Convenience
     listOfNumbers,
 
@@ -52,4 +57,5 @@ import           Prelude                       ()
 
 import           Stg.Language.Prelude.Function
 import           Stg.Language.Prelude.List
+import           Stg.Language.Prelude.Bool
 import           Stg.Language.Prelude.Number
