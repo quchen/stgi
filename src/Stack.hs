@@ -5,7 +5,7 @@
 -- specialized API.
 module Stack (
     Stack(..),
-    popN,
+    forEachPop,
     (<>>),
 ) where
 
@@ -51,12 +51,11 @@ instance OverloadedLists.IsList (Stack a) where
 (<>>) :: [a] -> Stack a -> Stack a
 list <>> stack = foldr (:<) stack list
 
--- | Pop exactly n elements off the stack; fail if not enough elements are
--- present.
-popN :: Int -> Stack a -> Maybe ([a], Stack a)
-popN n _ | n < 0 = Nothing
-popN 0 stack = Just ([], stack)
-popN _ Empty = Nothing
-popN n (x :< xs) = case popN (n-1) xs of
+-- | For each list element, pop one element off the stack. Fail if not enough
+-- elements are on the stack.
+forEachPop :: [x] -> Stack a -> Maybe ([a], Stack a)
+forEachPop (_:_) Empty = Nothing
+forEachPop [] stack = Just ([], stack)
+forEachPop (_:xs) (s :< stack) = case forEachPop xs stack of
     Nothing -> Nothing
-    Just (pops, rest) -> Just (x:pops, rest)
+    Just (pops, rest) -> Just (s:pops, rest)

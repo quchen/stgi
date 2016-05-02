@@ -3,7 +3,6 @@ module Test.Stack (tests) where
 
 
 import           Data.Foldable
-import           Data.Maybe
 import           Data.Monoid
 import           GHC.Exts              (fromList)
 import           Test.Tasty
@@ -21,36 +20,32 @@ tests = testGroup "Stack" [test_popN, fromToList, test_mappend]
 test_popN :: TestTree
 test_popN = testGroup "popN"
     [ againstReference
-    , roundtrip
-    , negativeFirstArg ]
+    , roundtrip ]
   where
     againstReference = QC.testProperty
-        "Agrees with reference implementation"
-        (\(NonNegative n) xs ->
-            let _ = xs :: Stack Int
-            in popN n xs === popN_reference n xs )
+        "Agrees with naive implementation"
+        (\xs stack ->
+            let _ = stack :: Stack Int
+                _ = xs :: [()]
+            in xs `forEachPop` stack === xs `naive` stack )
       where
-        popN_reference :: Int -> Stack a -> Maybe ([a], Stack a)
-        popN_reference n stack | n > length stack = Nothing
-        popN_reference n stack = Just (let (xs, ys) = splitAt n (toList stack)
-                                       in (xs, fromList ys) )
+        naive :: [x] -> Stack a -> Maybe ([a], Stack a)
+        naive xs stack
+            | length xs > length stack = Nothing
+            | otherwise =
+                let (before, after) = splitAt (length xs) (toList stack)
+                in Just (before, fromList after)
 
     roundtrip = QC.testProperty
         "pop-then-push"
-        (\(NonNegative n) xs ->
-            let popped = popN n xs
-                _ = xs :: Stack Int
-            in classify (isNothing popped) "overpopped"
-                (case popped of
-                    Just (a,b) -> a <>> b === xs
-                    Nothing -> property True ))
-
-    negativeFirstArg = QC.testProperty
-        "Negative first argument => Nothing"
-        (\(Positive n) xs ->
-            let _ = xs :: Stack Int
-            in popN (-n) xs === Nothing )
-
+        (\xs stack ->
+            let popped = xs `forEachPop` stack
+                _ = stack :: Stack Int
+                _ = xs :: [Int]
+            in case popped of
+                Just (a,b) -> a <>> b === stack
+                Nothing -> classify True "overpopped"
+                    (length xs > length stack) )
 
 fromToList :: TestTree
 fromToList = testGroup "List conversion"

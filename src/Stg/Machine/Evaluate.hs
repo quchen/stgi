@@ -113,7 +113,7 @@ stgRule s@StgState
     , stgArgStack = argS
     , stgHeap     = heap }
     | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- H.lookup a heap
-    , Just (args, argS') <- S.popN (length bound) argS
+    , Just (args, argS') <- bound `S.forEachPop` argS
 
   = let locals = makeLocals (freeLocals <> boundLocals)
         freeLocals = zip free freeVals
