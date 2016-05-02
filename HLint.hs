@@ -1,8 +1,11 @@
 import "hint" HLint.Default
+import "hint" HLint.Builtin.All
 
 -- Naming can be useful
-ignore "Avoid Lambda"
+ignore "Avoid lambda"
 ignore "Eta reduce"
+ignore "Use camelCase"
+ignore "Use fromMaybe"
 
 -- AMP fallout
 error "generalize mapM"  = mapM  ==> traverse

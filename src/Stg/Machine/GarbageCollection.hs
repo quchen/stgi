@@ -87,7 +87,7 @@ data GcState = GcState
 gcStep :: GcState -> GcState
 gcStep GcState
     { aliveHeap = oldAlive@(Alive (Heap alive))
-    , evacuate  = Alive (evacuateAddrs)
+    , evacuate  = Alive evacuateAddrs
     , oldHeap   = Heap oldRest }
   = GcState
     { aliveHeap = oldAlive <> Alive (Heap scavenged)

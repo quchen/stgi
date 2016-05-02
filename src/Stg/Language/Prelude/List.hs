@@ -267,8 +267,8 @@ listOfNumbers name ints = nil <>
         , LambdaForm ([Var (intName i)] <> [ Var tailName | tailName P./= "nil"])
                      Update
                      []
-                     ((AppC (Constr "Cons")
-                            [AtomVar (Var (intName i)),AtomVar (Var tailName)] )))
+                     (AppC (Constr "Cons")
+                           [AtomVar (Var (intName i)),AtomVar (Var tailName)] ))
     listBindName i = "list_" <> intName i
 
     intBind :: P.Integer -> (Var, LambdaForm)

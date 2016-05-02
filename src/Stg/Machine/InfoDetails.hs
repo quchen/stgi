@@ -1,8 +1,7 @@
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 
 -- | Temporary module to extract detail info message generation from "Evaluate".
 -- Should be replaced by a proper ADT with prettyprinting.
@@ -36,7 +35,7 @@ unusedLocals :: [Var] -> Locals -> InfoDetail
 unusedLocals vars (Locals locals) = InfoDetail (
     let used   = M.fromList (map (,()) vars)
         unused = locals `M.difference` used
-        prettyDiscardedBind var val = [(pretty var <+> lparen <> pretty val <> rparen)]
+        prettyDiscardedBind var val = [pretty var <+> lparen <> pretty val <> rparen]
     in if M.null unused
         then []
         else [ prettyprint (

@@ -114,7 +114,7 @@ evalsUntil maxSteps (HaltIf haltIf) (PerformGc performGc) = go False
         state | haltIf state
             -> terminate (state { stgInfo = Info HaltedByPredicate [] })
 
-        state@StgState{ stgInfo = Info (StateTransiton{}) _ }
+        state@StgState{ stgInfo = Info StateTransiton{} _ }
             | attemptGc && performGc state -> case garbageCollect state of
                 stateGc@StgState{stgInfo = Info GarbageCollection _} ->
                     state : stateGc : go False (evalStep stateGc)

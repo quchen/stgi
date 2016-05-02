@@ -1,6 +1,5 @@
 {-# LANGUAGE NumDecimals       #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
 
 -- | Functions and types required to implement tests that check whether
 -- a certain closure is reduced to the expected form by the STG.

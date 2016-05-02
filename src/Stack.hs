@@ -50,7 +50,7 @@ instance OverloadedLists.IsList (Stack a) where
 -- | Push a list of items onto the stack. The first item will be at the
 -- top of the stack.
 (<>>) :: [a] -> Stack a -> Stack a
-list <>> stack = fromList list <> stack
+list <>> stack = foldr (:<) stack list
 
 -- | Pop exactly n elements off the stack; fail if not enough elements are
 -- present.

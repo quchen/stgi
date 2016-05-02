@@ -37,7 +37,7 @@ lookupAlgebraicAlt
 lookupAlgebraicAlt (Alts alts def) constr  = lookupAlt matchingAlt alts def
   where
     matchingAlt (AlgebraicAlt c _ _) = c == constr
-    matchingAlt (PrimitiveAlt{})     = False
+    matchingAlt PrimitiveAlt{}       = False
 
 -- | 'lookupPrimitiveAlt' for primitive literals.
 lookupPrimitiveAlt
@@ -47,11 +47,11 @@ lookupPrimitiveAlt
 lookupPrimitiveAlt (Alts alts def) lit = lookupAlt matchingAlt alts def
   where
     matchingAlt (PrimitiveAlt lit' _) = lit' == lit
-    matchingAlt (AlgebraicAlt{})      = False
+    matchingAlt AlgebraicAlt{}        = False
 
 lookupAlt :: (alt -> Bool) -> [alt] -> def -> Either def alt
 lookupAlt matchingAlt alts def = case L.find matchingAlt alts of
-    Just alt -> Right alt
+    Just alt   -> Right alt
     _otherwise -> Left def
 
 liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure

@@ -441,7 +441,7 @@ data Closure = Closure LambdaForm [Value]
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty Closure where
-    pretty (Closure (lambdaForm) []) = pretty lambdaForm
+    pretty (Closure lambdaForm []) = pretty lambdaForm
     pretty (Closure lambda freeVals) =
         prettyLambda id
                      prettyFree
@@ -456,7 +456,7 @@ instance Pretty Closure where
             freeVals )
 
 instance PrettyAnsi Closure where
-    prettyAnsi (Closure (lambdaForm) []) = prettyAnsi lambdaForm
+    prettyAnsi (Closure lambdaForm []) = prettyAnsi lambdaForm
     prettyAnsi (Closure lambda freeVals) =
         prettyLambda id -- FIXME: this should be lambdaHead to match the Ansi colour version
                      prettyFree
