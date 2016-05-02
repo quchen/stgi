@@ -18,7 +18,7 @@ tests :: TestTree
 tests = testGroup "Stack" [test_popN, fromToList, test_mappend]
 
 test_popN :: TestTree
-test_popN = testGroup "popN"
+test_popN = testGroup "forEachPop"
     [ againstReference
     , roundtrip ]
   where
