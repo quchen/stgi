@@ -7,7 +7,6 @@ module Stack (
     Stack(..),
     popN,
     (<>>),
-    fromList,
 ) where
 
 
@@ -44,7 +43,7 @@ instance Monoid (Stack a) where
 
 instance OverloadedLists.IsList (Stack a) where
     type Item (Stack a) = a
-    fromList = fromList
+    fromList = foldr (:<) Empty
     toList = F.toList
 
 -- | Push a list of items onto the stack. The first item will be at the
@@ -61,7 +60,3 @@ popN _ Empty = Nothing
 popN n (x :< xs) = case popN (n-1) xs of
     Nothing -> Nothing
     Just (pops, rest) -> Just (x:pops, rest)
-
--- | Create a stack from a list. The first item will be the top of the stack.
-fromList :: [a] -> Stack a
-fromList = foldr (:<) Empty

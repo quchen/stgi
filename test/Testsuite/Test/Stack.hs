@@ -5,6 +5,7 @@ module Test.Stack (tests) where
 import           Data.Foldable
 import           Data.Maybe
 import           Data.Monoid
+import           GHC.Exts              (fromList)
 import           Test.Tasty
 import           Test.Tasty.QuickCheck as QC
 
@@ -56,11 +57,14 @@ fromToList = testGroup "List conversion"
     [ QC.testProperty
         "toList . fromList = id"
         (\xs -> let _ = xs :: [Int]
-                in toList (fromList xs) === xs )
+                in fromStack (toStack xs) === xs )
     , QC.testProperty
         "fromList . toList = id"
-        (\xs -> let _ = xs ::Stack Int
-                in fromList (toList xs) === xs )]
+        (\xs -> let _ = xs :: [Int]
+                in fromStack (toStack xs) === xs )]
+  where
+    toStack = fromList :: [Int] -> Stack Int
+    fromStack = toList :: Stack Int -> [Int]
 
 test_mappend :: TestTree
 test_mappend = QC.testProperty
