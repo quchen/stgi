@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Orphans.Language () where
@@ -44,6 +46,9 @@ shrinkBut1stLetter text = case T.uncons text of
 shrinkBut1st :: Arbitrary a => [a] -> [[a]]
 shrinkBut1st [] = []
 shrinkBut1st (x:xs) = map (x:) (shrink xs)
+
+reservedKeywords :: [Var]
+reservedKeywords = ["let", "in", "case", "of"]
 
 
 --------------------------------------------------------------------------------
@@ -125,7 +130,10 @@ instance Arbitrary Var where
     arbitrary = do
         x <- lowerChar
         xs <- extendedLetters
-        (pure . Var) (x <> xs)
+        let var = Var (x <> xs)
+        if var `elem` reservedKeywords
+            then arbitrary
+            else pure var
     shrink (Var var) = map Var (shrinkBut1stLetter var)
 
 instance Arbitrary Atom where
