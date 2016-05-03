@@ -50,7 +50,7 @@ closureReductionTest :: ClosureReductionSpec -> TestTree
 closureReductionTest testSpec = testCase (T.unpack (testName testSpec)) test
   where
     program = initialState "main" (source testSpec)
-    finalState = evalUntil (maxSteps testSpec)
+    finalState = evalUntil (RunForMaxSteps (maxSteps testSpec))
                            (HaltIf (successPredicate testSpec))
                            (performGc testSpec)
                            program

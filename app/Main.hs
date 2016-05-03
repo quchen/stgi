@@ -35,7 +35,7 @@ main = do
 
 runStg :: (forall a. PrettyAnsi a => a -> Text) -> Program -> IO ()
 runStg ppr prog =
-    let states = evalsUntil 10000
+    let states = evalsUntil RunIndefinitely
                             (HaltIf (const False))
                             (PerformGc (const True))
                             (initialState "main" prog)

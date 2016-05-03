@@ -12,6 +12,7 @@ module Stg.Machine (
     evalsUntil,
     terminated,
     HaltIf(..),
+    RunForSteps(..),
 
     -- * Garbage collection
     garbageCollect,
@@ -68,6 +69,11 @@ initialState mainVar (Program binds) = initializedState
 
 
 -- | Predicate to decide whether the machine should halt.
+data RunForSteps =
+      RunIndefinitely -- ^ Do not terminate based on the number of steps
+    | RunForMaxSteps Integer
+
+-- | Predicate to decide whether the machine should halt.
 newtype HaltIf = HaltIf (StgState -> Bool)
 
 -- | Predicate to decide whether a garbage collection should be attempted
@@ -80,13 +86,13 @@ newtype PerformGc = PerformGc (StgState -> Bool)
 -- 'last' ('evalsUntil' ...) ≡ 'evalUntil'
 -- @
 evalUntil
-    :: Integer   -- ^ Maximum number of steps allowed
-    -> HaltIf    -- ^ Halting decision function
-    -> PerformGc -- ^ Condition under which to perform GC
-    -> StgState  -- ^ Initial state
-    -> StgState  -- ^ Final state
-evalUntil maxSteps halt performGc state
-    = last (evalsUntil maxSteps halt performGc state)
+    :: RunForSteps -- ^ Maximum number of steps allowed
+    -> HaltIf      -- ^ Halting decision function
+    -> PerformGc   -- ^ Condition under which to perform GC
+    -> StgState    -- ^ Initial state
+    -> StgState    -- ^ Final state
+evalUntil runForSteps halt performGc state
+    = last (evalsUntil runForSteps halt performGc state)
 
 -- | Evaluate the STG, and record all intermediate states.
 --
@@ -98,17 +104,19 @@ evalUntil maxSteps halt performGc state
 -- 'evalsUntil' ≈ 'unfoldr' 'evalUntil'
 -- @
 evalsUntil
-    :: Integer    -- ^ Maximum number of steps allowed
-    -> HaltIf     -- ^ Halting decision function
-    -> PerformGc  -- ^ Condition under which to perform GC
-    -> StgState   -- ^ Initial state
-    -> [StgState] -- ^ All intermediate states
-evalsUntil maxSteps (HaltIf haltIf) (PerformGc performGc) = go False
+    :: RunForSteps -- ^ Maximum number of steps allowed
+    -> HaltIf      -- ^ Halting decision function
+    -> PerformGc   -- ^ Condition under which to perform GC
+    -> StgState    -- ^ Initial state
+    -> [StgState]  -- ^ All intermediate states
+evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc) = go False
   where
     terminate = (:[])
     go attemptGc = \case
 
-        state@StgState{ stgTicks = ticks } | ticks >= maxSteps
+        state@StgState{ stgTicks = ticks }
+            | RunForMaxSteps maxSteps <- runForSteps
+            , ticks >= maxSteps
             -> terminate (state { stgInfo = Info MaxStepsExceeded [] })
 
         state | haltIf state
