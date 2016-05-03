@@ -27,27 +27,7 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog = Stg.listIntEquals
-            <> Stg.int "zero" 0
-            <> Stg.int "one" 1
-            <> Stg.foldl'
-            <> Stg.add
-            <> Stg.zipWith
-            <> [stgProgram|
-
-        fibo = () \u () ->
-            letrec
-                fib0 = (fib1) \u () -> Cons (zero, fib1);
-                fib1 = (fib2) \u () -> Cons (one, fib2);
-                tailFibo = () \u () -> case fibo () of
-                    Cons (x,xs) -> xs ();
-                    bad -> Error_badNonEmptyList (bad);
-                fib2 = (tailFibo) \u () -> zipWith (add, fibo, tailFibo)
-            in fib0 ();
-        sum = () \u () -> foldl' (add, zero);
-
-        main = () \u () -> sum (fibo)
-        |]
+    let prog = [stg| main = () \n () -> main () |]
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True
         then runStg prettyprintAnsi prog
@@ -55,7 +35,7 @@ main = do
 
 runStg :: (forall a. PrettyAnsi a => a -> Text) -> Program -> IO ()
 runStg ppr prog =
-    let states = evalsUntil 1000
+    let states = evalsUntil 10000
                             (HaltIf (const False))
                             (PerformGc (const True))
                             (initialState "main" prog)
