@@ -366,9 +366,9 @@ zipWith = [stgProgram|
         Cons (x,xs') -> case ys () of
             Nil () -> Nil ();
             Cons (y,ys') ->
-                let fxy  = (f,x,y)   \u () -> f (x,y);
-                    rest = (xs',ys') \u () -> zip (xs',ys')
-                in Cons (tup, rest);
+                let fxy = (f, x, y) \u () -> f (x,y);
+                    rest = (f, xs',ys') \u () -> zipWith (f, xs',ys')
+                in Cons (fxy, rest);
             badList -> Error_zipWith (badList);
         badList -> Error_zipWith (badList)
     |]
