@@ -16,14 +16,14 @@ module Stg.Machine.GarbageCollection (
 
 
 
-import qualified Data.Map                 as M
-import           Data.Monoid              hiding (Alt)
-import           Data.Set                 (Set)
-import qualified Data.Set                 as S
+import qualified Data.Map                as M
+import           Data.Monoid             hiding (Alt)
+import           Data.Set                (Set)
+import qualified Data.Set                as S
 
 import           Stg.Language
+import qualified Stg.Machine.Heap        as H
 import qualified Stg.Machine.InfoDetails as InfoDetail
-import qualified Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 
 
@@ -60,15 +60,15 @@ splitHeap StgState
             = until everythingCollected gcStep start
 
         start = GcState
-            { aliveHeap     = mempty
-            , oldHeap       = heap
+            { aliveHeap = mempty
+            , oldHeap = heap
             , evacuate = (Alive . mconcat)
                 [ addrs code, addrs globals
                 , addrs argS, addrs retS, addrs updS ] }
     in (Dead dead, alive)
 
 everythingCollected :: GcState -> Bool
-everythingCollected GcState{evacuate = Alive x} = S.null x
+everythingCollected GcState{evacuate = Alive alive} = S.null alive
 
 data GcState = GcState
     { aliveHeap :: Alive Heap
