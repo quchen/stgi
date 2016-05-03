@@ -47,14 +47,12 @@ initialState mainVar (Program binds) = initializedState
     -- Unfortunately, GC and rules rely on the existence of a global
     -- environment, so we *have* to fill it.
     dummyLetInitial = StgState
-        { stgCode        = Eval (Let Recursive binds (AppF mainVar [])) mempty
-        , stgArgStack    = mempty
-        , stgReturnStack = mempty
-        , stgUpdateStack = mempty
-        , stgHeap        = mempty
-        , stgGlobals     = mempty
-        , stgTicks       = 0
-        , stgInfo        = Info StateInitial [] }
+        { stgCode    = Eval (Let Recursive binds (AppF mainVar [])) mempty
+        , stgStack   = mempty
+        , stgHeap    = mempty
+        , stgGlobals = mempty
+        , stgTicks   = 0
+        , stgInfo    = Info StateInitial [] }
     initializedState = case evalStep dummyLetInitial of
         state | terminated state -> state
         state@StgState

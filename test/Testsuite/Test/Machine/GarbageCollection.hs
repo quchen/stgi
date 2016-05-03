@@ -51,13 +51,11 @@ splitHeapTest = testGroup "Split heap in dead/alive"
 
     dummyState = StgState
         { stgCode        = ReturnInt 1
-        , stgArgStack    = mempty
-        , stgReturnStack = mempty
-        , stgUpdateStack = mempty
-        , stgHeap        = dirtyHeap
-        , stgGlobals     = globals
-        , stgTicks       = 0
-        , stgInfo        = Info GarbageCollection [] }
+        , stgStack   = mempty
+        , stgHeap    = dirtyHeap
+        , stgGlobals = globals
+        , stgTicks   = 0
+        , stgInfo    = Info GarbageCollection [] }
 
     errorMsg cleanHeap = T.unlines
         [ "Globals:"

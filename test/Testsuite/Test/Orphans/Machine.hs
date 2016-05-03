@@ -23,20 +23,14 @@ instance Arbitrary StgState where
             <*> arbitrary
             <*> arbitrary
             <*> arbitrary
-            <*> arbitrary
-            <*> arbitrary
 
 instance Arbitrary MemAddr where
     arbitrary = arbitrary1 MemAddr
 
-instance Arbitrary ArgumentFrame where
-    arbitrary = arbitrary1 ArgumentFrame
-
-instance Arbitrary ReturnFrame where
-    arbitrary = arbitrary2 ReturnFrame
-
-instance Arbitrary UpdateFrame where
-    arbitrary = arbitrary3 UpdateFrame
+instance Arbitrary StackFrame where
+    arbitrary = oneof [ arbitrary1 ArgumentFrame
+                      , arbitrary2 ReturnFrame
+                      , arbitrary1 UpdateFrame ]
 
 instance Arbitrary Value where
     arbitrary = oneof [ arbitrary1 Addr

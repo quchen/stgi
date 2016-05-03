@@ -62,23 +62,20 @@ evalLet vars addrs = (InfoDetail . map prettyprint)
 
 
 evalCase :: InfoDetail
-evalCase = InfoDetail [ "Push the alternatives and the local environment on the return stack" ]
+evalCase = InfoDetail [ "Save alternatives and local environment as a stack frame" ]
 
 
 
 enterUpdatable :: MemAddr -> InfoDetail
 enterUpdatable addr = InfoDetail
-    [ "Push a new update frame with the entered address " <> prettyprint addr
-    , "Save current argument and return stacks on that update frame"
-    , "Argument and return stacks are now empty"  ]
+    [ "Push a new update frame with the entered address " <> prettyprint addr ]
 
 
 
 conUpdate :: Constr -> MemAddr -> InfoDetail
 conUpdate con addrU = InfoDetail
-    [ "Trying to return " <> prettyprint con <> " without anything on argument/return stacks"
-    , "Update closure at " <> prettyprint addrU <> " with returned constructor"
-    , "Restore argument/return stacks from the update frame" ]
+    [ "Trying to return " <> prettyprint con <> ", but there is no return frame on the top of the stack"
+    , "Update closure at " <> prettyprint addrU <> " given by the update frame with returned constructor"  ]
 
 
 
@@ -88,9 +85,9 @@ returnIntCannotUpdate = InfoDetail
 
 
 
-stacksNotEmpty :: InfoDetail
-stacksNotEmpty = InfoDetail
-    [ "Stacks are not empty; the program terminated unexpectedly."
+stackNotEmpty :: InfoDetail
+stackNotEmpty = InfoDetail
+    [ "The stack is not empty; the program terminated unexpectedly."
     , "The lack of a better description is a bug in the STG evaluator."
     , "Please report this to the project maintainers!" ]
 

@@ -77,6 +77,12 @@ applyPrimOp = \case
     Geq -> boolToPrim (>=)
     Neq -> boolToPrim (/=)
 
+isArgFrame :: StackFrame -> Bool
+isArgFrame ArgumentFrame{} = True
+isArgFrame _else           = False
+
+
+
 -- | Perform a single STG machine evaluation step.
 evalStep :: StgState -> StgState
 evalStep state = let state' = stgRule state
@@ -91,38 +97,41 @@ stgRule :: StgState -> StgState
 
 -- (1) Function application
 stgRule s@StgState
-    { stgCode     = Eval (AppF f xs) locals
-    , stgArgStack = argS
-    , stgGlobals  = globals }
-    | Success (Addr a) <- val locals globals (AtomVar f)
+    { stgCode    = Eval (AppF f xs) locals
+    , stgStack   = stack
+    , stgGlobals = globals }
+    | Success (Addr addr) <- val locals globals (AtomVar f)
     , Success xsVals <- vals locals globals xs
 
-  = let argS' = map ArgumentFrame xsVals <>> argS
+  = let stack' = map ArgumentFrame xsVals <>> stack
 
-    in s { stgCode     = Enter a
-         , stgArgStack = argS'
-         , stgInfo = Info (StateTransiton Eval_FunctionApplication)
-                          (mconcat [ InfoDetail.appF f xs
-                                   , InfoDetail.unusedLocals (f : [ var | AtomVar var <- xs ]) locals ])}
+    in s { stgCode  = Enter addr
+         , stgStack = stack'
+         , stgInfo  = Info
+             (StateTransiton Eval_FunctionApplication)
+             (mconcat [ InfoDetail.appF f xs
+                      , InfoDetail.unusedLocals (f : [ var | AtomVar var <- xs ]) locals ])}
 
 
 
 -- (2) Enter non-updatable closure
 stgRule s@StgState
-    { stgCode     = Enter a
-    , stgArgStack = argS
-    , stgHeap     = heap }
-    | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- H.lookup a heap
-    , Just (args, argS') <- bound `S.forEachPop` argS
+    { stgCode  = Enter addr
+    , stgStack = stack
+    , stgHeap  = heap }
+    | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- H.lookup addr heap
+    , Just (frames, stack') <- bound `S.forEachPop` stack
+    , all isArgFrame frames
+    , args <- [ arg | ArgumentFrame arg <- frames ]
 
   = let locals = makeLocals (freeLocals <> boundLocals)
         freeLocals = zip free freeVals
-        boundLocals = zipWith (\b (ArgumentFrame v) -> (b, v)) bound args
+        boundLocals = zip bound args
 
-    in s { stgCode     = Eval body locals
-         , stgArgStack = argS'
-         , stgInfo     = Info (StateTransiton Enter_NonUpdatableClosure)
-                              (InfoDetail.enterNonUpdatable a) }
+    in s { stgCode  = Eval body locals
+         , stgStack = stack'
+         , stgInfo  = Info (StateTransiton Enter_NonUpdatableClosure)
+                           (InfoDetail.enterNonUpdatable addr) }
 
 
 
@@ -209,15 +218,15 @@ stgRule s@StgState
 
 -- (4) Case evaluation
 stgRule s@StgState
-    { stgCode        = (Eval (Case expr alts) locals)
-    , stgReturnStack = retS }
+    { stgCode = (Eval (Case expr alts) locals)
+    , stgStack = stack }
 
-  = let retS' = ReturnFrame alts locals :< retS
+  = let stack' = ReturnFrame alts locals :< stack
 
-    in s { stgCode        = Eval expr locals
-         , stgReturnStack = retS'
-         , stgInfo        = Info (StateTransiton Eval_Case)
-                                 InfoDetail.evalCase }
+    in s { stgCode  = Eval expr locals
+         , stgStack = stack'
+         , stgInfo  = Info (StateTransiton Eval_Case)
+                           InfoDetail.evalCase }
 
 
 
@@ -228,43 +237,44 @@ stgRule s@StgState
     | Success valsXs <- vals locals globals xs
 
   = s { stgCode = ReturnCon con valsXs
-      , stgInfo = Info (StateTransiton Eval_AppC)
-                       (InfoDetail.unusedLocals [ var | AtomVar var <- xs ] locals) }
+      , stgInfo = Info
+          (StateTransiton Eval_AppC)
+          (InfoDetail.unusedLocals [ var | AtomVar var <- xs ] locals) }
 
 
 
 -- (6) Algebraic constructor return, standard match found
 stgRule s@StgState
-    { stgCode        = ReturnCon con ws
-    , stgReturnStack = ReturnFrame alts locals :< retS' }
+    { stgCode  = ReturnCon con ws
+    , stgStack = ReturnFrame alts locals :< stack' }
     | Right (AlgebraicAlt _con vars expr) <- lookupAlgebraicAlt alts con
 
   = let locals' = addLocals (zip vars ws) locals
 
-    in s { stgCode        = Eval expr locals'
-         , stgReturnStack = retS'
-         , stgInfo        = Info (StateTransiton ReturnCon_Match) [] }
+    in s { stgCode  = Eval expr locals'
+         , stgStack = stack'
+         , stgInfo  = Info (StateTransiton ReturnCon_Match) [] }
 
 
 
 -- (7) Algebraic constructor return, unbound default match
 stgRule s@StgState
-    { stgCode        = ReturnCon con _ws
-    , stgReturnStack = ReturnFrame alts locals :< retS' }
+    { stgCode  = ReturnCon con _ws
+    , stgStack = ReturnFrame alts locals :< stack' }
     | Left (DefaultNotBound expr) <- lookupAlgebraicAlt alts con
 
-  = s { stgCode        = Eval expr locals
-      , stgReturnStack = retS'
-      , stgInfo        = Info (StateTransiton ReturnCon_DefUnbound) [] }
+  = s { stgCode  = Eval expr locals
+      , stgStack = stack'
+      , stgInfo  = Info (StateTransiton ReturnCon_DefUnbound) [] }
 
 
 
 -- (8) Algebraic constructor return, bound default match
 stgRule s@StgState
-    { stgCode        = ReturnCon con ws
-    , stgReturnStack = ReturnFrame alts locals :< retS'
-    , stgHeap        = heap
-    , stgTicks       = ticks }
+    { stgCode  = ReturnCon con ws
+    , stgStack = ReturnFrame alts locals :< stack'
+    , stgHeap  = heap
+    , stgTicks = ticks }
     | Left (DefaultBound v expr) <- lookupAlgebraicAlt alts con
 
   = let locals' = addLocals [(v, Addr addr)] locals
@@ -272,10 +282,10 @@ stgRule s@StgState
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
         vs = let newVar _old i = Var ("alg8_" <> show' ticks <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
-    in s { stgCode        = Eval expr locals'
-         , stgReturnStack = retS'
-         , stgHeap        = heap'
-         , stgInfo        = Info (StateTransiton ReturnCon_DefBound) [] }
+    in s { stgCode  = Eval expr locals'
+         , stgStack = stack'
+         , stgHeap  = heap'
+         , stgInfo  = Info (StateTransiton ReturnCon_DefBound) [] }
 
 
 
@@ -298,39 +308,39 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
 
 -- (11) Primitive constructor return, standard match found
 stgRule s@StgState
-    { stgCode        = ReturnInt k
-    , stgReturnStack = ReturnFrame alts locals :< retS' }
+    { stgCode  = ReturnInt k
+    , stgStack = ReturnFrame alts locals :< stack' }
     | Right (PrimitiveAlt _k expr) <- lookupPrimitiveAlt alts (Literal k)
 
-  = s { stgCode        = Eval expr locals
-      , stgReturnStack = retS'
-      , stgInfo        = Info (StateTransiton ReturnInt_Match) [] }
+  = s { stgCode  = Eval expr locals
+      , stgStack = stack'
+      , stgInfo  = Info (StateTransiton ReturnInt_Match) [] }
 
 
 
 -- (12) Primitive constructor return, bound default match
 stgRule s@StgState
-    { stgCode        = ReturnInt k
-    , stgReturnStack = ReturnFrame alts locals :< retS' }
+    { stgCode  = ReturnInt k
+    , stgStack = ReturnFrame alts locals :< stack' }
     | Left (DefaultBound v expr) <- lookupPrimitiveAlt alts (Literal k)
 
   = let locals' = addLocals [(v, PrimInt k)] locals
 
-    in s { stgCode        = Eval expr locals'
-         , stgReturnStack = retS'
-         , stgInfo        = Info (StateTransiton ReturnInt_DefBound) [] }
+    in s { stgCode  = Eval expr locals'
+         , stgStack = stack'
+         , stgInfo  = Info (StateTransiton ReturnInt_DefBound) [] }
 
 
 
 -- (13) Primitive constructor return, unbound default match
 stgRule s@StgState
-    { stgCode        = ReturnInt k
-    , stgReturnStack = ReturnFrame alts locals :< retS' }
+    { stgCode  = ReturnInt k
+    , stgStack = ReturnFrame alts locals :< stack' }
     | Left (DefaultNotBound expr) <- lookupPrimitiveAlt alts (Literal k)
 
-  = s { stgCode        = Eval expr locals
-      , stgReturnStack = retS'
-      , stgInfo        = Info (StateTransiton ReturnInt_DefUnbound) [] }
+  = s { stgCode  = Eval expr locals
+      , stgStack = stack'
+      , stgInfo  = Info (StateTransiton ReturnInt_DefUnbound) [] }
 
 
 
@@ -348,74 +358,81 @@ stgRule s@StgState
 
 -- (15) Enter updatable closure
 stgRule s@StgState
-    { stgCode        = Enter addr
-    , stgArgStack    = argS
-    , stgReturnStack = retS
-    , stgUpdateStack = updS
-    , stgHeap        = heap }
+    { stgCode  = Enter addr
+    , stgStack = stack
+    , stgHeap  = heap }
     | Just (Closure (LambdaForm free Update [] body) freeVals) <- H.lookup addr heap
 
-  = let updS' = UpdateFrame argS retS addr :< updS
+  = let stack' = UpdateFrame addr :< stack
         locals = makeLocals (zip free freeVals)
 
-    in s { stgCode        = Eval body locals
-         , stgArgStack    = Empty
-         , stgReturnStack = Empty
-         , stgUpdateStack = updS'
-         , stgInfo        = Info (StateTransiton Enter_UpdatableClosure)
-                                 (InfoDetail.enterUpdatable addr) }
+    in s { stgCode  = Eval body locals
+         , stgStack = stack'
+         , stgInfo  = Info (StateTransiton Enter_UpdatableClosure)
+                           (InfoDetail.enterUpdatable addr) }
 
 
 
 -- (16) Algebraic constructor return, argument/return stacks empty -> update
 stgRule s@StgState
-    { stgCode        = ReturnCon con ws
-    , stgArgStack    = Empty
-    , stgReturnStack = Empty
-    , stgUpdateStack = UpdateFrame argSU retSU addrU :< updS'
-    , stgHeap        = heap
-    , stgTicks       = ticks }
+    { stgCode  = ReturnCon con ws
+    , stgStack = UpdateFrame addr :< stack'
+    , stgHeap  = heap
+    , stgTicks = ticks }
 
   = let vs = let newVar _old i = Var ("upd16_" <> show' ticks <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
-        heap' = H.update addrU (Closure lf ws) heap
+        heap' = H.update addr (Closure lf ws) heap
 
-    in s { stgCode        = ReturnCon con ws
-         , stgArgStack    = argSU
-         , stgReturnStack = retSU
-         , stgUpdateStack = updS'
-         , stgHeap        = heap'
-         , stgInfo        = Info (StateTransiton ReturnCon_Update)
-                                 (InfoDetail.conUpdate con addrU) }
+    in s { stgCode  = ReturnCon con ws
+         , stgStack = stack'
+         , stgHeap  = heap'
+         , stgInfo  = Info (StateTransiton ReturnCon_Update)
+                           (InfoDetail.conUpdate con addr) }
 
 
 
 -- (17a) Enter partially applied closure
 stgRule s@StgState
-    { stgCode        = Enter addr
-    , stgArgStack    = argS
-    , stgReturnStack = Empty
-    , stgUpdateStack = UpdateFrame argSU retSU addrU :< updS'
-    , stgHeap        = heap
-    , stgTicks       = ticks }
-    | Just (Closure (LambdaForm _vs NoUpdate xs _body) _wsf) <- H.lookup addr heap
-    , F.length argS < L.length xs
+    { stgCode  = Enter addrEnter
+    , stgStack = stack
+    , stgHeap  = heap
+    , stgTicks = ticks }
+    | Just (Closure (LambdaForm _vs NoUpdate xs _body) _wsf) <- H.lookup addrEnter heap
+    , Just (argFrames, UpdateFrame addrUpdate :< stack') <- popArgsUntilUpdate stack xs
 
-  = let argS' = argS <> argSU
-        (xs1, _xs2) = splitAt (F.length argS) xs
+  = let xs1 = zipWith const xs (F.toList argFrames)
         f = Var ("upd17a_" <> show' ticks)
         fxs1 = AppF f (map AtomVar xs1)
-        moreArgsClosure = Closure (LambdaForm (f : xs1) NoUpdate [] fxs1)
-                                  (Addr addr : F.foldMap (\(ArgumentFrame v) -> [v]) argS)
-        heap' = H.update addrU moreArgsClosure heap
+        freeVars = f : xs1
+        freeVals = zipWith const
+            (Addr addrEnter : F.foldMap (\(ArgumentFrame v) -> [v]) argFrames)
+            freeVars
+        updatedClosure = Closure (LambdaForm freeVars NoUpdate [] fxs1) freeVals
 
-    in s { stgCode        = Enter addr
-         , stgArgStack    = argS'
-         , stgReturnStack = retSU
-         , stgUpdateStack = updS'
-         , stgHeap        = heap'
-         , stgInfo        = Info (StateTransiton Enter_PartiallyAppliedUpdate) [] }
+        heap' = H.update addrUpdate updatedClosure heap
+
+    in s { stgCode  = Enter addrEnter
+         , stgStack = stack'
+         , stgHeap  = heap'
+         , stgInfo  = Info (StateTransiton Enter_PartiallyAppliedUpdate) [] }
+
+  where
+
+    -- | Are there enough 'ArgumentFrame's on the stack to fill the args
+    -- parameter? If so, return those frames, along with the rest of the stack.
+    popArgsUntilUpdate withArgsStack args
+        = let (argFrames, argsPoppedStack) = S.span isArgFrame withArgsStack
+          in if argFrames `enoughFor` args
+              then Nothing -- Enough args present, no need for update
+              else Just ( filter isArgFrame (F.toList argFrames)
+                        , argsPoppedStack)
+
+    -- | Are there enough frames to fill the args?
+    enoughFor (_:<fs) (_:as) = enoughFor fs as
+    enoughFor Empty   (_:_)  = False
+    enoughFor _       _      = True
 
 stgRule s = noRuleApplies s
 
@@ -440,8 +457,9 @@ noRuleApplies s@StgState
 -- empty return stack, because that would imply that a closure should be updated
 -- with a primitive value; but no closure has a primitive type.
 noRuleApplies s@StgState
-    { stgCode        = ReturnInt{}
-    , stgUpdateStack = Empty }
+    { stgCode  = ReturnInt{}
+    , stgStack = Empty }
+
   = s { stgInfo = Info (StateError ReturnIntWithEmptyReturnStack)
                        InfoDetail.returnIntCannotUpdate}
 
@@ -452,38 +470,43 @@ noRuleApplies s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
     | Failure (NotInScope notInScope) <- vals locals globals (AtomVar f : xs)
+
   = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
+
+
 
 -- Constructor argument not in scope
 noRuleApplies s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
     | Failure (NotInScope notInScope) <- vals locals globals xs
+
   = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
 
 
 
 -- Algebraic constructor return, but primitive alternative on return frame
 noRuleApplies s@StgState
-    { stgCode        = ReturnCon{}
-    , stgReturnStack = ReturnFrame (Alts (AlgebraicAlt{}:_) _) _ :< _ }
+    { stgCode  = ReturnCon{}
+    , stgStack = ReturnFrame (Alts (AlgebraicAlt{}:_) _) _ :< _ }
+
   = s { stgInfo = Info (StateError AlgReturnToPrimAlts) [] }
+
+
 
 -- Primitive return, but algebraic alternative on return frame
 noRuleApplies s@StgState
-    { stgCode        = ReturnInt _
-    , stgReturnStack = ReturnFrame (Alts (PrimitiveAlt{}:_) _) _ :< _ }
+    { stgCode  = ReturnInt _
+    , stgStack = ReturnFrame (Alts (PrimitiveAlt{}:_) _) _ :< _ }
+
   = s { stgInfo = Info (StateError PrimReturnToAlgAlts) [] }
 
 
 
 -- Successful, ordinary termination
-noRuleApplies s@StgState
-    { stgArgStack    = S.Empty
-    , stgReturnStack = S.Empty
-    , stgUpdateStack = S.Empty }
+noRuleApplies s@StgState { stgStack = S.Empty }
   = s { stgInfo = Info NoRulesApply [] }
 
 
 
-noRuleApplies s = s { stgInfo = Info NoRulesApply InfoDetail.stacksNotEmpty }
+noRuleApplies s = s { stgInfo = Info NoRulesApply InfoDetail.stackNotEmpty }

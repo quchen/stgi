@@ -50,12 +50,10 @@ newtype Dead a = Dead a
 -- (are still used) components.
 splitHeap :: StgState -> (Dead Heap, Alive Heap)
 splitHeap StgState
-    { stgCode        = code
-    , stgHeap        = heap
-    , stgGlobals     = globals
-    , stgArgStack    = argS
-    , stgReturnStack = retS
-    , stgUpdateStack = updS }
+    { stgCode    = code
+    , stgHeap    = heap
+    , stgGlobals = globals
+    , stgStack   = stack }
   = let GcState {aliveHeap = alive, oldHeap = dead}
             = until everythingCollected gcStep start
 
@@ -63,8 +61,7 @@ splitHeap StgState
             { aliveHeap = mempty
             , oldHeap = heap
             , evacuate = (Alive . mconcat)
-                [ addrs code, addrs globals
-                , addrs argS, addrs retS, addrs updS ] }
+                [addrs code, addrs globals, addrs stack] }
     in (Dead dead, alive)
 
 everythingCollected :: GcState -> Bool
@@ -118,14 +115,11 @@ instance Addresses Code where
     addrs (ReturnCon _con args) = addrs args
     addrs (ReturnInt _int)      = []
 
-instance Addresses ArgumentFrame where
-    addrs (ArgumentFrame vals) = addrs vals
-
-instance Addresses ReturnFrame where
-    addrs (ReturnFrame alts locals) = addrs alts <> addrs locals
-
-instance Addresses UpdateFrame where
-    addrs (UpdateFrame argS retS addr) = addrs argS <> addrs retS <> addrs addr
+instance Addresses StackFrame where
+    addrs = \case
+        ArgumentFrame vals      -> addrs vals
+        ReturnFrame alts locals -> addrs alts <> addrs locals
+        UpdateFrame addr        -> addrs addr
 
 instance Addresses MemAddr where
     addrs addr = [addr]

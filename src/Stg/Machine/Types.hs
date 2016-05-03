@@ -10,9 +10,7 @@
 module Stg.Machine.Types (
     StgState(..),
     StgStateColours(..),
-    ArgumentFrame(..),
-    ReturnFrame(..),
-    UpdateFrame(..),
+    StackFrame(..),
     MemAddr(..),
     Value(..),
     Code(..),
@@ -51,36 +49,29 @@ import           Stg.Util
 
 -- | The internal state of an STG.
 data StgState = StgState
-    { stgCode        :: Code
+    { stgCode    :: Code
         -- ^ Operation the STG should perform next
 
-    , stgArgStack    :: Stack ArgumentFrame
-        -- ^ Argument stack, storing values given to functions and constructors
+    , stgStack   :: Stack StackFrame
+        -- ^ The stack stores not-yet-used arguments (argument stack part),
+        -- computations to return to once case evaluation has finished
+        -- (return stack part), and instructions to update heap entries
+        -- once computation of a certain value is done.
 
-    , stgReturnStack :: Stack ReturnFrame
-        -- ^ Return stack, storing the local environment to restore and
-        --   possible alternatives to be taken once a computation reaches
-        --   a certain point.
-
-    , stgUpdateStack :: Stack UpdateFrame
-        -- ^ Update stack, used to store the environment an updateable closure
-        --   was called in, so that it can be updated in memory when it has
-        --   been reduced.
-
-    , stgHeap        :: Heap
+    , stgHeap    :: Heap
         -- ^ The heap stores values allocated at the top level or in @let(rec)@
         --   expressions.
 
-    , stgGlobals     :: Globals
+    , stgGlobals :: Globals
         -- ^ The environment consisting of the top-level definitions.
 
-    , stgTicks       :: Integer
+    , stgTicks   :: Integer
         -- ^ A counter, used to generte fresh variable names from.
 
-    , stgInfo        :: Info
+    , stgInfo    :: Info
         -- ^ Information about the current state
     }
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | Package of colour definitions used in this module.
 data StgStateColours = StgStateColours
@@ -101,12 +92,7 @@ colour = StgStateColours
 instance Pretty StgState where
     pretty state = align (vsep
         [ "Code:" <+> pretty (stgCode state)
-        , nest 4 (vsep
-            [ "Stacks"
-            , align (vsep
-                [ "Arg:" <+> prettyStack (stgArgStack state)
-                , "Ret:" <+> prettyStack (stgReturnStack state)
-                , "Upd:" <+> prettyStack (stgUpdateStack state) ])])
+        , nest 4 (vsep [ "Stack", prettyStack (stgStack state) ])
         , nest 4 (vsep [ "Heap", pretty (stgHeap state)])
         , nest 4 (vsep [ "Globals", pretty (stgGlobals state)])
         , nest 4 ("Step:" <+> pretty (stgTicks state)) ])
@@ -114,12 +100,7 @@ instance Pretty StgState where
 instance PrettyAnsi StgState where
     prettyAnsi state = align (vsep
         [ headline colour "Code:" <+> prettyAnsi (stgCode state)
-        , nest 4 (vsep
-            [headline colour "Stacks"
-            , align (vsep
-                [ headline colour "Arg:" <+> prettyStackAnsi (stgArgStack state)
-                , headline colour "Ret:" <+> prettyStackAnsi (stgReturnStack state)
-                , headline colour "Upd:" <+> prettyStackAnsi (stgUpdateStack state) ])])
+        , nest 4 (vsep [headline colour "Stack", prettyStackAnsi (stgStack state) ])
         , nest 4 (vsep [headline colour "Heap", prettyAnsi (stgHeap state)])
         , nest 4 (vsep [headline colour "Globals", prettyAnsi (stgGlobals state)])
         , nest 4 (headline colour "Step:" <+> pretty (stgTicks state)) ])
@@ -129,7 +110,7 @@ prettyStack :: Pretty a => Stack a -> Doc
 prettyStack Empty = "(empty)"
 prettyStack stack = (align . vsep) prettyFrames
   where
-    prettyFrame frame i = "Frame" <+> int i <> ":" <+> align (pretty frame)
+    prettyFrame frame i = "[" <+> int i <> "]" <+> align (pretty frame)
     prettyFrames = zipWith prettyFrame (toList stack) [1..]
 
 -- | ANSI-prettyprint a 'Stack'.
@@ -137,54 +118,44 @@ prettyStackAnsi :: PrettyAnsi a => Stack a -> Doc
 prettyStackAnsi Empty = "(empty)"
 prettyStackAnsi stack = (align . vsep) prettyFrames
   where
-    prettyFrame frame i = "Frame" <+> int i <> ":" <+> align (prettyAnsi frame)
+    prettyFrame frame i = "[" <> int i <> "]" <+> align (prettyAnsi frame)
     prettyFrames = zipWith prettyFrame (toList stack) (reverse [1..length stack])
 
--- | Argument frames store values on the argument stack, so that they can
--- later be retrieved when the calling function can be applied to them.
-newtype ArgumentFrame = ArgumentFrame Value
+-- ^ A stack frame of the unified stack that includes arguments, returns, and
+-- updates.
+data StackFrame =
+      ArgumentFrame Value
+        -- ^ Argument frames store values on the argument stack, so that they
+        -- can later be retrieved when the calling function can be applied to
+        -- them.
+
+    | ReturnFrame Alts Locals
+        -- ^ Return frames are used when the scrutinee of a case expression is
+        -- done being evaluated, and the branch to continue on has to be
+        -- decided.
+
+    | UpdateFrame MemAddr
+        -- ^ When an updatable closure is entered, an update frame with its heap
+        -- address is created. Once its computation finishes, its heap entry is
+        -- updated with the computed value.
+
     deriving (Eq, Ord, Show, Generic)
 
-instance Pretty ArgumentFrame where
-    pretty (ArgumentFrame val) = pretty val
+instance Pretty StackFrame where
+    pretty = \case
+        ArgumentFrame val -> "(Argument)" <+> pretty val
+        ReturnFrame alts locals -> "(Return)" <+>
+            (align . vsep) [ fill 7 "Alts:"   <+> align (pretty alts)
+                           , fill 7 "Locals:" <+> align (pretty locals) ]
+        UpdateFrame addr -> "(Update)" <+> pretty addr
 
-instance PrettyAnsi ArgumentFrame where
-    prettyAnsi (ArgumentFrame val) = prettyAnsi val
-
--- | Return frames are used when the scrutinee of a case expression is done
--- being evaluated, and the branch to continue on has to be decided.
-data ReturnFrame = ReturnFrame Alts Locals
-    deriving (Eq, Ord, Show, Generic)
-
-instance Pretty ReturnFrame where
-    pretty (ReturnFrame alts locals) =
-        (align . vsep) [ fill 7 "Alts:"   <+> align (pretty alts)
-                       , fill 7 "Locals:" <+> align (pretty locals) ]
-
-instance PrettyAnsi ReturnFrame where
-    prettyAnsi (ReturnFrame alts locals) =
-        (align . vsep) [ headline colour (fill 7 "Alts:") <+> align (prettyAnsi alts)
-                       , headline colour (fill 7 "Locals:") <+> align (prettyAnsi locals) ]
-
--- | Update frames store information about the machine's state before an
--- updateable closure was entered, so that they can help update it once it is
--- evaluated.
-data UpdateFrame = UpdateFrame (Stack ArgumentFrame) (Stack ReturnFrame) MemAddr
-    deriving (Eq, Ord, Show, Generic)
-
-instance Pretty UpdateFrame where
-    pretty (UpdateFrame upd ret addr) =
-        (align . vsep)
-             [ "Update address:" <+> pretty addr
-             , "Arg:" <+> prettyStack upd
-             , "Ret:" <+> prettyStack ret ]
-
-instance PrettyAnsi UpdateFrame where
-    prettyAnsi (UpdateFrame upd ret addr) =
-        (align . vsep)
-             [ headline colour "Update address:" <+> prettyAnsi addr
-             , headline colour "Arg:" <+> prettyStackAnsi upd
-             , headline colour "Ret:" <+> prettyStackAnsi ret]
+instance PrettyAnsi StackFrame where
+    prettyAnsi = \case
+        ArgumentFrame val -> "(Argument)" <+> prettyAnsi val
+        ReturnFrame alts locals -> "(Return)" <+>
+            (align . vsep) [ (fill 7 "Alts:") <+> align (prettyAnsi alts)
+                           , (fill 7 "Locals:") <+> align (prettyAnsi locals) ]
+        UpdateFrame addr -> "(Update)" <+> prettyAnsi addr
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int

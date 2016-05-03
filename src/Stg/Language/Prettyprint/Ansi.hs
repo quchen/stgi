@@ -104,10 +104,11 @@ instance PrettyAnsi Rec where
 
 instance PrettyAnsi Expr where
     prettyAnsi = \case
-        Let rec binds expr -> align (
-            keyword colour "let" <> prettyAnsi rec <+> prettyAnsi binds
-            <$>
-            keyword colour "in" <+> prettyAnsi expr )
+        Let rec binds expr -> (align . vsep)
+            [ keyword colour "let" <> prettyAnsi rec <+> (case rec of
+                Recursive -> hardline <> indent 4 (prettyAnsi binds)
+                NonRecursive -> prettyAnsi binds)
+            , keyword colour "in" <+> prettyAnsi expr ]
         Case expr alts ->
             keyword colour "case" <+> prettyAnsi expr <+> keyword colour "of"
             <$>

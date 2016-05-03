@@ -230,9 +230,11 @@ instance Pretty Rec where
 
 instance Pretty Expr where
     pretty = \case
-        Let rec binds expr -> align (
-            vsep [ "let" <> pretty rec <+> pretty binds
-                 , "in" <+> pretty expr ])
+        Let rec binds expr -> (align . vsep)
+            [ "let" <> pretty rec <+> (case rec of
+                Recursive -> hardline <> indent 4 (pretty binds)
+                NonRecursive -> pretty binds)
+            , "in" <+> pretty expr ]
         Case expr alts -> vsep [ "case" <+> pretty expr <+> "of"
                                , indent 4 (align (pretty alts)) ]
         AppF var args -> pretty var <+> prettyList args

@@ -7,13 +7,16 @@ module Stack (
     Stack(..),
     forEachPop,
     (<>>),
+    span,
 ) where
 
 
 
 import           Data.Foldable                as F
 import           Data.Monoid
-import qualified GHC.Exts                     as OverloadedLists
+import qualified GHC.Exts                     as OL
+import           Prelude                      hiding (span)
+import qualified Prelude                      as P
 import           Text.PrettyPrint.ANSI.Leijen hiding (list, (<>))
 
 
@@ -41,7 +44,7 @@ instance Monoid (Stack a) where
     Empty `mappend` s = s
     (x :< xs) `mappend` ys = x :< (xs <> ys)
 
-instance OverloadedLists.IsList (Stack a) where
+instance OL.IsList (Stack a) where
     type Item (Stack a) = a
     fromList = foldr (:<) Empty
     toList = F.toList
@@ -59,3 +62,8 @@ forEachPop [] stack = Just ([], stack)
 forEachPop (_:xs) (s :< stack) = case forEachPop xs stack of
     Nothing -> Nothing
     Just (pops, rest) -> Just (s:pops, rest)
+
+-- | Like 'Prelude.span' for lists.
+span :: (a -> Bool) -> Stack a -> (Stack a, Stack a)
+span p stack = let (a,b) = P.span p (toList stack)
+                in (OL.fromList a, OL.fromList b)
