@@ -32,6 +32,7 @@ import qualified Prelude                     as P
 
 import qualified Data.Map                    as M
 import           Data.Monoid
+import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 
 import           Stg.Language
@@ -133,19 +134,20 @@ cycle = concat <> [stg|
 -- @
 take = Num.add <> [stgProgram|
     take = () \u () ->
-        letrec  minusOne = () \n () -> Int# (-1#);
-                take' = (minusOne) \n (n, xs) -> case n () of
-                    Int# (nPrim) -> case nPrim () of
-                        0# -> Nil ();
-                        default ->
-                            let n' = (n, minusOne) \u () -> add (n, minusOne)
-                            in case xs () of
-                               Nil () -> Nil ();
-                               Cons (y,ys) ->
-                                   let rest = (n', ys) \u () -> take (n', ys)
-                                   in Cons (y, rest);
-                               badList -> Error_take_not_a_list (badList);
-                    badInt -> Error_take_not_an_int (badInt)
+        letrec
+            minusOne = () \n () -> Int# (-1#);
+            take' = (minusOne) \n (n, xs) -> case n () of
+                Int# (nPrim) -> case nPrim () of
+                    0# -> Nil ();
+                    default -> case xs () of
+                        Nil () -> Nil ();
+                        Cons (y,ys) ->
+                            letrec
+                                n' = (n, minusOne) \u () -> add (n, minusOne);
+                                rest = (n', ys) \u () -> take (n', ys)
+                            in Cons (y, rest);
+                        badList -> Error_take_not_a_list (badList);
+                badInt -> Error_take_not_an_int (badInt)
         in take' ()
     |]
 
@@ -234,13 +236,15 @@ map = [stg|
 --
 -- @
 -- numbers = () \u () ->
---     letrec  int_1 = () \n () -> Int\# (1\#);
---             int_3 = () \n () -> Int\# (3\#);
---             int_neg2 = () \n () -> Int\# (-2\#);
---             list_int_1 = (int_1,list_int_neg2) \u () -> Cons (int_1,list_int_neg2);
---             list_int_3 = (int_3,nil) \u () -> Cons (int_3,nil);
---             list_int_neg2 = (int_neg2,list_int_3) \u () -> Cons (int_neg2,list_int_3)
---     in list_int_1 ()
+--     letrec
+--         int_'2 = () \n () -> Int# (-2#);
+--         int_1 = () \n () -> Int# (1#);
+--         int_3 = () \n () -> Int# (3#);
+--         list_ix0_int_1 = (int_1,list_ix1_int_'2) \u () -> Cons (int_1,list_ix1_int_'2);
+--         list_ix1_int_'2 = (int_'2,list_ix2_int_3) \u () -> Cons (int_'2,list_ix2_int_3);
+--         list_ix2_int_3 = (int_3) \u () -> Cons (int_3,nil)
+--     in list_ix0_int_1 ();
+-- nil = () \n () -> Nil ()
 -- @
 listOfNumbers
     :: T.Text      -- ^ Name of the list in the STG program
@@ -255,21 +259,23 @@ listOfNumbers name ints = nil <>
         , LambdaForm [] Update []
             (Let Recursive
                 (Binds (M.fromList (intBinds <> listBinds)))
-                (AppF (Var (listBindName (P.head ints))) []) ))])
+                (AppF (Var (listBindName 0 (P.head ints))) []) ))])
   where
     intBinds = P.map intBind ints
-    listBinds = P.zipWith listBind
-                          ints
-                          (P.map listBindName (P.tail ints) <> ["nil"])
+    listBinds = P.zipWith3 listBind
+                           [0..]
+                           ints
+                           (P.zipWith listBindName [1..] (P.tail ints) <> ["nil"])
 
-    listBind i tailName =
-        ( Var (listBindName i)
+    listBind ix i tailName =
+        ( Var (listBindName ix i)
         , LambdaForm ([Var (intName i)] <> [ Var tailName | tailName P./= "nil"])
                      Update
                      []
                      (AppC (Constr "Cons")
                            [AtomVar (Var (intName i)),AtomVar (Var tailName)] ))
-    listBindName i = "list_" <> intName i
+    listBindName :: P.Integer -> P.Integer -> Text
+    listBindName ix i = "list_ix" <> show' ix <> "_" <> intName i
 
     intBind :: P.Integer -> (Var, LambdaForm)
     intBind i =
@@ -300,7 +306,7 @@ listIntEquals = Num.eq <> [stgProgram|
                 Cons (y,ys') -> case eq_Int (x,y) of
                     True () -> listIntEquals (xs',ys');
                     False () -> False ();
-                    default -> Error_listEquals_1 ();
+                    badBool -> Error_listEquals_1 (badBool);
                 badList -> Error_listEquals_2 (badList);
             badList -> Error_listEquals_3 (badList)
     |]
