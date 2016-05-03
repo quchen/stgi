@@ -30,7 +30,9 @@ tests = testGroup "Medium-sized, with GC"
     , program_takeRepeat
     , program_map
     , program_filter
-    , program_sort ]
+    , program_sort
+    , program_zipWith
+    , program_fibonacci ]
 
 defSpec :: ClosureReductionSpec
 defSpec = ClosureReductionSpec
@@ -166,3 +168,58 @@ program_sort = closureReductionTest defSpec
                 True () -> Success ();
                 wrong   -> TestFail (wrong)
         |] }
+
+program_zipWith :: TestTree
+program_zipWith = closureReductionTest defSpec
+    { testName = "zipWith (+)"
+    , source = Stg.listIntEquals
+            <> Stg.listOfNumbers "list1" list1
+            <> Stg.listOfNumbers "list2" list2
+            <> Stg.listOfNumbers "expectedZipped" zipped
+            <> Stg.add
+            <> Stg.zipWith
+            <> [stgProgram|
+
+        main = () \u () ->
+            let zipped = () \n () -> zipWith (add, list1, list2)
+            in case listIntEquals (zipped, expectedZipped) of
+                True ()  -> Success ();
+                False () -> TestFail ();
+                err      -> Error_badBool (err)
+        |] }
+  where
+    list1 = [1, 2, 3, 4, 5]
+    list2 = [10, 20, 30]
+    zipped = zipWith (+) list1 list2
+
+program_fibonacci :: TestTree
+program_fibonacci = closureReductionTest defSpec
+    { testName = "Fibonacci sequence"
+    , source = Stg.listIntEquals
+            <> Stg.int "zero" 0
+            <> Stg.int "one" 1
+            <> Stg.int "numFibos" numFibos
+            <> Stg.listOfNumbers "expectedFibos" (take numFibos fibo)
+            <> Stg.foldl'
+            <> Stg.add
+            <> Stg.take
+            <> Stg.zipWith
+            <> [stgProgram|
+
+        main = () \u () ->
+            letrec
+                fibos = (fibo) \n () -> take (numFibos, fibo);
+                fibo = () \u () ->
+                    letrec
+                        fib0 = (fib1) \u () -> Cons (zero, fib1);
+                        fib1 = (fib2) \u () -> Cons (one, fib2);
+                        fib2 = (fib0, fib1) \u () -> zipWith (add, fib0, fib1)
+                    in fib0 ()
+            in case listIntEquals (fibos, expectedFibos) of
+                True () -> Success ();
+                err -> TestFail (err)
+        |] }
+  where
+    fibo = 0 : 1 : zipWith (+) fibo (tail fibo)
+    numFibos :: Num a => a
+    numFibos = 10
