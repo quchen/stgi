@@ -62,7 +62,7 @@ evalLet vars addrs = (InfoDetail . map prettyprint)
 
 
 evalCase :: InfoDetail
-evalCase = InfoDetail [ "Push the alternatives and the local environment on the update stack" ]
+evalCase = InfoDetail [ "Push the alternatives and the local environment on the return stack" ]
 
 
 
