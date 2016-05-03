@@ -18,6 +18,9 @@ module Stg.Language.Prelude (
     sort,
     map,
     listIntEquals,
+    length,
+    zip,
+    zipWith,
 
     -- * Boolean
     and2,
@@ -56,7 +59,7 @@ module Stg.Language.Prelude (
 
 import           Prelude                       ()
 
+import           Stg.Language.Prelude.Bool
 import           Stg.Language.Prelude.Function
 import           Stg.Language.Prelude.List
-import           Stg.Language.Prelude.Bool
 import           Stg.Language.Prelude.Number
