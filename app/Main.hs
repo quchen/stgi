@@ -27,17 +27,26 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog = Stg.listOfNumbers "inputList" (reverse [3,1,2,4])
-            <> Stg.listOfNumbers "expectedResult" [1,2,3,4]
-            <> Stg.listIntEquals
-            <> Stg.sort
+    let prog = Stg.listIntEquals
+            <> Stg.int "zero" 0
+            <> Stg.int "one" 1
+            <> Stg.foldl'
+            <> Stg.add
+            <> Stg.zipWith
             <> [stgProgram|
 
-        main = () \u () ->
-            let sorted = () \u () -> sort (inputList)
-            in case listIntEquals (expectedResult, sorted) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        fibo = () \u () ->
+            letrec
+                fib0 = (fib1) \u () -> Cons (zero, fib1);
+                fib1 = (fib2) \u () -> Cons (one, fib2);
+                tailFibo = () \u () -> case fibo () of
+                    Cons (x,xs) -> xs ();
+                    bad -> Error_badNonEmptyList (bad);
+                fib2 = (tailFibo) \u () -> zipWith (add, fibo, tailFibo)
+            in fib0 ();
+        sum = () \u () -> foldl' (add, zero);
+
+        main = () \u () -> sum (fibo)
         |]
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True
