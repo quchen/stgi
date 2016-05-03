@@ -102,7 +102,7 @@ stgRule s@StgState
     in s { stgCode     = Enter a
          , stgArgStack = argS'
          , stgInfo = Info (StateTransiton Eval_FunctionApplication)
-                          (mconcat [ InfoDetail.appF f (AtomVar f : xs)
+                          (mconcat [ InfoDetail.appF f xs
                                    , InfoDetail.unusedLocals (f : [ var | AtomVar var <- xs ]) locals ])}
 
 
