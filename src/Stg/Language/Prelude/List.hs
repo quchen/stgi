@@ -132,23 +132,23 @@ cycle = concat <> [stg|
 -- @
 -- take : Int -> [a] -> [a]
 -- @
-take = Num.add <> [stgProgram|
-    take = () \u () ->
+take = [stgProgram|
+    take = () \n (n) ->
         letrec
-            minusOne = () \n () -> Int# (-1#);
-            take' = (minusOne) \n (n, xs) -> case n () of
-                Int# (nPrim) -> case nPrim () of
+            takePrim = (takePrim) \n (nPrim, xs) ->
+                case nPrim () of
                     0# -> Nil ();
                     default -> case xs () of
                         Nil () -> Nil ();
-                        Cons (y,ys) ->
-                            letrec
-                                n' = (n, minusOne) \u () -> add (n, minusOne);
-                                rest = (n', ys) \u () -> take (n', ys)
-                            in Cons (y, rest);
-                        badList -> Error_take_not_a_list (badList);
-                badInt -> Error_take_not_an_int (badInt)
-        in take' ()
+                        Cons (x,xs) -> case 1# of
+                            one ->
+                                let rest = (takePrim, xs, nPrim, one) \u () -> case -# nPrim one of
+                                        nPrimPred -> takePrim (nPrimPred, xs)
+                                in Cons (x,rest);
+                        badList -> Error_take_badList (badList)
+        in case n () of
+            Int# (nPrim) -> takePrim (nPrim);
+            badInt -> Error_take_badInt (badInt)
     |]
 
 -- | Keep only the elements for which a predicate holds.
@@ -355,7 +355,6 @@ zip = [stgProgram|
 
 -- | Zip two lists into one, using a user-specified combining function.
 -- If one list is longer than the other, ignore the exceeding elements.
--- UNTESTED
 --
 -- @
 -- zipWith (+) [1,2,3,4,5] [10,20,30] ==> [11,22,33]
