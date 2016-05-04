@@ -44,13 +44,16 @@ const = [stg| const = () \n (x,y) -> x () |]
 -- compose : (b -> c) -> (a -> b) -> a -> c
 -- @
 compose = [stg|
-    compose = () \n (f, g) ->
-        let fgx = (f,g) \n (x) ->
-                let gx = (g,x) \n () -> g (x) -- TODO: \u or \n?
-                in f (gx)
-        in fgx ()
+    compose = () \n (f, g, x) ->
+        let gx = (g,x) \n () -> g (x) -- Only used once, no need for \u
+        in f (gx)
     |]
 
+-- | The fixed point combinator.
+--
+-- @
+-- fix : (a -> a) -> a
+-- @
 fix = [stgProgram|
     fix = () \n (f) ->
         letrec x = (f, x) \u () -> f (x)

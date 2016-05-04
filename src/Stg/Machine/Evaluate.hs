@@ -131,7 +131,7 @@ stgRule s@StgState
     in s { stgCode  = Eval body locals
          , stgStack = stack'
          , stgInfo  = Info (StateTransiton Enter_NonUpdatableClosure)
-                           (InfoDetail.enterNonUpdatable addr) }
+                           (InfoDetail.enterNonUpdatable addr args) }
 
 
 

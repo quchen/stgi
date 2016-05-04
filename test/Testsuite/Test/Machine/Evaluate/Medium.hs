@@ -120,7 +120,7 @@ program_map = closureReductionTest defSpec
             <> Stg.map
             <> Stg.listOfNumbers "inputList" [1,2,3]
             <> Stg.listOfNumbers "expectedResult" (map (+1) [1,2,3])
-            <> Stg.listIntEquals
+            <> Stg.equals_List_Int
             <> [stgProgram|
 
         main = () \u () ->
@@ -129,7 +129,7 @@ program_map = closureReductionTest defSpec
                                 plusOne' = (one) \n (n) -> add (n, one)
                         in plusOne' ();
                     actual = (plusOne) \u () -> map (plusOne, inputList)
-            in case listIntEquals (actual, expectedResult) of
+            in case equals_List_Int (actual, expectedResult) of
                 True () -> Success ();
                 wrong   -> TestFail (wrong)
         |] }
@@ -141,14 +141,14 @@ program_filter = closureReductionTest defSpec
             <> Stg.listOfNumbers "expectedResult" (filter (> 0) [1,-1,2,-2,-3,3])
             <> Stg.int "zero" 0
             <> Stg.gt
-            <> Stg.listIntEquals
+            <> Stg.equals_List_Int
             <> Stg.filter
             <> [stgProgram|
 
         main = () \u () ->
             letrec  positive = () \n (x) -> gt_Int (x, zero);
                     filtered = (positive) \n () -> filter (positive, inputList)
-            in case listIntEquals (expectedResult, filtered) of
+            in case equals_List_Int (expectedResult, filtered) of
                 True () -> Success ();
                 wrong   -> TestFail (wrong)
         |] }
@@ -158,13 +158,13 @@ program_sort = closureReductionTest defSpec
     { testName = "sort"
     , source = Stg.listOfNumbers "inputList" [3,1,2,4]
             <> Stg.listOfNumbers "expectedResult" [1,2,3,4]
-            <> Stg.listIntEquals
+            <> Stg.equals_List_Int
             <> Stg.sort
             <> [stgProgram|
 
         main = () \u () ->
             let sorted = () \u () -> sort (inputList)
-            in case listIntEquals (expectedResult, sorted) of
+            in case equals_List_Int (expectedResult, sorted) of
                 True () -> Success ();
                 wrong   -> TestFail (wrong)
         |] }
@@ -172,7 +172,7 @@ program_sort = closureReductionTest defSpec
 program_zipWith :: TestTree
 program_zipWith = closureReductionTest defSpec
     { testName = "zipWith (+)"
-    , source = Stg.listIntEquals
+    , source = Stg.equals_List_Int
             <> Stg.listOfNumbers "list1" list1
             <> Stg.listOfNumbers "list2" list2
             <> Stg.listOfNumbers "expectedZipped" zipped
@@ -182,7 +182,7 @@ program_zipWith = closureReductionTest defSpec
 
         main = () \u () ->
             let zipped = () \n () -> zipWith (add, list1, list2)
-            in case listIntEquals (zipped, expectedZipped) of
+            in case equals_List_Int (zipped, expectedZipped) of
                 True ()  -> Success ();
                 False () -> TestFail ();
                 err      -> Error_badBool (err)
@@ -195,12 +195,11 @@ program_zipWith = closureReductionTest defSpec
 program_fibonacci :: TestTree
 program_fibonacci = closureReductionTest defSpec
     { testName = "Fibonacci sequence"
-    , source = Stg.listIntEquals
+    , source = Stg.equals_List_Int
             <> Stg.int "zero" 0
             <> Stg.int "one" 1
             <> Stg.int "numFibos" numFibos
             <> Stg.listOfNumbers "expectedFibos" (take numFibos fibo)
-            <> Stg.foldl'
             <> Stg.add
             <> Stg.take
             <> Stg.zipWith
@@ -215,7 +214,7 @@ program_fibonacci = closureReductionTest defSpec
                         fib1 = (fib2) \u () -> Cons (one, fib2);
                         fib2 = (fib0, fib1) \u () -> zipWith (add, fib0, fib1)
                     in fib0 ()
-            in case listIntEquals (fibos, expectedFibos) of
+            in case equals_List_Int (fibos, expectedFibos) of
                 True () -> Success ();
                 err -> TestFail (err)
         |] }

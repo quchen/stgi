@@ -44,8 +44,10 @@ unusedLocals vars (Locals locals) = InfoDetail (
 
 
 
-enterNonUpdatable :: MemAddr -> InfoDetail
-enterNonUpdatable addr = InfoDetail ["Enter closure at " <> prettyprint addr]
+enterNonUpdatable :: MemAddr -> [Value] -> InfoDetail
+enterNonUpdatable addr args = (InfoDetail . map prettyprint)
+    [ "Enter closure at " <> pretty addr
+    , "Pop arguments " <> commaSep (foldMap (\arg -> [pretty arg]) args) <> " from the stack" ]
 
 
 

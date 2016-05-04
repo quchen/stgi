@@ -6,7 +6,7 @@
 module Stg.Language.Prelude (
     -- * Lists
     nil,
-    concat,
+    concat2,
     foldl,
     foldl',
     foldr,
@@ -17,7 +17,7 @@ module Stg.Language.Prelude (
     repeat,
     sort,
     map,
-    listIntEquals,
+    equals_List_Int,
     length,
     zip,
     zipWith,

@@ -13,7 +13,6 @@ module Stg.Machine.Env (
     NotInScope(..),
 
     -- * Globals
-    makeGlobals,
     globalVal,
 ) where
 
@@ -62,10 +61,6 @@ vals locals globals = traverse (val locals globals)
 -- | Look up the value of a variable in the local environment.
 localVal :: Locals -> Var -> Validate NotInScope Value
 localVal locals = val locals mempty . AtomVar
-
--- | Create the global environment from a list of bindings.
-makeGlobals :: [(Var, Value)] -> Globals
-makeGlobals = Globals . M.fromList
 
 -- | Look up the value of a variable in the global environment.
 globalVal :: Globals -> Var -> Validate NotInScope Value

@@ -6,7 +6,7 @@
 
 module Stg.Language.Prelude.List (
     nil,
-    concat,
+    concat2,
     foldl,
     foldl',
     foldr,
@@ -17,7 +17,7 @@ module Stg.Language.Prelude.List (
     repeat,
     sort,
     map,
-    listIntEquals,
+    equals_List_Int,
     length,
     zip,
     zipWith,
@@ -43,18 +43,29 @@ import           Stg.Language.Prelude.Number as Num
 
 
 
-nil, concat, foldl, foldl', foldr, iterate, cycle, take, filter :: Program
-repeat, sort, map, listIntEquals, length, zip, zipWith :: Program
+nil, concat2, foldl, foldl', foldr, iterate, cycle, take, filter :: Program
+repeat, sort, map, equals_List_Int, length, zip, zipWith :: Program
 
+
+-- | The empty list as a top-level closure.
+--
+-- @
+-- nil : [a]
+-- @
 nil = [stg| nil = () \n () -> Nil () |]
 
-concat = [stg|
-    concat = () \n (xs,ys) -> case xs () of
+-- | Concatenate two lists. Haskell's @(++)@.
+--
+-- @
+-- concat2 : [a] -> [a] -> [a]
+-- @
+concat2 = [stg|
+    concat2 = () \n (xs,ys) -> case xs () of
         Nil () -> ys ();
         Cons (x,xs') ->
-            let rest = (xs', ys) \u () -> concat (xs', ys)
+            let rest = (xs', ys) \u () -> concat2 (xs', ys)
             in Cons (x, rest);
-        def -> Error_concat (def)
+        def -> Error_concat2 (def)
     |]
 
 -- | Lazy left list fold.
@@ -121,9 +132,9 @@ iterate = [stg|
 -- @
 -- cycle : [a] -> [a]
 -- @
-cycle = concat <> [stg|
+cycle = concat2 <> [stg|
     cycle = () \n (xs) ->
-        letrec xs' = (xs, xs') \u () -> concat (xs, xs')
+        letrec xs' = (xs, xs') \u () -> concat2 (xs, xs')
         in xs' ()
     |]
 
@@ -192,7 +203,7 @@ repeat = [stg|
 -- @
 -- sort : [Int] -> [Int]
 -- @
-sort = mconcat [leq, gt, filter, concat] <> [stgProgram|
+sort = mconcat [leq, gt, filter, concat2] <> [stgProgram|
     sort = () \n (xs) -> case xs () of
         Nil () -> Nil ();
         Cons (pivot,xs') ->
@@ -208,7 +219,7 @@ sort = mconcat [leq, gt, filter, concat] <> [stgProgram|
                         afterPivot    = (xs', moreThanPivot) \u () -> filter (moreThanPivot,  xs')
                     in sort (afterPivot)
             in  let fromPivotOn = (pivot, afterPivotSorted) \u () -> Cons (pivot, afterPivotSorted)
-                in concat (beforePivotSorted, fromPivotOn);
+                in concat2 (beforePivotSorted, fromPivotOn);
         badList -> Error_sort (badList)
     |]
 
@@ -294,8 +305,8 @@ listOfNumbers name ints = nil <>
 -- @
 -- map : [Int] -> [Int] -> Bool
 -- @
-listIntEquals = Num.eq <> [stgProgram|
-    listIntEquals = () \n (xs, ys) ->
+equals_List_Int = Num.eq <> [stgProgram|
+    equals_List_Int = () \n (xs, ys) ->
         case xs () of
             Nil () -> case ys () of
                 Nil () -> True ();
@@ -304,7 +315,7 @@ listIntEquals = Num.eq <> [stgProgram|
             Cons (x,xs') -> case ys () of
                 Nil () -> False ();
                 Cons (y,ys') -> case eq_Int (x,y) of
-                    True () -> listIntEquals (xs',ys');
+                    True () -> equals_List_Int (xs',ys');
                     False () -> False ();
                     badBool -> Error_listEquals_1 (badBool);
                 badList -> Error_listEquals_2 (badList);

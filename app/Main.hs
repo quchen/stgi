@@ -27,30 +27,19 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog = Stg.int "two" 2
-            <> Stg.take
-            <> Stg.repeat
-            <> Stg.foldr
-            <> Stg.seq
+    let prog = Stg.foldl'
+            <> Stg.add
+            <> Stg.int "zero" 0
+            <> Stg.eq
+            <> Stg.listOfNumbers "list" [1..5]
+            <> Stg.int "expected" (sum [1..5])
             <> [stgProgram|
-
-        consBang = () \n (x,xs) -> case xs () of v -> Cons (x, v);
-        nil = () \n () -> Nil ();
-        forceSpine = () \n (xs) -> foldr (consBang, nil, xs);
-
-        twoUnits = () \u () ->
-            letrec  repeated = (unit) \u () -> repeat (unit);
-                    unit = () \n () -> Unit ();
-                    take2 = (repeated) \u () -> take (two, repeated)
-            in      forceSpine (take2);
-
-        main = () \u () -> case twoUnits () of
-            Cons (x,xs) -> case xs () of
-                Cons (y,ys) -> case ys () of
-                    Nil () -> Success ();
-                    default -> TestFailure ();
-                default -> TestFailure ();
-            default -> TestFailure ()
+        sum = () \n (xs) -> foldl' (add, zero, xs);
+        main = () \u () ->
+            let actual = () \u () -> sum (list)
+            in case eq_Int (actual, expected) of
+                True () -> Success ();
+                default -> TestFail ()
         |]
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True
