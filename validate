@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+stack clean
+stack build   --ghc-options -Werror
+stack test    --ghc-options -Werror
+stack haddock --no-haddock-deps
+stack sdist
+hlint src test app
