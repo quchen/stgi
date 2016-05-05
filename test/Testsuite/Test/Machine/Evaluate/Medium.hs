@@ -29,8 +29,6 @@ tests = testGroup "Medium-sized, with GC"
     , program_foldrSum
     , program_takeRepeat
     , program_map
-    , program_filter
-    , program_sort
     , program_zipWith
     , program_fibonacci ]
 
@@ -130,41 +128,6 @@ program_map = machineStateTest defSpec
                         in plusOne' ();
                     actual = (plusOne) \u () -> map (plusOne, inputList)
             in case equals_List_Int (actual, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_filter :: TestTree
-program_filter = machineStateTest defSpec
-    { testName = "filter list"
-    , source = Stg.listOfNumbers "inputList" [1,-1,2,-2,-3,3]
-            <> Stg.listOfNumbers "expectedResult" (filter (> 0) [1,-1,2,-2,-3,3])
-            <> Stg.int "zero" 0
-            <> Stg.gt
-            <> Stg.equals_List_Int
-            <> Stg.filter
-            <> [stgProgram|
-
-        main = () \u () ->
-            letrec  positive = () \n (x) -> gt_Int (x, zero);
-                    filtered = (positive) \n () -> filter (positive, inputList)
-            in case equals_List_Int (expectedResult, filtered) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_sort :: TestTree
-program_sort = machineStateTest defSpec
-    { testName = "sort"
-    , source = Stg.listOfNumbers "inputList" [3,1,2,4]
-            <> Stg.listOfNumbers "expectedResult" [1,2,3,4]
-            <> Stg.equals_List_Int
-            <> Stg.sort
-            <> [stgProgram|
-
-        main = () \u () ->
-            let sorted = () \u () -> sort (inputList)
-            in case equals_List_Int (expectedResult, sorted) of
                 True () -> Success ();
                 wrong   -> TestFail (wrong)
         |] }
