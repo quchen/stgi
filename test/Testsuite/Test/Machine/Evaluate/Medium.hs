@@ -14,12 +14,12 @@ module Test.Machine.Evaluate.Medium (tests) where
 import           Data.Monoid
 import           Test.Tasty
 
-import qualified Stg.Language.Prelude                       as Stg
+import qualified Stg.Language.Prelude                             as Stg
 import           Stg.Machine
 import           Stg.Parser
 
-import           Test.Machine.Evaluate.ClosureReductionTest
-import           Test.Orphans                               ()
+import           Test.Machine.Evaluate.TestTemplates.MachineState
+import           Test.Orphans                                     ()
 
 
 
@@ -34,16 +34,16 @@ tests = testGroup "Medium-sized, with GC"
     , program_zipWith
     , program_fibonacci ]
 
-defSpec :: ClosureReductionSpec
-defSpec = ClosureReductionSpec
+defSpec :: MachineStateTestSpec
+defSpec = MachineStateTestSpec
     { testName         = "Default medium closure reduction test template"
-    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , source           = [stg| main = () \n () -> Success () |]
     , maxSteps         = 1024
     , performGc        = PerformGc (const True) }
 
 program_add3 :: TestTree
-program_add3 = closureReductionTest defSpec
+program_add3 = machineStateTest defSpec
     { testName = "add3(x,y,z) = x+y+z"
     , source = [stgProgram|
         add3 = () \n (x,y,z) -> case x () of
@@ -67,7 +67,7 @@ program_add3 = closureReductionTest defSpec
         |] }
 
 program_foldrSum :: TestTree
-program_foldrSum = closureReductionTest defSpec
+program_foldrSum = machineStateTest defSpec
     { testName = "Sum of list via foldr"
     , source = Stg.foldr
             <> Stg.add
@@ -85,7 +85,7 @@ program_foldrSum = closureReductionTest defSpec
         |] }
 
 program_takeRepeat :: TestTree
-program_takeRepeat = closureReductionTest defSpec
+program_takeRepeat = machineStateTest defSpec
     { testName = "take 2 (repeat ())"
     , source = Stg.int "two" 2
             <> Stg.take
@@ -114,7 +114,7 @@ program_takeRepeat = closureReductionTest defSpec
         |] }
 
 program_map :: TestTree
-program_map = closureReductionTest defSpec
+program_map = machineStateTest defSpec
     { testName = "map (+1) [1,2,3]"
     , source = Stg.add
             <> Stg.map
@@ -135,7 +135,7 @@ program_map = closureReductionTest defSpec
         |] }
 
 program_filter :: TestTree
-program_filter = closureReductionTest defSpec
+program_filter = machineStateTest defSpec
     { testName = "filter list"
     , source = Stg.listOfNumbers "inputList" [1,-1,2,-2,-3,3]
             <> Stg.listOfNumbers "expectedResult" (filter (> 0) [1,-1,2,-2,-3,3])
@@ -154,7 +154,7 @@ program_filter = closureReductionTest defSpec
         |] }
 
 program_sort :: TestTree
-program_sort = closureReductionTest defSpec
+program_sort = machineStateTest defSpec
     { testName = "sort"
     , source = Stg.listOfNumbers "inputList" [3,1,2,4]
             <> Stg.listOfNumbers "expectedResult" [1,2,3,4]
@@ -170,7 +170,7 @@ program_sort = closureReductionTest defSpec
         |] }
 
 program_zipWith :: TestTree
-program_zipWith = closureReductionTest defSpec
+program_zipWith = machineStateTest defSpec
     { testName = "zipWith (+)"
     , source = Stg.equals_List_Int
             <> Stg.listOfNumbers "list1" list1
@@ -193,7 +193,7 @@ program_zipWith = closureReductionTest defSpec
     zipped = zipWith (+) list1 list2
 
 program_fibonacci :: TestTree
-program_fibonacci = closureReductionTest defSpec
+program_fibonacci = machineStateTest defSpec
     { testName = "Fibonacci sequence"
     , source = Stg.equals_List_Int
             <> Stg.int "zero" 0

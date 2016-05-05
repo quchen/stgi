@@ -71,7 +71,6 @@ test-suite stg-test
                      , Test.Language.Prelude
                      , Test.Language.Prelude.Bool
                      , Test.Language.Prelude.Function
-                     , Test.Language.Prelude.HaskellReferenceTest
                      , Test.Language.Prelude.List
                      , Test.Language.Prelude.Number
                      , Test.Language.Prettyprint
@@ -79,7 +78,9 @@ test-suite stg-test
                      , Test.Language.Prettyprint.ParserInverse
                      , Test.Machine
                      , Test.Machine.Evaluate
-                     , Test.Machine.Evaluate.ClosureReductionTest
+                     , Test.Machine.Evaluate.TestTemplates.MachineState
+                     , Test.Machine.Evaluate.TestTemplates.HaskellReference
+                     , Test.Machine.Evaluate.TestTemplates.Util
                      , Test.Machine.Evaluate.Medium
                      , Test.Machine.Evaluate.Small
                      , Test.Machine.GarbageCollection

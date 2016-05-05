@@ -15,8 +15,8 @@ import           Test.Tasty
 import           Stg.Machine
 import           Stg.Parser
 
-import           Test.Machine.Evaluate.ClosureReductionTest
-import           Test.Orphans                               ()
+import           Test.Machine.Evaluate.TestTemplates.MachineState
+import           Test.Orphans                                     ()
 
 
 
@@ -65,16 +65,16 @@ tests = testGroup "Small, no GC"
         ]
     ]
 
-defSpec :: ClosureReductionSpec
-defSpec = ClosureReductionSpec
+defSpec :: MachineStateTestSpec
+defSpec = MachineStateTestSpec
     { testName         = "Default small closure reduction test template"
-    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
+    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , source           = [stg| main = () \n () -> Success () |]
     , maxSteps         = 32
     , performGc        = PerformGc (const False) }
 
 funcapp_simple :: TestTree
-funcapp_simple = closureReductionTest defSpec
+funcapp_simple = machineStateTest defSpec
     { testName = "Simple function application"
     , source = [stg|
         main = () \u () -> case id (unit) of
@@ -85,7 +85,7 @@ funcapp_simple = closureReductionTest defSpec
         |] }
 
 defaultOnlyCase_unboundAlgebraic :: TestTree
-defaultOnlyCase_unboundAlgebraic = closureReductionTest defSpec
+defaultOnlyCase_unboundAlgebraic = machineStateTest defSpec
     { testName = "Unbound, algebraic scrutinee"
     , source = [stg|
         main = () \u () -> case x () of
@@ -94,7 +94,7 @@ defaultOnlyCase_unboundAlgebraic = closureReductionTest defSpec
         |] }
 
 defaultOnlyCase_boundAlgebraic :: TestTree
-defaultOnlyCase_boundAlgebraic = closureReductionTest defSpec
+defaultOnlyCase_boundAlgebraic = machineStateTest defSpec
     { testName = "Bound, algebraic scrutinee"
     , source = [stg|
         main = () \u () -> case x () of
@@ -103,7 +103,7 @@ defaultOnlyCase_boundAlgebraic = closureReductionTest defSpec
         |] }
 
 defaultOnlyCase_unboundPrimitive :: TestTree
-defaultOnlyCase_unboundPrimitive = closureReductionTest defSpec
+defaultOnlyCase_unboundPrimitive = machineStateTest defSpec
     { testName = "Unbound, primitive scrutinee"
     , source = [stgProgram|
         main = () \u () -> case 1# of
@@ -111,7 +111,7 @@ defaultOnlyCase_unboundPrimitive = closureReductionTest defSpec
         |] }
 
 defaultOnlyCase_boundPrimitive :: TestTree
-defaultOnlyCase_boundPrimitive = closureReductionTest defSpec
+defaultOnlyCase_boundPrimitive = machineStateTest defSpec
     { testName = "Bound, primitive scrutinee"
     , source = [stg|
         main = () \u () -> case 1# of
@@ -119,7 +119,7 @@ defaultOnlyCase_boundPrimitive = closureReductionTest defSpec
         |] }
 
 algebraicCase_normalMatch :: TestTree
-algebraicCase_normalMatch = closureReductionTest defSpec
+algebraicCase_normalMatch = machineStateTest defSpec
     { testName = "Successful"
     , source = [stg|
         main = () \u () -> case Nothing () of
@@ -128,7 +128,7 @@ algebraicCase_normalMatch = closureReductionTest defSpec
         |] }
 
 algebraicCase_defaultUnboundMatch :: TestTree
-algebraicCase_defaultUnboundMatch = closureReductionTest defSpec
+algebraicCase_defaultUnboundMatch = machineStateTest defSpec
     { testName = "Unbound default"
     , source = [stg|
         main = () \u () -> case Nothing () of
@@ -137,7 +137,7 @@ algebraicCase_defaultUnboundMatch = closureReductionTest defSpec
         |] }
 
 algebraicCase_defaultBoundMatch :: TestTree
-algebraicCase_defaultBoundMatch = closureReductionTest defSpec
+algebraicCase_defaultBoundMatch = machineStateTest defSpec
     { testName = "Bound default"
     , source = [stg|
         main = () \u () -> case Nothing () of
@@ -147,7 +147,7 @@ algebraicCase_defaultBoundMatch = closureReductionTest defSpec
         |] }
 
 primitiveCase_normalMatch :: TestTree
-primitiveCase_normalMatch = closureReductionTest defSpec
+primitiveCase_normalMatch = machineStateTest defSpec
     { testName = "Successful"
     , source = [stg|
         main = () \u () -> case 1# of
@@ -156,7 +156,7 @@ primitiveCase_normalMatch = closureReductionTest defSpec
         |] }
 
 primitiveCase_defaultUnboundMatch :: TestTree
-primitiveCase_defaultUnboundMatch = closureReductionTest defSpec
+primitiveCase_defaultUnboundMatch = machineStateTest defSpec
     { testName = "Unbound default"
     , source = [stg|
         main = () \u () -> case 1# of
@@ -166,7 +166,7 @@ primitiveCase_defaultUnboundMatch = closureReductionTest defSpec
         |] }
 
 primitiveCase_defaultBoundMatch :: TestTree
-primitiveCase_defaultBoundMatch = closureReductionTest defSpec
+primitiveCase_defaultBoundMatch = machineStateTest defSpec
     { testName = "Bound default"
     , source = [stg|
         main = () \u () -> case 1# of
@@ -177,7 +177,7 @@ primitiveCase_defaultBoundMatch = closureReductionTest defSpec
         |] }
 
 letBinding :: TestTree
-letBinding = closureReductionTest defSpec
+letBinding = machineStateTest defSpec
     { testName = "Single binding"
     , source = [stg|
         main = () \u () -> let x = () \n () -> Success ()
@@ -185,7 +185,7 @@ letBinding = closureReductionTest defSpec
         |] }
 
 letMultiBinding :: TestTree
-letMultiBinding = closureReductionTest defSpec
+letMultiBinding = machineStateTest defSpec
     { testName = "Multiple bindings"
     , source = [stg|
         main = () \u () ->
@@ -199,7 +199,7 @@ letMultiBinding = closureReductionTest defSpec
         |] }
 
 letNestedBinding :: TestTree
-letNestedBinding = closureReductionTest defSpec
+letNestedBinding = machineStateTest defSpec
     { testName = "Nested bindings"
     , source = [stg|
         main = () \u () ->
@@ -215,7 +215,7 @@ letNestedBinding = closureReductionTest defSpec
         |] }
 
 letrecBinding :: TestTree
-letrecBinding = closureReductionTest defSpec
+letrecBinding = machineStateTest defSpec
     { testName = "Single binding"
     , source = [stg|
         main = () \u () -> letrec x = () \n () -> Success ()
@@ -223,7 +223,7 @@ letrecBinding = closureReductionTest defSpec
         |] }
 
 letrecMultiBinding :: TestTree
-letrecMultiBinding = closureReductionTest defSpec
+letrecMultiBinding = machineStateTest defSpec
     { testName = "Cross-referencing bindings"
     , source = [stg|
         main = () \u () -> letrec id = () \n (x) -> x ();
@@ -238,7 +238,7 @@ letrecMultiBinding = closureReductionTest defSpec
         |] }
 
 addition :: TestTree
-addition = closureReductionTest defSpec
+addition = machineStateTest defSpec
     { testName = "Addition       +#"
     , source = [stg|
         op = () \n (x,y) -> case +# x y of
@@ -251,7 +251,7 @@ addition = closureReductionTest defSpec
         |] }
 
 subtraction :: TestTree
-subtraction = closureReductionTest defSpec
+subtraction = machineStateTest defSpec
     { testName = "Subtraction    -#"
     , source = [stg|
         op = () \n (x,y) -> case -# x y of
@@ -264,7 +264,7 @@ subtraction = closureReductionTest defSpec
         |] }
 
 multiplication :: TestTree
-multiplication = closureReductionTest defSpec
+multiplication = machineStateTest defSpec
     { testName = "Multiplication *#"
     , source = [stg|
         op = () \n (x,y) -> case *# x y of
@@ -277,7 +277,7 @@ multiplication = closureReductionTest defSpec
         |] }
 
 division :: TestTree
-division = closureReductionTest defSpec
+division = machineStateTest defSpec
     { testName = "Division       /#"
     , source = [stg|
         op = () \n (x,y) -> case /# x y of
@@ -290,7 +290,7 @@ division = closureReductionTest defSpec
         |] }
 
 modulo :: TestTree
-modulo = closureReductionTest defSpec
+modulo = machineStateTest defSpec
     { testName = "Modulo         %#"
     , source = [stg|
         op = () \n (x,y) -> case %# x y of
@@ -303,7 +303,7 @@ modulo = closureReductionTest defSpec
         |] }
 
 less :: TestTree
-less = closureReductionTest defSpec
+less = machineStateTest defSpec
     { testName = "Less than        <#"
     , source = [stg|
         op = () \n (x,y) -> case <# x y of
@@ -316,7 +316,7 @@ less = closureReductionTest defSpec
         |] }
 
 lessOrEqual :: TestTree
-lessOrEqual = closureReductionTest defSpec
+lessOrEqual = machineStateTest defSpec
     { testName = "Less or equal    <=#"
     , source = [stg|
         op = () \n (x,y) -> case <=# x y of
@@ -329,7 +329,7 @@ lessOrEqual = closureReductionTest defSpec
         |] }
 
 equal :: TestTree
-equal = closureReductionTest defSpec
+equal = machineStateTest defSpec
     { testName = "Equality         ==#"
     , source = [stg|
         op = () \n (x,y) -> case ==# x y of
@@ -342,7 +342,7 @@ equal = closureReductionTest defSpec
         |] }
 
 unequal :: TestTree
-unequal = closureReductionTest defSpec
+unequal = machineStateTest defSpec
     { testName = "Inequality       /=#"
     , source = [stg|
         op = () \n (x,y) -> case /=# x y of
@@ -355,7 +355,7 @@ unequal = closureReductionTest defSpec
         |] }
 
 greaterOrEqual :: TestTree
-greaterOrEqual = closureReductionTest defSpec
+greaterOrEqual = machineStateTest defSpec
     { testName = "Greater or equal >=#"
     , source = [stg|
         op = () \n (x,y) -> case >=# x y of
@@ -368,7 +368,7 @@ greaterOrEqual = closureReductionTest defSpec
         |] }
 
 greater :: TestTree
-greater = closureReductionTest defSpec
+greater = machineStateTest defSpec
     { testName = "Greater than     >#"
     , source = [stg|
         op = () \n (x,y) -> case ># x y of
