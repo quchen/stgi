@@ -13,8 +13,6 @@ module Test.Machine.Evaluate.ClosureReductionTest (
 import           Data.Monoid
 import           Data.Text                (Text)
 import qualified Data.Text                as T
-import           Test.Tasty
-import           Test.Tasty.HUnit
 
 import           Stg.Language
 import           Stg.Language.Prettyprint
@@ -23,6 +21,9 @@ import           Stg.Machine.Env
 import           Stg.Machine.Heap         as H
 import           Stg.Machine.Types
 import           Stg.Util
+
+import           Test.Tasty
+import           Test.Tasty.HUnit
 
 
 

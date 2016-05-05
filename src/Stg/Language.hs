@@ -280,7 +280,7 @@ instance Pretty Var where
 
 instance Pretty Atom where
     pretty = \case
-        AtomVar var -> pretty     var
+        AtomVar var -> pretty var
         AtomLit lit -> pretty lit
     prettyList = parens . align . hcat . punctuate "," . map pretty
 

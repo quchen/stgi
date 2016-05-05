@@ -68,6 +68,12 @@ test-suite stg-test
   hs-source-dirs:      test/Testsuite
   main-is:             Main.hs
   other-modules:       Test.Language
+                     , Test.Language.Prelude
+                     , Test.Language.Prelude.Bool
+                     , Test.Language.Prelude.Function
+                     , Test.Language.Prelude.HaskellReferenceTest
+                     , Test.Language.Prelude.List
+                     , Test.Language.Prelude.Number
                      , Test.Language.Prettyprint
                      , Test.Language.Prettyprint.Ansi
                      , Test.Language.Prettyprint.ParserInverse
