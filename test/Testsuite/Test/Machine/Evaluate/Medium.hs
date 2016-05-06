@@ -28,8 +28,6 @@ tests = testGroup "Medium-sized, with GC"
     [ program_add3
     , program_foldrSum
     , program_takeRepeat
-    , program_map
-    , program_zipWith
     , program_fibonacci ]
 
 defSpec :: MachineStateTestSpec
@@ -110,50 +108,6 @@ program_takeRepeat = machineStateTest defSpec
                 default -> TestFailure ();
             default -> TestFailure ()
         |] }
-
-program_map :: TestTree
-program_map = machineStateTest defSpec
-    { testName = "map (+1) [1,2,3]"
-    , source = Stg.add
-            <> Stg.map
-            <> Stg.listOfNumbers "inputList" [1,2,3]
-            <> Stg.listOfNumbers "expectedResult" (map (+1) [1,2,3])
-            <> Stg.equals_List_Int
-            <> [stgProgram|
-
-        main = () \u () ->
-            letrec  plusOne = () \u () ->
-                        letrec  one = () \n () -> Int# (1#);
-                                plusOne' = (one) \n (n) -> add (n, one)
-                        in plusOne' ();
-                    actual = (plusOne) \u () -> map (plusOne, inputList)
-            in case equals_List_Int (actual, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_zipWith :: TestTree
-program_zipWith = machineStateTest defSpec
-    { testName = "zipWith (+)"
-    , source = Stg.equals_List_Int
-            <> Stg.listOfNumbers "list1" list1
-            <> Stg.listOfNumbers "list2" list2
-            <> Stg.listOfNumbers "expectedZipped" zipped
-            <> Stg.add
-            <> Stg.zipWith
-            <> [stgProgram|
-
-        main = () \u () ->
-            let zipped = () \n () -> zipWith (add, list1, list2)
-            in case equals_List_Int (zipped, expectedZipped) of
-                True ()  -> Success ();
-                False () -> TestFail ();
-                err      -> Error_badBool (err)
-        |] }
-  where
-    list1 = [1, 2, 3, 4, 5]
-    list2 = [10, 20, 30]
-    zipped = zipWith (+) list1 list2
 
 program_fibonacci :: TestTree
 program_fibonacci = machineStateTest defSpec
