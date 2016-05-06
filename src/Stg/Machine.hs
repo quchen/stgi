@@ -120,7 +120,7 @@ evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc) = go False
         state | haltIf state
             -> terminate (state { stgInfo = Info HaltedByPredicate [] })
 
-        state@StgState{ stgInfo = Info StateTransiton{} _ }
+        state@StgState{ stgInfo = Info StateTransition{} _ }
             | attemptGc && performGc state -> case garbageCollect state of
                 stateGc@StgState{stgInfo = Info GarbageCollection _} ->
                     state : stateGc : go False (evalStep stateGc)
@@ -143,7 +143,7 @@ evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc) = go False
 -- | Check whether a state is terminal.
 terminated :: StgState -> Bool
 terminated StgState{stgInfo = Info info _} = case info of
-    StateTransiton{}    -> False
+    StateTransition{}    -> False
     StateInitial{}      -> False
     GarbageCollection{} -> False
     _otherwise          -> True

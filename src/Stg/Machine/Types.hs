@@ -290,7 +290,7 @@ data InfoShort =
       -- An example of this would be a 'ReturnCon' state with an empty
       -- return stack.
 
-    | StateTransiton StateTransition
+    | StateTransition StateTransition
       -- ^ Description of the state transition that lead to the current state.
 
     | StateInitial
@@ -306,7 +306,7 @@ instance Pretty InfoShort where
         NoRulesApply      -> "No further rules apply"
         MaxStepsExceeded  -> "Maximum number of steps exceeded"
         StateError err    -> "Errorenous state: " <+> pretty err
-        StateTransiton t  -> "State transition:" <+> pretty t
+        StateTransition t -> "State transition:" <+> pretty t
         StateInitial      -> "Initial state"
         GarbageCollection -> "Garbage collection"
 

@@ -67,6 +67,7 @@ tests = testGroup "Rules"
             , greaterOrEqual
             , greater ]
         ]
+    , enterUpdatableClosure
     , testGroup "Primitive case evaluation shortcuts"
         [ primopShortcut_defaultBound
         , primopShortcut_normalMatch ]
@@ -420,6 +421,18 @@ greater = machineStateTest defSpec
             default -> Error ()
         |] }
 
+enterUpdatableClosure :: TestTree
+enterUpdatableClosure = machineStateTest defSpec
+    { testName = "Enter updatable closure (rule 15)"
+    , source = [stg|
+        main = () \u () -> case Unit () of
+            default -> Success ()
+        |]
+    , someStateSatisfies = \state -> case stgInfo state of
+        Info (StateTransition Enter_UpdatableClosure) _ -> True
+        _otherwise -> False
+    }
+
 primopShortcut_defaultBound :: TestTree
 primopShortcut_defaultBound = machineStateTest defSpec
     { testName = "Default bound match shortcut (rule 18)"
@@ -430,7 +443,7 @@ primopShortcut_defaultBound = machineStateTest defSpec
                     3#      -> Success ();
                     default -> TestFail ()
         |]
-    , forbiddenState = \stgState -> case stgCode stgState of
+    , forbiddenState = \state -> case stgCode state of
         Eval AppP{} _ -> True -- The point of the shortcut is to never reach
                               -- the AppP rule itself.
         _otherwise    -> False
@@ -447,7 +460,7 @@ primopShortcut_normalMatch = machineStateTest defSpec
                         3# -> Success ();
                         wrong -> TestFail (wrong)
         |]
-    , forbiddenState = \stgState -> case stgCode stgState of
+    , forbiddenState = \state -> case stgCode state of
         Eval AppP{} _ -> True -- The point of the shortcut is to never reach
                               -- the AppP rule itself.
         _otherwise    -> False
