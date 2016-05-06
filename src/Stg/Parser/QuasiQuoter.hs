@@ -29,7 +29,6 @@ module Stg.Parser.QuasiQuoter (
 
 
 import           Data.Either
-import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
@@ -75,33 +74,32 @@ stg = defaultQuoter { quoteExp  = expQuoter }
     expQuoter input =
         let inputText = T.pack input
             parses =
-                [ quoteAs program        inputText
-                , quoteAs lambdaForm     inputText
-                , quoteAs expr           inputText
-                , quoteAs alts           inputText
-                , quoteAs nonDefaultAlts inputText
-                , quoteAs algebraicAlt   inputText
-                , quoteAs primitiveAlt   inputText
-                , quoteAs defaultAlt     inputText
-                , quoteAs literal        inputText
-                , quoteAs primOp         inputText
-                , quoteAs vars           inputText
-                , quoteAs atoms          inputText
-                , quoteAs atom           inputText
-                , quoteAs varTok         inputText
-                , quoteAs conTok         inputText ]
-        in case firstRight parses of
-            Just ast -> ast
-            Nothing  -> fail "No parse succeeded; try using a type-specific \
-                             \parser, such as 'stgProgram'."
-
-    firstRight :: [Either l r] -> Maybe r
-    firstRight = listToMaybe . rights
+                [ quoteAs "program"        program        inputText
+                , quoteAs "lambdaForm"     lambdaForm     inputText
+                , quoteAs "expr"           expr           inputText
+                , quoteAs "alts"           alts           inputText
+                , quoteAs "nonDefaultAlts" nonDefaultAlts inputText
+                , quoteAs "algebraicAlt"   algebraicAlt   inputText
+                , quoteAs "primitiveAlt"   primitiveAlt   inputText
+                , quoteAs "defaultAlt"     defaultAlt     inputText
+                , quoteAs "literal"        literal        inputText
+                , quoteAs "primOp"         primOp         inputText
+                , quoteAs "vars"           vars           inputText
+                , quoteAs "atoms"          atoms          inputText
+                , quoteAs "atom"           atom           inputText
+                , quoteAs "varTok"         varTok         inputText
+                , quoteAs "conTok"         conTok         inputText ]
+        in case partitionEithers parses of
+            (_, ast:_) -> ast
+            (errs, _) -> (fail . T.unpack . T.unlines)
+                ("No parse succeeded. Individual errors:" : errs)
 
     -- | Attempt to parse an input using a certain parser, and return the
     -- generated expression on success.
-    quoteAs :: Lift ast => Parser ast -> Text -> Either Text (Q Exp)
-    quoteAs p inputText = fmap lift (parse p inputText)
+    quoteAs :: Lift ast => Text -> Parser ast -> Text -> Either Text (Q Exp)
+    quoteAs parserName p inputText = fmap lift (case parse p inputText of
+        Left err -> (Left . ("  - " <>) . T.unwords . T.words) (parserName <> ": " <> err)
+        r@Right{} -> r )
 
 -- | Build a quasiquoter from a 'Parser'.
 stgQQ

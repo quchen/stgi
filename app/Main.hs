@@ -16,7 +16,6 @@ import           System.Console.ANSI      (hSupportsANSI)
 import           System.IO                (stdout)
 
 import           Stg.Language
-import qualified Stg.Language.Prelude     as Stg
 import           Stg.Language.Prettyprint
 import           Stg.Machine
 import           Stg.Machine.Types
@@ -27,20 +26,7 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog = [stgProgram|
-        main = () \u () ->
-            case flipTuple1 (2#) of
-                Tuple (a,b) -> case a () of
-                    2# -> case b () of
-                        Unit () -> Success ();
-                        badUnit -> Error_badUnit (badUnit);
-                    bad -> TestFail (bad);
-                badTuple -> Error_badTuple (badTuple);
-        tuple = () \n (x,y) -> Tuple (x,y);
-        flip = () \n (f, x, y) -> f (y, x);
-        flipTuple1 = () \u () -> flip (tuple, unit);
-        unit = () \n () -> Unit ()
-        |]
+    let prog = [stg| main = () \n () -> main () |]
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True
         then runStg prettyprintAnsi prog
