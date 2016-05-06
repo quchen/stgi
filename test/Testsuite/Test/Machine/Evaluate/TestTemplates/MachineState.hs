@@ -67,4 +67,4 @@ machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
             <>
             (if showFinalStateOnFail testSpec
                 then ["Final state:",  prettyprintAnsi finalState]
-                else [] ))
+                else ["Run test case with showFinalStateOnFail enabled for more details."] ))

@@ -90,8 +90,9 @@ letBinding :: TestTree
 letBinding = machineStateTest defSpec
     { testName = "Single binding"
     , source = [stg|
-        main = () \u () -> let x = () \n () -> Success ()
-                           in x ()
+        main = () \u () ->
+            let x = () \n () -> Success ()
+            in x ()
         |] }
 
 letMultiBinding :: TestTree
