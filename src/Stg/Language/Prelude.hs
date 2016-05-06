@@ -15,6 +15,7 @@ module Stg.Language.Prelude (
     take,
     filter,
     repeat,
+    replicate,
     sort,
     map,
     equals_List_Int,

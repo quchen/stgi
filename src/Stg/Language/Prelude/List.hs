@@ -13,6 +13,7 @@ module Stg.Language.Prelude.List (
     take,
     filter,
     repeat,
+    replicate,
     sort,
     map,
     equals_List_Int,
@@ -42,7 +43,7 @@ import           Stg.Language.Prelude.Number as Num
 
 
 nil, concat2, foldl, foldl', foldr, iterate, cycle, take, filter :: Program
-repeat, sort, map, equals_List_Int, length, zip, zipWith :: Program
+repeat, replicate, sort, map, equals_List_Int, length, zip, zipWith :: Program
 
 
 -- | The empty list as a top-level closure.
@@ -194,6 +195,26 @@ repeat = [stg|
     repeat = () \n (x) ->
         letrec xs = (x, xs) \u () -> Cons (x,xs)
         in xs ()
+    |]
+
+-- | Repeat a single element infinitely.
+--
+-- @
+-- replicate 3 1 = [1, 1, 1]
+-- @
+--
+-- @
+-- replicate : Int -> a -> [a]
+-- @
+replicate = [stg|
+    replicate = () \n (n, x) ->
+        let replicatePrim = () \n (nPrim, x) ->
+                case nPrim () of
+                    0# -> Nil ();
+                    default -> case 1# of
+                        one -> case -# nPrim one of
+                            nPrimPred -> replicatePrim (nPrimPred, x)
+        in replicatePrim (n, x)
     |]
 
 -- | That Haskell sort function often misleadingly referred to as "quicksort".
