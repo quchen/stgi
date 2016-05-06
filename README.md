@@ -16,6 +16,26 @@ human user. Things that might be important for an actual compiler backend, such
 as performance or static analysis, are not considered in general; only if it
 helps the understanding of the STG.
 
+The idea behind the machine is to represent the program in its abstract syntax
+tree form. However, due to references to other parts of the syntax tree, a
+program is a graph, not a tree. By evaluating this graph using a small set of
+rules, it can be systematically reduced to a final value, which will be the
+result of the program.
+
+The STG is
+  - **spineless** because the graph is not represented as a single data
+    structure in memory, but as a set of small parts of the graph that reference
+    each other. An important part of the evaluation mechanism is how to follow
+    these references.
+  - **tagless** because all heap values - unevaluated values, functions, already
+    evaluated values - are represented alike on the heap, in form of closures.
+    Tag*ful* would mean these closures have to be annotated with things type
+    information, or whether they were previously evaluated already.
+  - **graph reducing** because heap objects can be overwritten by simpler values
+    the machine has found out to be equivalent. For example, the computation
+    `1+1` on the heap might be overwritten by a constant `2` once that result
+    has been obtained somewhere.
+
 
 Useful applications
 -------------------
@@ -41,11 +61,11 @@ Differences from the 1992 paper
 
 ### Evaluation
 
-- The three stacks from the paper - argument, return, and update - are unified
-  into a single one, since they run synchronously anyway. This makes the current
-  location in the evaluation much clearer, since the stack is always popped from
-  the top. For example, having a return frame at the top means the program is
-  close to a `case` expression.
+- The three stacks from the operational semantics given in the paper - argument,
+  return, and update - are unified into a single one, since they run
+  synchronously anyway. This makes the current location in the evaluation much
+  clearer, since the stack is always popped from the top. For example, having a
+  return frame at the top means the program is close to a `case` expression.
 
 
 GHC's current STG
