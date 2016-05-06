@@ -31,11 +31,12 @@ tests = testGroup "Medium-sized, with GC"
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
-    { testName         = "Default medium closure reduction test template"
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , source           = [stg| main = () \n () -> Success () |]
-    , maxSteps         = 1024
-    , performGc        = PerformGc (const True) }
+    { testName             = "Default medium closure reduction test template"
+    , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
+    , source               = [stg| main = () \n () -> Success () |]
+    , maxSteps             = 1024
+    , performGc            = PerformGc (const True)
+    , showFinalStateOnFail = False}
 
 add3 :: TestTree
 add3 = machineStateTest defSpec

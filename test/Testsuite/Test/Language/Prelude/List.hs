@@ -150,7 +150,7 @@ foldSumTemplate
 
     -> TestTree
 foldSumTemplate foldName foldF foldStg = haskellReferenceTest HaskellReferenceTestSpec
-    { testName = "Sum of list via " <> foldName
+    { testName = foldName
     , maxSteps = 1024
     , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]

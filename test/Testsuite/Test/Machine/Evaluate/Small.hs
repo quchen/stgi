@@ -67,11 +67,12 @@ tests = testGroup "Small, no GC"
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
-    { testName         = "Default small closure reduction test template"
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , source           = [stg| main = () \n () -> Success () |]
-    , maxSteps         = 32
-    , performGc        = PerformGc (const False) }
+    { testName             = "Default small closure reduction test template"
+    , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
+    , source               = [stg| main = () \n () -> Success () |]
+    , maxSteps             = 32
+    , performGc            = PerformGc (const False)
+    , showFinalStateOnFail = False }
 
 funcapp_simple :: TestTree
 funcapp_simple = machineStateTest defSpec
