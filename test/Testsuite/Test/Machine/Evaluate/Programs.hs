@@ -38,7 +38,8 @@ defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
     { testName             = "Default medium closure reduction test template"
     , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate        = const False
+    , forbiddenState       = const False
+    , someStateSatisfies   = const True
     , source               = [stg| main = () \n () -> Success () |]
     , maxSteps             = 1024
     , performGc            = PerformGc (const True)

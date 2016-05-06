@@ -76,7 +76,8 @@ defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
     { testName             = "Default small closure reduction test template"
     , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate        = const False
+    , forbiddenState       = const False
+    , someStateSatisfies   = const True
     , source               = [stg| main = () \n () -> Success () |]
     , maxSteps             = 32
     , performGc            = PerformGc (const False)
@@ -429,7 +430,7 @@ primopShortcut_defaultBound = machineStateTest defSpec
                     3#      -> Success ();
                     default -> TestFail ()
         |]
-    , failPredicate = \stgState -> case stgCode stgState of
+    , forbiddenState = \stgState -> case stgCode stgState of
         Eval AppP{} _ -> True -- The point of the shortcut is to never reach
                               -- the AppP rule itself.
         _otherwise    -> False
@@ -446,7 +447,7 @@ primopShortcut_normalMatch = machineStateTest defSpec
                         3# -> Success ();
                         wrong -> TestFail (wrong)
         |]
-    , failPredicate = \stgState -> case stgCode stgState of
+    , forbiddenState = \stgState -> case stgCode stgState of
         Eval AppP{} _ -> True -- The point of the shortcut is to never reach
                               -- the AppP rule itself.
         _otherwise    -> False

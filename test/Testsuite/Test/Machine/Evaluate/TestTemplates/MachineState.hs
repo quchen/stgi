@@ -36,9 +36,13 @@ data MachineStateTestSpec = MachineStateTestSpec
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
-    , failPredicate        :: StgState -> Bool
+    , forbiddenState       :: StgState -> Bool
         -- ^ Fail if this predicate holds. This can be used to constrain the
         -- heap size during the test, for example.
+
+    , someStateSatisfies   :: StgState -> Bool
+        -- ^ Fail if this predicate held for no intermediate state. Useful to
+        -- check whether some rule applied, for example.
 
     , source               :: Program
         -- ^ STG program to run.
@@ -64,19 +68,22 @@ machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
                         (performGc testSpec)
                         program
     finalState = last states
-    test = case L.find (failPredicate testSpec) states of
+    test = case L.find (forbiddenState testSpec) states of
         Just bad -> (assertFailure . T.unpack . T.unlines)
             [ "Failure predicate held for an intemediate state"
             , if showFinalStateOnFail testSpec
                 then "Bad state:" <> prettyprintAnsi bad
                 else "Run test case with showFinalStateOnFail enabled\
                      \ to see the final state." ]
-        Nothing -> case stgInfo finalState of
-            Info HaltedByPredicate _ -> pure ()
-            _otherwise -> (assertFailure . T.unpack . T.unlines)
-                [ "STG failed to satisfy predicate: "
-                    <> prettyprintAnsi (stgInfo finalState)
-                , if showFinalStateOnFail testSpec
-                    then "Final state:" <>  prettyprintAnsi finalState
-                    else "Run test case with showFinalStateOnFail enabled\
-                         \ to see the final state." ]
+        Nothing -> case L.any (someStateSatisfies testSpec) states of
+            True -> case stgInfo finalState of
+                Info HaltedByPredicate _ -> pure ()
+                _otherwise -> (assertFailure . T.unpack . T.unlines)
+                    [ "STG failed to satisfy predicate: "
+                        <> prettyprintAnsi (stgInfo finalState)
+                    , if showFinalStateOnFail testSpec
+                        then "Final state:" <>  prettyprintAnsi finalState
+                        else "Run test case with showFinalStateOnFail enabled\
+                             \ to see the final state." ]
+            False -> (assertFailure . T.unpack)
+                "No intermediate state satisfied the required predicate."

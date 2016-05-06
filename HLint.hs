@@ -6,6 +6,7 @@ ignore "Avoid lambda"
 ignore "Eta reduce"
 ignore "Use camelCase"
 ignore "Use fromMaybe"
+ignore "Use if"
 
 -- AMP fallout
 error "generalize mapM"  = mapM  ==> traverse
