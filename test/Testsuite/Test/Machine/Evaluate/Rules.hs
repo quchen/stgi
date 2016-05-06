@@ -12,7 +12,9 @@ module Test.Machine.Evaluate.Rules (tests) where
 
 import           Test.Tasty
 
+import           Stg.Language
 import           Stg.Machine
+import           Stg.Machine.Types
 import           Stg.Parser
 
 import           Test.Machine.Evaluate.TestTemplates.MachineState
@@ -65,12 +67,20 @@ tests = testGroup "Rules"
             , greaterOrEqual
             , greater ]
         ]
+    , enterUpdatableClosure
+    , algebraicReturnUpdate
+    , missingArgsUpdate
+    , testGroup "Primitive case evaluation shortcuts"
+        [ primopShortcut_defaultBound
+        , primopShortcut_normalMatch ]
     ]
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
     { testName             = "Default small closure reduction test template"
     , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
+    , forbiddenState       = const False
+    , someStateSatisfies   = const True
     , source               = [stg| main = () \n () -> Success () |]
     , maxSteps             = 32
     , performGc            = PerformGc (const False)
@@ -412,3 +422,82 @@ greater = machineStateTest defSpec
                 v  -> TestFail (v);
             default -> Error ()
         |] }
+
+enterUpdatableClosure :: TestTree
+enterUpdatableClosure = machineStateTest defSpec
+    { testName = "Enter updatable closure (rule 15)"
+    , source = [stg|
+        main = () \u () -> case Unit () of
+            default -> Success ()
+        |]
+    , someStateSatisfies = \state -> case stgInfo state of
+        Info (StateTransition Enter_UpdatableClosure) _ -> True
+        _otherwise -> False
+    }
+
+algebraicReturnUpdate :: TestTree
+algebraicReturnUpdate = machineStateTest defSpec
+    { testName = "Update because of missing return frame (rule 16)"
+    , source = [stg|
+        main = () \u () -> case updateMe () of
+            default -> Success ();
+        updateMe = () \u () -> Unit ()
+        |]
+    , someStateSatisfies = \state -> case stgInfo state of
+        Info (StateTransition ReturnCon_Update) _ -> True
+        _otherwise -> False
+    }
+
+missingArgsUpdate :: TestTree
+missingArgsUpdate = machineStateTest defSpec
+    { testName = "Update because of missing argument frame (rule 17a)"
+    , source = [stgProgram|
+        main = () \u () ->
+            case flipTuple (1#,2#) of
+                Tuple (a,b) -> case a () of
+                    2# -> case b () of
+                        1# -> Success ();
+                        bad -> TestFail (bad);
+                    bad -> TestFail (bad);
+                badTuple -> Error_badTuple (badTuple);
+        tuple = () \n (x,y) -> Tuple (x,y);
+        flip = () \n (f, x, y) -> f (y, x);
+        flipTuple = () \u () -> flip (tuple)
+        |]
+    , someStateSatisfies = \state -> case stgInfo state of
+        Info (StateTransition Enter_PartiallyAppliedUpdate) _ -> True
+        _otherwise -> False
+    }
+
+primopShortcut_defaultBound :: TestTree
+primopShortcut_defaultBound = machineStateTest defSpec
+    { testName = "Default bound match shortcut (rule 18)"
+    , source = [stg|
+        main = () \u () -> case 1# of
+            v1 -> case 2# of
+                v2 -> case +# v1 v2 of
+                    3#      -> Success ();
+                    default -> TestFail ()
+        |]
+    , forbiddenState = \state -> case stgCode state of
+        Eval AppP{} _ -> True -- The point of the shortcut is to never reach
+                              -- the AppP rule itself.
+        _otherwise    -> False
+    }
+
+primopShortcut_normalMatch :: TestTree
+primopShortcut_normalMatch = machineStateTest defSpec
+    { testName = "Standard match shortcut (rule 19)"
+    , source = [stg|
+        main = () \u () -> case 1# of
+            v1 -> case 2# of
+                v2 -> case +# v1 v2 of
+                    v -> case v () of
+                        3# -> Success ();
+                        wrong -> TestFail (wrong)
+        |]
+    , forbiddenState = \state -> case stgCode state of
+        Eval AppP{} _ -> True -- The point of the shortcut is to never reach
+                              -- the AppP rule itself.
+        _otherwise    -> False
+    }

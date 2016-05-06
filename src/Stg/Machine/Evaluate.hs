@@ -108,7 +108,7 @@ stgRule s@StgState
     in s { stgCode  = Enter addr
          , stgStack = stack'
          , stgInfo  = Info
-             (StateTransiton Eval_FunctionApplication)
+             (StateTransition Eval_FunctionApplication)
              (mconcat [ InfoDetail.appF f xs
                       , InfoDetail.unusedLocals (f : [ var | AtomVar var <- xs ]) locals ])}
 
@@ -130,7 +130,7 @@ stgRule s@StgState
 
     in s { stgCode  = Eval body locals
          , stgStack = stack'
-         , stgInfo  = Info (StateTransiton Enter_NonUpdatableClosure)
+         , stgInfo  = Info (StateTransition Enter_NonUpdatableClosure)
                            (InfoDetail.enterNonUpdatable addr args) }
 
 
@@ -158,7 +158,7 @@ stgRule s@StgState
         Success (locals', addrs, heap') ->
             s { stgCode = Eval expr locals'
               , stgHeap = heap'
-              , stgInfo = Info (StateTransiton (Eval_Let rec))
+              , stgInfo = Info (StateTransition (Eval_Let rec))
                                (InfoDetail.evalLet vars addrs) }
         Failure (NotInScope notInScope) ->
             s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
@@ -198,7 +198,7 @@ stgRule s@StgState
   = let locals' = addLocals [(pat, PrimInt opXY)] locals
 
     in s { stgCode = Eval expr locals'
-         , stgInfo = Info (StateTransiton Eval_Case_Primop_DefaultBound) [] }
+         , stgInfo = Info (StateTransition Eval_Case_Primop_DefaultBound) [] }
 
 
 
@@ -212,7 +212,7 @@ stgRule s@StgState
     , Right (PrimitiveAlt _opXY expr) <- lookupPrimitiveAlt alts (Literal opXY)
 
   = s { stgCode = Eval expr locals
-      , stgInfo = Info (StateTransiton Eval_Case_Primop_Normal) [] }
+      , stgInfo = Info (StateTransition Eval_Case_Primop_Normal) [] }
 
 
 
@@ -225,7 +225,7 @@ stgRule s@StgState
 
     in s { stgCode  = Eval expr locals
          , stgStack = stack'
-         , stgInfo  = Info (StateTransiton Eval_Case)
+         , stgInfo  = Info (StateTransition Eval_Case)
                            InfoDetail.evalCase }
 
 
@@ -238,7 +238,7 @@ stgRule s@StgState
 
   = s { stgCode = ReturnCon con valsXs
       , stgInfo = Info
-          (StateTransiton Eval_AppC)
+          (StateTransition Eval_AppC)
           (InfoDetail.unusedLocals [ var | AtomVar var <- xs ] locals) }
 
 
@@ -253,7 +253,7 @@ stgRule s@StgState
 
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
-         , stgInfo  = Info (StateTransiton ReturnCon_Match) [] }
+         , stgInfo  = Info (StateTransition ReturnCon_Match) [] }
 
 
 
@@ -265,7 +265,7 @@ stgRule s@StgState
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
-      , stgInfo  = Info (StateTransiton ReturnCon_DefUnbound) [] }
+      , stgInfo  = Info (StateTransition ReturnCon_DefUnbound) [] }
 
 
 
@@ -285,14 +285,14 @@ stgRule s@StgState
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
          , stgHeap  = heap'
-         , stgInfo  = Info (StateTransiton ReturnCon_DefBound) [] }
+         , stgInfo  = Info (StateTransition ReturnCon_DefBound) [] }
 
 
 
 -- (9) Literal evaluation
 stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = s { stgCode = ReturnInt k
-      , stgInfo = Info (StateTransiton Eval_Lit) [] }
+      , stgInfo = Info (StateTransition Eval_Lit) [] }
 
 
 
@@ -301,7 +301,7 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
     | Success (PrimInt k) <- val locals mempty (AtomVar f)
 
   = s { stgCode = ReturnInt k
-      , stgInfo = Info (StateTransiton Eval_LitApp)
+      , stgInfo = Info (StateTransition Eval_LitApp)
                        (InfoDetail.unusedLocals [f] locals)}
 
 
@@ -314,7 +314,7 @@ stgRule s@StgState
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
-      , stgInfo  = Info (StateTransiton ReturnInt_Match) [] }
+      , stgInfo  = Info (StateTransition ReturnInt_Match) [] }
 
 
 
@@ -328,7 +328,7 @@ stgRule s@StgState
 
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
-         , stgInfo  = Info (StateTransiton ReturnInt_DefBound) [] }
+         , stgInfo  = Info (StateTransition ReturnInt_DefBound) [] }
 
 
 
@@ -340,7 +340,7 @@ stgRule s@StgState
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
-      , stgInfo  = Info (StateTransiton ReturnInt_DefUnbound) [] }
+      , stgInfo  = Info (StateTransition ReturnInt_DefUnbound) [] }
 
 
 
@@ -351,7 +351,7 @@ stgRule s@StgState
     , Success (PrimInt yVal) <- localVal locals y
 
   = s { stgCode = ReturnInt (applyPrimOp op xVal yVal)
-      , stgInfo = Info (StateTransiton Eval_AppP)
+      , stgInfo = Info (StateTransition Eval_AppP)
                        (InfoDetail.unusedLocals [x,y] locals) }
 
 
@@ -368,7 +368,7 @@ stgRule s@StgState
 
     in s { stgCode  = Eval body locals
          , stgStack = stack'
-         , stgInfo  = Info (StateTransiton Enter_UpdatableClosure)
+         , stgInfo  = Info (StateTransition Enter_UpdatableClosure)
                            (InfoDetail.enterUpdatable addr) }
 
 
@@ -388,7 +388,7 @@ stgRule s@StgState
     in s { stgCode  = ReturnCon con ws
          , stgStack = stack'
          , stgHeap  = heap'
-         , stgInfo  = Info (StateTransiton ReturnCon_Update)
+         , stgInfo  = Info (StateTransition ReturnCon_Update)
                            (InfoDetail.conUpdate con addr) }
 
 
@@ -414,9 +414,10 @@ stgRule s@StgState
         heap' = H.update addrUpdate updatedClosure heap
 
     in s { stgCode  = Enter addrEnter
-         , stgStack = stack'
+         , stgStack = argFrames <>> stack'
          , stgHeap  = heap'
-         , stgInfo  = Info (StateTransiton Enter_PartiallyAppliedUpdate) [] }
+         , stgInfo  = Info (StateTransition Enter_PartiallyAppliedUpdate)
+                           (InfoDetail.papUpdate addrUpdate) }
 
   where
 

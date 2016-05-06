@@ -61,7 +61,7 @@ instance Arbitrary InfoShort where
     arbitrary = oneof [ pure NoRulesApply
                       , pure MaxStepsExceeded
                       , pure HaltedByPredicate
-                      , arbitrary1 StateTransiton
+                      , arbitrary1 StateTransition
                       , arbitrary1 StateError
                       , pure StateInitial ]
 

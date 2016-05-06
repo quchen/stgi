@@ -12,6 +12,7 @@ import           Data.Text                                            (Text)
 
 import           Stg.Language
 import qualified Stg.Language.Prelude                                 as Stg
+import           Stg.Machine.Types
 import           Stg.Parser
 
 import           Test.Machine.Evaluate.TestTemplates.HaskellReference
@@ -38,6 +39,7 @@ stgFilter = haskellReferenceTest HaskellReferenceTestSpec
     , maxSteps = 1024
     , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , failPredicate = const False
     , source = \xs ->
            Stg.listOfNumbers "inputList" xs
         <> Stg.listOfNumbers "expectedResult" (filter (> 0) xs)
@@ -62,6 +64,7 @@ stgSort = haskellReferenceTest HaskellReferenceTestSpec
     , maxSteps = 1024
     , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , failPredicate = const False
     , source = \xs ->
            Stg.listOfNumbers "inputList" xs
         <> Stg.listOfNumbers "expectedResult" (L.sort xs)
@@ -82,6 +85,7 @@ stgMap = haskellReferenceTest HaskellReferenceTestSpec
     , maxSteps = 1024
     , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , failPredicate = const False
     , source = \(xs, offset) ->
            Stg.add
         <> Stg.map
@@ -106,6 +110,7 @@ stgZipWith = haskellReferenceTest HaskellReferenceTestSpec
     , maxSteps = 1024
     , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , failPredicate = const False
     , source = \(list1, list2) ->
            Stg.equals_List_Int
         <> Stg.listOfNumbers "list1" list1
@@ -128,14 +133,17 @@ foldrSum  = foldSumTemplate
     "foldr"
     foldr
     (Stg.foldr <> [stg| fold = () \n () -> foldr  () |])
+    (const False)
 foldlSum  = foldSumTemplate
     "foldl"
     foldl
     (Stg.foldl <> [stg| fold = () \n () -> foldl  () |])
+    (const False)
 foldl'Sum = foldSumTemplate
     "foldl'"
     L.foldl'
     (Stg.foldl' <> [stg| fold = () \n () -> foldl' () |])
+    (\stgState -> length (stgStack stgState) >= 8) -- Stack should stay small!
 
 foldSumTemplate
     :: Text
@@ -148,12 +156,17 @@ foldSumTemplate
         -- ^ STG Program with binding associating "fold" with the desired fold
         -- function, e.g. foldr
 
+    -> (StgState -> Bool)
+        -- ^ Failure predicate; useful in foldl' to check bounded stack size
+
     -> TestTree
-foldSumTemplate foldName foldF foldStg = haskellReferenceTest HaskellReferenceTestSpec
+foldSumTemplate foldName foldF foldStg failP
+  = haskellReferenceTest HaskellReferenceTestSpec
     { testName = foldName
     , maxSteps = 1024
     , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , failPredicate = failP
     , source = \(z, xs) ->
            foldStg
         <> Stg.add

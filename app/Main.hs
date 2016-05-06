@@ -27,19 +27,19 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog = Stg.foldl'
-            <> Stg.add
-            <> Stg.int "zero" 0
-            <> Stg.eq
-            <> Stg.listOfNumbers "list" [1..5]
-            <> Stg.int "expected" (sum [1..5])
-            <> [stgProgram|
-        sum = () \n (xs) -> foldl' (add, zero, xs);
+    let prog = [stgProgram|
         main = () \u () ->
-            let actual = () \u () -> sum (list)
-            in case eq_Int (actual, expected) of
-                True () -> Success ();
-                default -> TestFail ()
+            case flipTuple1 (2#) of
+                Tuple (a,b) -> case a () of
+                    2# -> case b () of
+                        Unit () -> Success ();
+                        badUnit -> Error_badUnit (badUnit);
+                    bad -> TestFail (bad);
+                badTuple -> Error_badTuple (badTuple);
+        tuple = () \n (x,y) -> Tuple (x,y);
+        flip = () \n (f, x, y) -> f (y, x);
+        flipTuple1 = () \u () -> flip (tuple, unit);
+        unit = () \n () -> Unit ()
         |]
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True
