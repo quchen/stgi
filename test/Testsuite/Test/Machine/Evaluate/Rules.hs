@@ -23,6 +23,15 @@ import           Test.Orphans                                     ()
 tests :: TestTree
 tests = testGroup "Rules"
     [ functionApplication
+    , testGroup "Let (rule 3)"
+        [ testGroup "Non-recursive"
+            [ letBinding
+            , letMultiBinding
+            , letNestedBinding ]
+        , testGroup "Recursive"
+            [ letrecBinding
+            , letrecMultiBinding ]
+        ]
     , testGroup "Case evaluation (rule 4)"
         [ testGroup "Default-only"
             [ defaultOnlyCase_unboundAlgebraic
@@ -38,15 +47,8 @@ tests = testGroup "Rules"
             , primitiveCase_defaultUnboundMatch
             , primitiveCase_defaultBoundMatch ]
         ]
-    , testGroup "Let (rule 3)"
-        [ testGroup "Non-recursive"
-            [ letBinding
-            , letMultiBinding
-            , letNestedBinding ]
-        , testGroup "Recursive"
-            [ letrecBinding
-            , letrecMultiBinding ]
-        ]
+    , literalEvaluation
+    , literalApplication
     , testGroup "Primitive functions (rule 14)"
         [ testGroup "Integer arithmetic"
             [ addition
@@ -82,6 +84,68 @@ functionApplication = machineStateTest defSpec
             default -> TestFail ();
         id = () \n (x) -> x ();
         unit = () \n () -> Unit ()
+        |] }
+
+letBinding :: TestTree
+letBinding = machineStateTest defSpec
+    { testName = "Single binding"
+    , source = [stg|
+        main = () \u () -> let x = () \n () -> Success ()
+                           in x ()
+        |] }
+
+letMultiBinding :: TestTree
+letMultiBinding = machineStateTest defSpec
+    { testName = "Multiple bindings"
+    , source = [stg|
+        main = () \u () ->
+            let id = () \n (x) -> x ();
+                one = () \n () -> Int# (1#)
+            in case id (one) of
+                Int# (y) -> case y () of
+                    1# -> Success ();
+                    wrong -> TestFail (wrong);
+                default -> Error ()
+        |] }
+
+letNestedBinding :: TestTree
+letNestedBinding = machineStateTest defSpec
+    { testName = "Nested bindings"
+    , source = [stg|
+        main = () \u () ->
+            let id = () \n (x) -> x ();
+                one = () \n () -> Int# (1#)
+            in let idOne = (id, one) \n () -> case id (one) of
+                          v -> v ()
+               in case idOne () of
+                   Int# (y) -> case y () of
+                       1# -> Success ();
+                       wrong -> TestFail (wrong);
+                   default -> Error ()
+        |] }
+
+letrecBinding :: TestTree
+letrecBinding = machineStateTest defSpec
+    { testName = "Single binding"
+    , source = [stg|
+        main = () \u () -> letrec x = () \n () -> Success ()
+                           in x ()
+        |] }
+
+letrecMultiBinding :: TestTree
+letrecMultiBinding = machineStateTest defSpec
+    { testName = "Cross-referencing bindings"
+    , source = [stg|
+        main = () \u () ->
+            letrec id = () \n (x) -> x ();
+                   idOne = (id, one) \n () -> case id (one) of
+                       v -> v ();
+                   one = () \n () -> Int# (1#)
+            in case idOne () of
+                Int# (y) -> case y () of
+                    1# -> Success ();
+                    default -> TestFail ();
+                default -> Error ()
         |] }
 
 defaultOnlyCase_unboundAlgebraic :: TestTree
@@ -176,65 +240,23 @@ primitiveCase_defaultBoundMatch = machineStateTest defSpec
             x    -> Success ()
         |] }
 
-letBinding :: TestTree
-letBinding = machineStateTest defSpec
-    { testName = "Single binding"
+literalEvaluation :: TestTree
+literalEvaluation = machineStateTest defSpec
+    { testName = "Literal evaluation (rule 9)"
     , source = [stg|
-        main = () \u () -> let x = () \n () -> Success ()
-                           in x ()
+        main = () \u () -> case 1# of
+            1# -> Success ();
+            x  -> TestFail (x)
         |] }
 
-letMultiBinding :: TestTree
-letMultiBinding = machineStateTest defSpec
-    { testName = "Multiple bindings"
+literalApplication :: TestTree
+literalApplication = machineStateTest defSpec
+    { testName = "Literal application (rule 10)"
     , source = [stg|
-        main = () \u () ->
-            let id = () \n (x) -> x ();
-                one = () \n () -> Int# (1#)
-            in case id (one) of
-                Int# (y) -> case y () of
-                    1# -> Success ();
-                    wrong -> TestFail (wrong);
-                default -> Error ()
-        |] }
-
-letNestedBinding :: TestTree
-letNestedBinding = machineStateTest defSpec
-    { testName = "Nested bindings"
-    , source = [stg|
-        main = () \u () ->
-            let id = () \n (x) -> x ();
-                one = () \n () -> Int# (1#)
-            in let idOne = (id, one) \n () -> case id (one) of
-                          v -> v ()
-               in case idOne () of
-                   Int# (y) -> case y () of
-                       1# -> Success ();
-                       wrong -> TestFail (wrong);
-                   default -> Error ()
-        |] }
-
-letrecBinding :: TestTree
-letrecBinding = machineStateTest defSpec
-    { testName = "Single binding"
-    , source = [stg|
-        main = () \u () -> letrec x = () \n () -> Success ()
-                           in x ()
-        |] }
-
-letrecMultiBinding :: TestTree
-letrecMultiBinding = machineStateTest defSpec
-    { testName = "Cross-referencing bindings"
-    , source = [stg|
-        main = () \u () -> letrec id = () \n (x) -> x ();
-                                  idOne = (id, one) \n () -> case id (one) of
-                                      v -> v ();
-                                  one = () \n () -> Int# (1#)
-                           in case idOne () of
-                               Int# (y) -> case y () of
-                                   1# -> Success ();
-                                   default -> TestFail ();
-                               default -> Error ()
+        main = () \u () -> case 1# of
+            v1 -> case v1 () of
+                1# -> Success ();
+                x  -> TestFail (x)
         |] }
 
 addition :: TestTree
