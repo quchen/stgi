@@ -68,6 +68,7 @@ tests = testGroup "Rules"
             , greater ]
         ]
     , enterUpdatableClosure
+    , algebraicReturnUpdate
     , testGroup "Primitive case evaluation shortcuts"
         [ primopShortcut_defaultBound
         , primopShortcut_normalMatch ]
@@ -430,6 +431,19 @@ enterUpdatableClosure = machineStateTest defSpec
         |]
     , someStateSatisfies = \state -> case stgInfo state of
         Info (StateTransition Enter_UpdatableClosure) _ -> True
+        _otherwise -> False
+    }
+
+algebraicReturnUpdate :: TestTree
+algebraicReturnUpdate = machineStateTest defSpec
+    { testName = "Update because of missing return frame (rule 16)"
+    , source = [stg|
+        main = () \u () -> case updateMe () of
+            default -> Success ();
+        updateMe = () \u () -> Unit ()
+        |]
+    , someStateSatisfies = \state -> case stgInfo state of
+        Info (StateTransition ReturnCon_Update) _ -> True
         _otherwise -> False
     }
 
