@@ -19,10 +19,16 @@ module Stg.Language.Prelude (
     replicate,
     sort,
     map,
-    equals_List_Int,
     length,
     zip,
     zipWith,
+
+    -- * Tuples
+    fst,
+    snd,
+    curry,
+    uncurry,
+    swap,
 
     -- * Boolean
     and2,
@@ -31,6 +37,9 @@ module Stg.Language.Prelude (
 
     -- ** Convenience
     listOfNumbers,
+    equals_List_Int,
+    tupleOfNumbers,
+    equals_Tuple_Int,
 
     -- * Numbers
     -- ** Convenience
@@ -65,3 +74,4 @@ import           Stg.Language.Prelude.Bool
 import           Stg.Language.Prelude.Function
 import           Stg.Language.Prelude.List
 import           Stg.Language.Prelude.Number
+import           Stg.Language.Prelude.Tuple

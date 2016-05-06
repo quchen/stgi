@@ -16,6 +16,7 @@ import           System.Console.ANSI      (hSupportsANSI)
 import           System.IO                (stdout)
 
 import           Stg.Language
+import qualified Stg.Language.Prelude     as Stg
 import           Stg.Language.Prettyprint
 import           Stg.Machine
 import           Stg.Machine.Types
@@ -26,7 +27,19 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog = [stg| main = () \n () -> main () |]
+    let tuple = (1,2)
+        prog = Stg.tupleOfNumbers "tuple" tuple
+         <> Stg.int "expectedResult" (snd tuple)
+         <> Stg.snd
+         <> Stg.eq
+         <> [stgProgram|
+
+         main = () \u () ->
+             let actualSnd = () \n () -> snd (tuple)
+             in case eq_Int (expectedResult, actualSnd) of
+                 True () -> Success ();
+                 wrong   -> TestFail (wrong)
+         |]
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True
         then runStg prettyprintAnsi prog

@@ -23,6 +23,7 @@ library
                      , Stg.Language.Prelude.Function
                      , Stg.Language.Prelude.List
                      , Stg.Language.Prelude.Number
+                     , Stg.Language.Prelude.Tuple
                      , Stg.Language.Prettyprint
                      , Stg.Language.Prettyprint.Ansi
                      , Stg.Language.Prettyprint.ParserInverse
@@ -73,6 +74,7 @@ test-suite stg-test
                      , Test.Language.Prelude.Function
                      , Test.Language.Prelude.List
                      , Test.Language.Prelude.Number
+                     , Test.Language.Prelude.Tuple
                      , Test.Language.Prettyprint
                      , Test.Language.Prettyprint.Ansi
                      , Test.Language.Prettyprint.ParserInverse
