@@ -400,12 +400,11 @@ instance Exts.IsList InfoDetail where
 instance Pretty InfoDetail where
     pretty (InfoDetail entries) = case entries of
         [] -> mempty
-        es -> let -- TODO: rewrite this crap code
-                  worded = map T.words es
-                  concatted = map (hsep . map (text . T.unpack)) worded
-                  bulleted = map ("  -" <+>) concatted
-                  listed = align (vsep bulleted)
-              in listed
+        es -> let bulletPrefixes = map ("  -" <+>)
+                  prettyWords = hsep . map (text . T.unpack) . T.words
+              in (align . vsep . bulletPrefixes . map prettyWords) es
+
+
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]

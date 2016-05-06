@@ -2,8 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
--- TODO: list equality
-
 module Stg.Language.Prelude.List (
     nil,
     concat2,
@@ -222,8 +220,6 @@ sort = mconcat [leq, gt, filter, concat2] <> [stgProgram|
                 in concat2 (beforePivotSorted, fromPivotOn);
         badList -> Error_sort (badList)
     |]
-
--- TODO: list :: [a] -> Program
 
 -- | Apply a function to each element of a list.
 --
