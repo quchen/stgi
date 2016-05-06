@@ -22,7 +22,7 @@ import           Test.Orphans                                     ()
 
 tests :: TestTree
 tests = testGroup "Rules"
-    [ functionApplication
+    [ nonUpdatableFunctionApplication
     , testGroup "Let (rule 3)"
         [ testGroup "Non-recursive"
             [ letBinding
@@ -47,6 +47,7 @@ tests = testGroup "Rules"
             , primitiveCase_defaultUnboundMatch
             , primitiveCase_defaultBoundMatch ]
         ]
+    , constructorApplication
     , literalEvaluation
     , literalApplication
     , testGroup "Primitive functions (rule 14)"
@@ -75,9 +76,9 @@ defSpec = MachineStateTestSpec
     , performGc            = PerformGc (const False)
     , showFinalStateOnFail = False }
 
-functionApplication :: TestTree
-functionApplication = machineStateTest defSpec
-    { testName = "Function application (rule 1)"
+nonUpdatableFunctionApplication :: TestTree
+nonUpdatableFunctionApplication = machineStateTest defSpec
+    { testName = "Function application, enter non-updatable closure (rule 1 and 2)"
     , source = [stg|
         main = () \u () -> case id (unit) of
             Unit () -> Success ();
@@ -239,6 +240,15 @@ primitiveCase_defaultBoundMatch = machineStateTest defSpec
             123# -> TestFail ();
             -1#  -> TestFail ();
             x    -> Success ()
+        |] }
+
+constructorApplication :: TestTree
+constructorApplication = machineStateTest defSpec
+    { testName = "Constructor application (rule 5)"
+    , source = [stg|
+        main = () \u () -> case Just (1#) of
+            Just (v) -> Success ();
+            x        -> TestFail (x)
         |] }
 
 literalEvaluation :: TestTree
