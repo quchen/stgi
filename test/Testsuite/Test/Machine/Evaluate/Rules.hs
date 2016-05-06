@@ -2,11 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
--- | Tests of small size, defined by terminating within a certain number of
--- steps (configured in 'defSpec').
---
--- These tests will be run without garbage collection.
-module Test.Machine.Evaluate.Small (tests) where
+-- | Tests for each of the STG rules. The scope should be as small as possible
+-- around the actual test subject as possible. (To test return-after-case
+-- you have to combine case evaluation and return handling, but you do not
+-- have to introduce new bindings with @let@, for example.)
+module Test.Machine.Evaluate.Rules (tests) where
 
 
 
@@ -21,10 +21,9 @@ import           Test.Orphans                                     ()
 
 
 tests :: TestTree
-tests = testGroup "Small, no GC"
-    [ testGroup "Function application"
-        [ funcapp_simple ]
-    , testGroup "Case"
+tests = testGroup "Rules"
+    [ functionApplication
+    , testGroup "Case evaluation (rule 4)"
         [ testGroup "Default-only"
             [ defaultOnlyCase_unboundAlgebraic
             , defaultOnlyCase_boundAlgebraic
@@ -39,7 +38,7 @@ tests = testGroup "Small, no GC"
             , primitiveCase_defaultUnboundMatch
             , primitiveCase_defaultBoundMatch ]
         ]
-    , testGroup "Let"
+    , testGroup "Let (rule 3)"
         [ testGroup "Non-recursive"
             [ letBinding
             , letMultiBinding
@@ -48,7 +47,7 @@ tests = testGroup "Small, no GC"
             [ letrecBinding
             , letrecMultiBinding ]
         ]
-    , testGroup "Primitive functions"
+    , testGroup "Primitive functions (rule 14)"
         [ testGroup "Integer arithmetic"
             [ addition
             , subtraction
@@ -74,9 +73,9 @@ defSpec = MachineStateTestSpec
     , performGc            = PerformGc (const False)
     , showFinalStateOnFail = False }
 
-funcapp_simple :: TestTree
-funcapp_simple = machineStateTest defSpec
-    { testName = "Simple function application"
+functionApplication :: TestTree
+functionApplication = machineStateTest defSpec
+    { testName = "Function application (rule 1)"
     , source = [stg|
         main = () \u () -> case id (unit) of
             Unit () -> Success ();
@@ -87,7 +86,7 @@ funcapp_simple = machineStateTest defSpec
 
 defaultOnlyCase_unboundAlgebraic :: TestTree
 defaultOnlyCase_unboundAlgebraic = machineStateTest defSpec
-    { testName = "Unbound, algebraic scrutinee"
+    { testName = "Unbound, algebraic scrutinee (rule 7)"
     , source = [stg|
         main = () \u () -> case x () of
             default -> x ();
@@ -96,7 +95,7 @@ defaultOnlyCase_unboundAlgebraic = machineStateTest defSpec
 
 defaultOnlyCase_boundAlgebraic :: TestTree
 defaultOnlyCase_boundAlgebraic = machineStateTest defSpec
-    { testName = "Bound, algebraic scrutinee"
+    { testName = "Bound, algebraic scrutinee (rule 8)"
     , source = [stg|
         main = () \u () -> case x () of
             x -> x ();
@@ -105,7 +104,7 @@ defaultOnlyCase_boundAlgebraic = machineStateTest defSpec
 
 defaultOnlyCase_unboundPrimitive :: TestTree
 defaultOnlyCase_unboundPrimitive = machineStateTest defSpec
-    { testName = "Unbound, primitive scrutinee"
+    { testName = "Unbound, primitive scrutinee (rule 13)"
     , source = [stgProgram|
         main = () \u () -> case 1# of
             default -> Success ()
@@ -113,7 +112,7 @@ defaultOnlyCase_unboundPrimitive = machineStateTest defSpec
 
 defaultOnlyCase_boundPrimitive :: TestTree
 defaultOnlyCase_boundPrimitive = machineStateTest defSpec
-    { testName = "Bound, primitive scrutinee"
+    { testName = "Bound, primitive scrutinee (rule 12)"
     , source = [stg|
         main = () \u () -> case 1# of
             x -> Success ()
@@ -121,7 +120,7 @@ defaultOnlyCase_boundPrimitive = machineStateTest defSpec
 
 algebraicCase_normalMatch :: TestTree
 algebraicCase_normalMatch = machineStateTest defSpec
-    { testName = "Successful"
+    { testName = "Algebraic, normal match (rule 6)"
     , source = [stg|
         main = () \u () -> case Nothing () of
             Nothing () -> Success ();
@@ -130,7 +129,7 @@ algebraicCase_normalMatch = machineStateTest defSpec
 
 algebraicCase_defaultUnboundMatch :: TestTree
 algebraicCase_defaultUnboundMatch = machineStateTest defSpec
-    { testName = "Unbound default"
+    { testName = "Algebraic, unbound default match (rule 7)"
     , source = [stg|
         main = () \u () -> case Nothing () of
             Just (x) -> TestFail (x);
@@ -139,17 +138,17 @@ algebraicCase_defaultUnboundMatch = machineStateTest defSpec
 
 algebraicCase_defaultBoundMatch :: TestTree
 algebraicCase_defaultBoundMatch = machineStateTest defSpec
-    { testName = "Bound default"
+    { testName = "Algebraic, bound default match (rule 8)"
     , source = [stg|
         main = () \u () -> case Nothing () of
             Just (x) -> TestFail ();
-            v -> Success ()
+            v        -> Success ()
 
         |] }
 
 primitiveCase_normalMatch :: TestTree
 primitiveCase_normalMatch = machineStateTest defSpec
-    { testName = "Successful"
+    { testName = "Primitive, normal match (rule 11)"
     , source = [stg|
         main = () \u () -> case 1# of
             1#      -> Success ();
@@ -158,7 +157,7 @@ primitiveCase_normalMatch = machineStateTest defSpec
 
 primitiveCase_defaultUnboundMatch :: TestTree
 primitiveCase_defaultUnboundMatch = machineStateTest defSpec
-    { testName = "Unbound default"
+    { testName = "Primitive, unbound default match (rule 13)"
     , source = [stg|
         main = () \u () -> case 1# of
             0#      -> TestFail ();
@@ -168,7 +167,7 @@ primitiveCase_defaultUnboundMatch = machineStateTest defSpec
 
 primitiveCase_defaultBoundMatch :: TestTree
 primitiveCase_defaultBoundMatch = machineStateTest defSpec
-    { testName = "Bound default"
+    { testName = "Primitive, unbound default match (rule 12)"
     , source = [stg|
         main = () \u () -> case 1# of
             0#   -> TestFail ();

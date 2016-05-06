@@ -306,7 +306,7 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
 
 
 
--- (11) Primitive constructor return, standard match found
+-- (11) Primitive return, standard match found
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
@@ -318,7 +318,7 @@ stgRule s@StgState
 
 
 
--- (12) Primitive constructor return, bound default match
+-- (12) Primitive return, bound default match
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
@@ -332,7 +332,7 @@ stgRule s@StgState
 
 
 
--- (13) Primitive constructor return, unbound default match
+-- (13) Primitive return, unbound default match
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
