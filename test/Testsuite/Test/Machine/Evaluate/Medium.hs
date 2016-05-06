@@ -14,36 +14,32 @@ module Test.Machine.Evaluate.Medium (tests) where
 import           Data.Monoid
 import           Test.Tasty
 
-import qualified Stg.Language.Prelude                       as Stg
+import qualified Stg.Language.Prelude                             as Stg
 import           Stg.Machine
 import           Stg.Parser
 
-import           Test.Machine.Evaluate.ClosureReductionTest
-import           Test.Orphans                               ()
+import           Test.Machine.Evaluate.TestTemplates.MachineState
+import           Test.Orphans                                     ()
 
 
 
 tests :: TestTree
 tests = testGroup "Medium-sized, with GC"
-    [ program_add3
-    , program_foldrSum
-    , program_takeRepeat
-    , program_map
-    , program_filter
-    , program_sort
-    , program_zipWith
-    , program_fibonacci ]
+    [ add3
+    , takeRepeat
+    , fibonacci ]
 
-defSpec :: ClosureReductionSpec
-defSpec = ClosureReductionSpec
-    { testName         = "Default medium closure reduction test template"
-    , successPredicate = "main" ==> [stg| () \n () -> Success () |]
-    , source           = [stg| main = () \n () -> Success () |]
-    , maxSteps         = 1024
-    , performGc        = PerformGc (const True) }
+defSpec :: MachineStateTestSpec
+defSpec = MachineStateTestSpec
+    { testName             = "Default medium closure reduction test template"
+    , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
+    , source               = [stg| main = () \n () -> Success () |]
+    , maxSteps             = 1024
+    , performGc            = PerformGc (const True)
+    , showFinalStateOnFail = False}
 
-program_add3 :: TestTree
-program_add3 = closureReductionTest defSpec
+add3 :: TestTree
+add3 = machineStateTest defSpec
     { testName = "add3(x,y,z) = x+y+z"
     , source = [stgProgram|
         add3 = () \n (x,y,z) -> case x () of
@@ -66,26 +62,8 @@ program_add3 = closureReductionTest defSpec
             default -> Error ()
         |] }
 
-program_foldrSum :: TestTree
-program_foldrSum = closureReductionTest defSpec
-    { testName = "Sum of list via foldr"
-    , source = Stg.foldr
-            <> Stg.add
-            <> Stg.int "zero" 0
-            <> Stg.eq
-            <> Stg.listOfNumbers "list" [1..5]
-            <> Stg.int "expected" (sum [1..5])
-            <> [stgProgram|
-        sum = () \n (xs) -> foldr (add, zero, xs);
-        main = () \u () ->
-            let actual = () \u () -> sum (list)
-            in case eq_Int (actual, expected) of
-                True () -> Success ();
-                default -> TestFail ()
-        |] }
-
-program_takeRepeat :: TestTree
-program_takeRepeat = closureReductionTest defSpec
+takeRepeat :: TestTree
+takeRepeat = machineStateTest defSpec
     { testName = "take 2 (repeat ())"
     , source = Stg.int "two" 2
             <> Stg.take
@@ -113,87 +91,8 @@ program_takeRepeat = closureReductionTest defSpec
             default -> TestFailure ()
         |] }
 
-program_map :: TestTree
-program_map = closureReductionTest defSpec
-    { testName = "map (+1) [1,2,3]"
-    , source = Stg.add
-            <> Stg.map
-            <> Stg.listOfNumbers "inputList" [1,2,3]
-            <> Stg.listOfNumbers "expectedResult" (map (+1) [1,2,3])
-            <> Stg.equals_List_Int
-            <> [stgProgram|
-
-        main = () \u () ->
-            letrec  plusOne = () \u () ->
-                        letrec  one = () \n () -> Int# (1#);
-                                plusOne' = (one) \n (n) -> add (n, one)
-                        in plusOne' ();
-                    actual = (plusOne) \u () -> map (plusOne, inputList)
-            in case equals_List_Int (actual, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_filter :: TestTree
-program_filter = closureReductionTest defSpec
-    { testName = "filter list"
-    , source = Stg.listOfNumbers "inputList" [1,-1,2,-2,-3,3]
-            <> Stg.listOfNumbers "expectedResult" (filter (> 0) [1,-1,2,-2,-3,3])
-            <> Stg.int "zero" 0
-            <> Stg.gt
-            <> Stg.equals_List_Int
-            <> Stg.filter
-            <> [stgProgram|
-
-        main = () \u () ->
-            letrec  positive = () \n (x) -> gt_Int (x, zero);
-                    filtered = (positive) \n () -> filter (positive, inputList)
-            in case equals_List_Int (expectedResult, filtered) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_sort :: TestTree
-program_sort = closureReductionTest defSpec
-    { testName = "sort"
-    , source = Stg.listOfNumbers "inputList" [3,1,2,4]
-            <> Stg.listOfNumbers "expectedResult" [1,2,3,4]
-            <> Stg.equals_List_Int
-            <> Stg.sort
-            <> [stgProgram|
-
-        main = () \u () ->
-            let sorted = () \u () -> sort (inputList)
-            in case equals_List_Int (expectedResult, sorted) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_zipWith :: TestTree
-program_zipWith = closureReductionTest defSpec
-    { testName = "zipWith (+)"
-    , source = Stg.equals_List_Int
-            <> Stg.listOfNumbers "list1" list1
-            <> Stg.listOfNumbers "list2" list2
-            <> Stg.listOfNumbers "expectedZipped" zipped
-            <> Stg.add
-            <> Stg.zipWith
-            <> [stgProgram|
-
-        main = () \u () ->
-            let zipped = () \n () -> zipWith (add, list1, list2)
-            in case equals_List_Int (zipped, expectedZipped) of
-                True ()  -> Success ();
-                False () -> TestFail ();
-                err      -> Error_badBool (err)
-        |] }
-  where
-    list1 = [1, 2, 3, 4, 5]
-    list2 = [10, 20, 30]
-    zipped = zipWith (+) list1 list2
-
-program_fibonacci :: TestTree
-program_fibonacci = closureReductionTest defSpec
+fibonacci :: TestTree
+fibonacci = machineStateTest defSpec
     { testName = "Fibonacci sequence"
     , source = Stg.equals_List_Int
             <> Stg.int "zero" 0
