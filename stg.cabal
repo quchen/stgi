@@ -3,7 +3,7 @@ version:             0.1.0.0
 synopsis:            Educational implementation of the STG (Spineless Gagless
                      G-machine)
 description:         See README.md
-homepage:            http://github.com/githubuser/stg#readme
+homepage:            https://github.com/quchen/stg#readme
 license:             BSD3
 license-file:        LICENSE.md
 author:              David Luposchainsky <dluposchainsky (λ) gmail (dot) com>
@@ -119,4 +119,4 @@ test-suite doctest
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/stg
+  location: https://github.com/quchen/stg
