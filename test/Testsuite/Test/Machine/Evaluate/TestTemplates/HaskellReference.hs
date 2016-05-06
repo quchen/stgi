@@ -74,7 +74,7 @@ haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test
                 , "Failure because: "
                     <> prettyprintAnsi (stgInfo finalState)
                 , if showFinalStateOnFail testSpec
-                    then "Final state:" <>  prettyprintAnsi finalState
+                    then T.unlines ["Final state:", prettyprintAnsi finalState]
                     else "Run test case with showFinalStateOnFail\
                          \ to see the final state." ]
             failurePredicateTrueText bad = (T.unpack . T.unlines)

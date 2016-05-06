@@ -5,6 +5,7 @@
 module Stg.Language.Prelude.List (
     nil,
     concat2,
+    reverse,
     foldl,
     foldl',
     foldr,
@@ -44,6 +45,7 @@ import           Stg.Language.Prelude.Number as Num
 
 nil, concat2, foldl, foldl', foldr, iterate, cycle, take, filter :: Program
 repeat, replicate, sort, map, equals_List_Int, length, zip, zipWith :: Program
+reverse :: Program
 
 
 -- | The empty list as a top-level closure.
@@ -118,8 +120,9 @@ foldr = [stg|
 -- @
 iterate = [stg|
     iterate = () \n (f,x) ->
-        letrec fx = (f,x) \u () -> f (x);
-               rest = (f,fx) \u () -> iterate (f,fx)
+        letrec
+            fx = (f,x) \u () -> f (x);
+            rest = (f,fx) \u () -> iterate (f,fx)
         in Cons (x,rest) |]
 
 -- | Infinite list, created by repeating an initial (non-empty) list.
@@ -182,6 +185,28 @@ filter = [stg|
         badList -> Error_filter_2 (badList)
     |]
 
+-- | reverse a list.
+--
+-- @
+-- reverse [1,2,3] = [3,2,1]
+-- @
+--
+-- @
+-- reverse : [a] -> [a]
+-- @
+reverse = nil <> [stg|
+    reverse = () \n (xs) ->
+        letrec
+            reverse' = (reverse') \n (xs,ys) ->
+                case xs () of
+                    Nil () -> ys ();
+                    Cons (x,xs) ->
+                        let yxs = (x,ys) \u () -> Cons (x,ys)
+                        in reverse' (xs, yxs);
+                    badList -> Error_reverse (badList)
+        in reverse' (xs, nil)
+    |]
+
 -- | Repeat a single element infinitely.
 --
 -- @
@@ -197,7 +222,7 @@ repeat = [stg|
         in xs ()
     |]
 
--- | Repeat a single element infinitely.
+-- | Repeat a single element a number of times.
 --
 -- @
 -- replicate 3 1 = [1, 1, 1]
@@ -208,13 +233,18 @@ repeat = [stg|
 -- @
 replicate = [stg|
     replicate = () \n (n, x) ->
-        let replicatePrim = () \n (nPrim, x) ->
-                case nPrim () of
+        letrec
+            replicateXPrim = (replicateXPrim, x) \n (nPrim) ->
+                case 0# of zero -> case ># nPrim zero of
                     0# -> Nil ();
-                    default -> case 1# of
-                        one -> case -# nPrim one of
-                            nPrimPred -> replicatePrim (nPrimPred, x)
-        in replicatePrim (n, x)
+                    default ->
+                        let rest = (replicateXPrim, nPrim) \n () -> case 1# of
+                                one -> case -# nPrim one of
+                                    nPrimPred -> replicateXPrim (nPrimPred)
+                        in Cons (x, rest)
+        in case n () of
+            Int# (nPrim) -> replicateXPrim (nPrim);
+            badInt -> Error_replicate (badInt)
     |]
 
 -- | That Haskell sort function often misleadingly referred to as "quicksort".
@@ -347,11 +377,13 @@ equals_List_Int = Num.eq <> [stgProgram|
 -- @
 length = [stgProgram|
     length = () \u () ->
-        letrec  length' = () \n (n, xs) -> case xs () of
-            Nil () -> Int# (n);
-            Cons (y,ys) -> case +# n 1# of
-                n' -> length' (n', ys);
-            badList -> Error_length (badList)
+        letrec
+            length' = (length') \n (n, xs) -> case xs () of
+                Nil () -> Int# (n);
+                Cons (y,ys) -> case 1# of
+                    one -> case +# n one of
+                        n' -> length' (n', ys);
+                badList -> Error_length (badList)
         in length' (0#)
     |]
 

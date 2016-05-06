@@ -7,6 +7,7 @@ module Stg.Language.Prelude (
     -- * Lists
     nil,
     concat2,
+    reverse,
     foldl,
     foldl',
     foldr,

@@ -82,7 +82,7 @@ machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
                     [ "STG failed to satisfy predicate: "
                         <> prettyprintAnsi (stgInfo finalState)
                     , if showFinalStateOnFail testSpec
-                        then "Final state:" <>  prettyprintAnsi finalState
+                        then T.unlines ["Final state:", prettyprintAnsi finalState]
                         else "Run test case with showFinalStateOnFail enabled\
                              \ to see the final state." ]
             False -> (assertFailure . T.unpack)
