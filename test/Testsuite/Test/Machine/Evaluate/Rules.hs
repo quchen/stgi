@@ -12,7 +12,9 @@ module Test.Machine.Evaluate.Rules (tests) where
 
 import           Test.Tasty
 
+import           Stg.Language
 import           Stg.Machine
+import           Stg.Machine.Types
 import           Stg.Parser
 
 import           Test.Machine.Evaluate.TestTemplates.MachineState
@@ -65,12 +67,16 @@ tests = testGroup "Rules"
             , greaterOrEqual
             , greater ]
         ]
+    , testGroup "Primitive case evaluation shortcuts"
+        [ primopShortcut_defaultBound
+        , primopShortcut_normalMatch ]
     ]
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
     { testName             = "Default small closure reduction test template"
     , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
+    , failPredicate        = const False
     , source               = [stg| main = () \n () -> Success () |]
     , maxSteps             = 32
     , performGc            = PerformGc (const False)
@@ -412,3 +418,36 @@ greater = machineStateTest defSpec
                 v  -> TestFail (v);
             default -> Error ()
         |] }
+
+primopShortcut_defaultBound :: TestTree
+primopShortcut_defaultBound = machineStateTest defSpec
+    { testName = "Default bound match shortcut (rule 18)"
+    , source = [stg|
+        main = () \u () -> case 1# of
+            v1 -> case 2# of
+                v2 -> case +# v1 v2 of
+                    3#      -> Success ();
+                    default -> TestFail ()
+        |]
+    , failPredicate = \stgState -> case stgCode stgState of
+        Eval AppP{} _ -> True -- The point of the shortcut is to never reach
+                              -- the AppP rule itself.
+        _otherwise    -> False
+    }
+
+primopShortcut_normalMatch :: TestTree
+primopShortcut_normalMatch = machineStateTest defSpec
+    { testName = "Standard match shortcut (rule 19)"
+    , source = [stg|
+        main = () \u () -> case 1# of
+            v1 -> case 2# of
+                v2 -> case +# v1 v2 of
+                    v -> case v () of
+                        3# -> Success ();
+                        wrong -> TestFail (wrong)
+        |]
+    , failPredicate = \stgState -> case stgCode stgState of
+        Eval AppP{} _ -> True -- The point of the shortcut is to never reach
+                              -- the AppP rule itself.
+        _otherwise    -> False
+    }

@@ -11,6 +11,7 @@ module Test.Machine.Evaluate.TestTemplates.HaskellReference (
 
 
 
+import qualified Data.List                                as L
 import           Data.Monoid
 import           Data.Text                                (Text)
 import qualified Data.Text                                as T
@@ -37,6 +38,10 @@ data HaskellReferenceTestSpec a = HaskellReferenceTestSpec
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
+    , failPredicate        :: StgState -> Bool
+        -- ^ Fail if this predicate holds. This can be used to constrain the
+        -- heap size during the test, for example.
+
     , source               :: a -> Program
         -- ^ STG program to run.
 
@@ -56,22 +61,30 @@ haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test
   where
     test input =
         let program = initialState "main" (source testSpec input)
-            finalState = evalUntil
+            states = evalsUntil
                 (RunForMaxSteps (maxSteps testSpec))
                 (HaltIf ("main" ===> [stg| () \n () -> Success () |]))
                 (PerformGc (const False))
                 program
-            failureText = (T.unpack . T.unlines)
-                ([ "STG version of "
+            finalState = last states
+            successPredicateNotTrueText = (T.unpack . T.unlines)
+                [ "STG version of "
                     <> testName testSpec
                     <> " does not match Haskell's reference implementation."
                 , "Failure because: "
                     <> prettyprintAnsi (stgInfo finalState)
-                ]
-                <>
-                (if showFinalStateOnFail testSpec
-                    then ["Final state:",  prettyprintAnsi finalState]
-                    else ["Run test case with showFinalStateOnFail enabled for more details."] ))
-        in counterexample failureText (case stgInfo finalState of
-            Info HaltedByPredicate _ -> True
-            _otherwise               -> False )
+                , if showFinalStateOnFail testSpec
+                    then "Final state:" <>  prettyprintAnsi finalState
+                    else "Run test case with showFinalStateOnFail\
+                         \ to see the final state." ]
+            failurePredicateTrueText bad = (T.unpack . T.unlines)
+                [ "Failure predicate held for an intemediate state"
+                , if showFinalStateOnFail testSpec
+                    then "Bad state:" <> prettyprintAnsi bad
+                    else "Run test case with showFinalStateOnFail\
+                         \ to see the final state." ]
+        in case L.find (failPredicate testSpec) states of
+            Just bad -> counterexample (failurePredicateTrueText bad) False
+            Nothing -> case stgInfo finalState of
+                Info HaltedByPredicate _ -> property True
+                _otherwise -> counterexample successPredicateNotTrueText False
