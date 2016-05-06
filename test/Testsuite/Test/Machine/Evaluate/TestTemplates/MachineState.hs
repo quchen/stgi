@@ -28,20 +28,24 @@ import           Test.Tasty.HUnit
 -- | Specify a test that is based on a certain predicate to hold in an
 -- evaluation step.
 data MachineStateTestSpec = MachineStateTestSpec
-    { testName         :: Text
+    { testName             :: Text
         -- ^ Test name to display in the test overview.
 
-    , successPredicate :: StgState -> Bool
+    , successPredicate     :: StgState -> Bool
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
-    , source           :: Program
+    , source               :: Program
         -- ^ STG program to run.
 
-    , maxSteps         :: Integer
+    , maxSteps             :: Integer
         -- ^ Maximum number of steps to take
 
-    , performGc        :: PerformGc
+    , performGc            :: PerformGc
+
+    , showFinalStateOnFail :: Bool
+        -- ^ Print the full final state on failure? If set to 'False', only
+        -- the 'stgInfo' will be printed.
     }
 
 -- | Evaluate the @main@ closure of a STG program, and check whether the
@@ -57,7 +61,10 @@ machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
     test = case stgInfo finalState of
         Info HaltedByPredicate _ -> pure ()
         _otherwise -> (assertFailure . T.unpack . T.unlines)
-            [ "STG failed to satisfy predicate: "
+            ([ "STG failed to satisfy predicate: "
                 <> prettyprintAnsi (stgInfo finalState)
-            , "Final state:"
-            , prettyprintAnsi finalState ]
+            ]
+            <>
+            (if showFinalStateOnFail testSpec
+                then ["Final state:",  prettyprintAnsi finalState]
+                else [] ))

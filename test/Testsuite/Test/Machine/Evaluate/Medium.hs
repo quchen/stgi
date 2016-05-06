@@ -25,10 +25,9 @@ import           Test.Orphans                                     ()
 
 tests :: TestTree
 tests = testGroup "Medium-sized, with GC"
-    [ program_add3
-    , program_foldrSum
-    , program_takeRepeat
-    , program_fibonacci ]
+    [ add3
+    , takeRepeat
+    , fibonacci ]
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
@@ -38,8 +37,8 @@ defSpec = MachineStateTestSpec
     , maxSteps         = 1024
     , performGc        = PerformGc (const True) }
 
-program_add3 :: TestTree
-program_add3 = machineStateTest defSpec
+add3 :: TestTree
+add3 = machineStateTest defSpec
     { testName = "add3(x,y,z) = x+y+z"
     , source = [stgProgram|
         add3 = () \n (x,y,z) -> case x () of
@@ -62,26 +61,8 @@ program_add3 = machineStateTest defSpec
             default -> Error ()
         |] }
 
-program_foldrSum :: TestTree
-program_foldrSum = machineStateTest defSpec
-    { testName = "Sum of list via foldr"
-    , source = Stg.foldr
-            <> Stg.add
-            <> Stg.int "zero" 0
-            <> Stg.eq
-            <> Stg.listOfNumbers "list" [1..5]
-            <> Stg.int "expected" (sum [1..5])
-            <> [stgProgram|
-        sum = () \n (xs) -> foldr (add, zero, xs);
-        main = () \u () ->
-            let actual = () \u () -> sum (list)
-            in case eq_Int (actual, expected) of
-                True () -> Success ();
-                default -> TestFail ()
-        |] }
-
-program_takeRepeat :: TestTree
-program_takeRepeat = machineStateTest defSpec
+takeRepeat :: TestTree
+takeRepeat = machineStateTest defSpec
     { testName = "take 2 (repeat ())"
     , source = Stg.int "two" 2
             <> Stg.take
@@ -109,8 +90,8 @@ program_takeRepeat = machineStateTest defSpec
             default -> TestFailure ()
         |] }
 
-program_fibonacci :: TestTree
-program_fibonacci = machineStateTest defSpec
+fibonacci :: TestTree
+fibonacci = machineStateTest defSpec
     { testName = "Fibonacci sequence"
     , source = Stg.equals_List_Int
             <> Stg.int "zero" 0

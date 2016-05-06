@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module Test.Language.Prelude.List (tests) where
 
@@ -7,7 +8,9 @@ module Test.Language.Prelude.List (tests) where
 
 import qualified Data.List                                            as L
 import           Data.Monoid
+import           Data.Text                                            (Text)
 
+import           Stg.Language
 import qualified Stg.Language.Prelude                                 as Stg
 import           Stg.Parser
 
@@ -22,12 +25,18 @@ tests = testGroup "List"
     [ stgSort
     , stgFilter
     , stgMap
-    , stgZipWith ]
+    , stgZipWith
+    , testGroup "Folds"
+        [ foldrSum
+        , foldlSum
+        , foldl'Sum ]
+    ]
 
 stgFilter :: TestTree
 stgFilter = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "filter"
     , maxSteps = 1024
+    , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , source = \xs ->
            Stg.listOfNumbers "inputList" xs
@@ -51,6 +60,7 @@ stgSort :: TestTree
 stgSort = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "sort"
     , maxSteps = 1024
+    , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , source = \xs ->
            Stg.listOfNumbers "inputList" xs
@@ -70,6 +80,7 @@ stgMap :: TestTree
 stgMap = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "map"
     , maxSteps = 1024
+    , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , source = \(xs, offset) ->
            Stg.add
@@ -80,19 +91,20 @@ stgMap = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.equals_List_Int
         <> [stgProgram|
 
-    main = () \u () ->
-        letrec
-            plusOffset = () \n (n) -> add (n, offset);
-            actual = (plusOffset) \u () -> map (plusOffset, inputList)
-        in case equals_List_Int (actual, expectedResult) of
-            True () -> Success ();
-            wrong   -> TestFail (wrong)
-    |] }
+        main = () \u () ->
+            letrec
+                plusOffset = () \n (n) -> add (n, offset);
+                actual = (plusOffset) \u () -> map (plusOffset, inputList)
+            in case equals_List_Int (actual, expectedResult) of
+                True () -> Success ();
+                wrong   -> TestFail (wrong)
+        |] }
 
 stgZipWith :: TestTree
 stgZipWith = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "zipWith (+)"
     , maxSteps = 1024
+    , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , source = \(list1, list2) ->
            Stg.equals_List_Int
@@ -103,9 +115,56 @@ stgZipWith = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.zipWith
         <> [stgProgram|
 
-    main = () \u () ->
-        let zipped = () \n () -> zipWith (add, list1, list2)
-        in case equals_List_Int (zipped, expectedResult) of
-            True ()  -> Success ();
-            wrong   -> TestFail (wrong)
-    |] }
+        main = () \u () ->
+            let zipped = () \n () -> zipWith (add, list1, list2)
+            in case equals_List_Int (zipped, expectedResult) of
+                True ()  -> Success ();
+                wrong   -> TestFail (wrong)
+        |] }
+
+
+foldrSum, foldlSum, foldl'Sum :: TestTree
+foldrSum  = foldSumTemplate
+    "foldr"
+    foldr
+    (Stg.foldr <> [stg| fold = () \n () -> foldr  () |])
+foldlSum  = foldSumTemplate
+    "foldl"
+    foldl
+    (Stg.foldl <> [stg| fold = () \n () -> foldl  () |])
+foldl'Sum = foldSumTemplate
+    "foldl'"
+    L.foldl'
+    (Stg.foldl' <> [stg| fold = () \n () -> foldl' () |])
+
+foldSumTemplate
+    :: Text
+        -- ^ Fold function name
+
+    -> (forall a. (a -> a -> a) -> a -> [a] -> a)
+        -- ^ Haskell reference fold function
+
+    -> Program
+        -- ^ STG Program with binding associating "fold" with the desired fold
+        -- function, e.g. foldr
+
+    -> TestTree
+foldSumTemplate foldName foldF foldStg = haskellReferenceTest HaskellReferenceTestSpec
+    { testName = "Sum of list via " <> foldName
+    , maxSteps = 1024
+    , showFinalStateOnFail = False
+    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , source = \(z, xs) ->
+           foldStg
+        <> Stg.add
+        <> Stg.eq
+        <> Stg.int "z" z
+        <> Stg.listOfNumbers "input" xs
+        <> Stg.int "expected" (foldF (+) z xs)
+        <> [stgProgram|
+        main = () \u () ->
+            let actual = () \u () -> fold (add, z, input)
+            in case eq_Int (actual, expected) of
+                True () -> Success ();
+                default -> TestFail ()
+        |] }
