@@ -69,6 +69,7 @@ tests = testGroup "Rules"
         ]
     , enterUpdatableClosure
     , algebraicReturnUpdate
+    , missingArgsUpdate
     , testGroup "Primitive case evaluation shortcuts"
         [ primopShortcut_defaultBound
         , primopShortcut_normalMatch ]
@@ -444,6 +445,27 @@ algebraicReturnUpdate = machineStateTest defSpec
         |]
     , someStateSatisfies = \state -> case stgInfo state of
         Info (StateTransition ReturnCon_Update) _ -> True
+        _otherwise -> False
+    }
+
+missingArgsUpdate :: TestTree
+missingArgsUpdate = machineStateTest defSpec
+    { testName = "Update because of missing argument frame (rule 17a)"
+    , source = [stgProgram|
+        main = () \u () ->
+            case flipTuple (1#,2#) of
+                Tuple (a,b) -> case a () of
+                    2# -> case b () of
+                        1# -> Success ();
+                        bad -> TestFail (bad);
+                    bad -> TestFail (bad);
+                badTuple -> Error_badTuple (badTuple);
+        tuple = () \n (x,y) -> Tuple (x,y);
+        flip = () \n (f, x, y) -> f (y, x);
+        flipTuple = () \u () -> flip (tuple)
+        |]
+    , someStateSatisfies = \state -> case stgInfo state of
+        Info (StateTransition Enter_PartiallyAppliedUpdate) _ -> True
         _otherwise -> False
     }
 

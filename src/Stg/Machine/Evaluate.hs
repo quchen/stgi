@@ -414,9 +414,10 @@ stgRule s@StgState
         heap' = H.update addrUpdate updatedClosure heap
 
     in s { stgCode  = Enter addrEnter
-         , stgStack = stack'
+         , stgStack = argFrames <>> stack'
          , stgHeap  = heap'
-         , stgInfo  = Info (StateTransition Enter_PartiallyAppliedUpdate) [] }
+         , stgInfo  = Info (StateTransition Enter_PartiallyAppliedUpdate)
+                           (InfoDetail.papUpdate addrUpdate) }
 
   where
 

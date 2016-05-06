@@ -81,6 +81,13 @@ conUpdate con addrU = InfoDetail
 
 
 
+papUpdate :: MemAddr -> InfoDetail
+papUpdate updAddr = InfoDetail
+    [ "Not enough arguments on the stack"
+    , "Try to reveal more arguments by performing the update for " <> prettyprint updAddr
+    ]
+
+
 returnIntCannotUpdate :: InfoDetail
 returnIntCannotUpdate = InfoDetail
     ["No closure has primitive type, so we cannot update one with a primitive int"]
