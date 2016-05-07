@@ -358,6 +358,11 @@ stgRule s@StgState
 --
 -- which is a bit silly. I think this might be an oversight in the 1992 paper.
 -- The fast curry paper does not seem to impose this restriction.
+--
+--
+-- TODO: This rule is probably obsolete because of rules (18) and (19).
+-- Remove it after confirming this is true. I (quchen) was not able to produce
+-- a case in which (14) is still needed.
 stgRule s@StgState
     { stgCode = Eval (AppP op x y) locals }
     | Success (PrimInt xVal) <- localVal locals x
