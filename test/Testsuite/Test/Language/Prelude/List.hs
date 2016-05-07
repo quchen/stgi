@@ -45,7 +45,7 @@ stgFilter :: TestTree
 stgFilter = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "filter"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \(xs, threshold) ->
@@ -70,7 +70,7 @@ stgSort :: TestTree
 stgSort = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "sort"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \xs ->
@@ -91,7 +91,7 @@ stgMap :: TestTree
 stgMap = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "map"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \(xs, offset) ->
@@ -116,7 +116,7 @@ stgZipWith :: TestTree
 stgZipWith = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "zipWith (+)"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \(list1, list2) ->
@@ -172,7 +172,7 @@ foldSumTemplate foldName foldF foldStg failP
   = haskellReferenceTest HaskellReferenceTestSpec
     { testName = foldName
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = failP
     , source = \(z, xs) ->
@@ -194,7 +194,7 @@ stgConcat2 :: TestTree
 stgConcat2 = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "(++)"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \(list1, list2) ->
@@ -216,7 +216,7 @@ stgReverse :: TestTree
 stgReverse = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "reverse"
     , maxSteps = 1024
-    , showFinalStateOnFail = True
+    , failWithInfo = True
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \xs ->
@@ -237,7 +237,7 @@ stgCycle :: TestTree
 stgCycle = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "cycle (+take)"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \(NonEmpty list, NonNegative n) ->
@@ -263,7 +263,7 @@ stgRepeat :: TestTree
 stgRepeat = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "repeat (+take)"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \(item, NonNegative n) ->
@@ -288,9 +288,11 @@ stgReplicate :: TestTree
 stgReplicate = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "replicate"
     , maxSteps = 1024
-    , showFinalStateOnFail = True
+    , failWithInfo = True
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
+    , failPredicate = \stgState -> case stgCode stgState of
+        Eval AppP {} _ -> True
+        _ -> False
     , source = \(item, n) ->
            Stg.equals_List_Int
         <> Stg.int "n" n
@@ -311,7 +313,7 @@ stgIterate :: TestTree
 stgIterate = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "iterate (+take)"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \(seed, offset, NonNegative n) ->
@@ -341,7 +343,7 @@ stgLength :: TestTree
 stgLength = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "length"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \xs ->

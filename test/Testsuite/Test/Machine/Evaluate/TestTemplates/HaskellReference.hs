@@ -31,26 +31,25 @@ import           Test.Orphans                             ()
 
 -- | Specifies a test that is based on the reduction of a closure.
 data HaskellReferenceTestSpec a = HaskellReferenceTestSpec
-    { testName             :: Text
+    { testName         :: Text
         -- ^ The reference function's name. Used only for display purposes.
 
-    , successPredicate     :: StgState -> Bool
+    , successPredicate :: StgState -> Bool
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
-    , failPredicate        :: StgState -> Bool
+    , failPredicate    :: StgState -> Bool
         -- ^ Fail if this predicate holds. This can be used to constrain the
         -- heap size during the test, for example.
 
-    , source               :: a -> Program
+    , source           :: a -> Program
         -- ^ STG program to run.
 
-    , maxSteps             :: Integer
+    , maxSteps         :: Integer
         -- ^ Maximum number of steps to take
 
-    , showFinalStateOnFail :: Bool
-        -- ^ Print the full final state on failure? If set to 'False', only
-        -- the 'stgInfo' will be printed.
+    , failWithInfo     :: Bool
+        -- ^ Print program code and final state on test failure?
     }
 
 haskellReferenceTest
@@ -73,18 +72,23 @@ haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test
                     <> " does not match Haskell's reference implementation."
                 , "Failure because: "
                     <> prettyprintAnsi (stgInfo finalState)
-                , if showFinalStateOnFail testSpec
-                    then T.unlines ["Final state:", prettyprintAnsi finalState]
-                    else "Run test case with showFinalStateOnFail\
-                         \ to see the final state." ]
+                , if failWithInfo testSpec
+                    then T.unlines
+                        [ "Program:", prettyprintAnsi (source testSpec input)
+                        , "Final state:", prettyprintAnsi finalState ]
+                    else failWithInfoInfoText ]
             failurePredicateTrueText bad = (T.unpack . T.unlines)
                 [ "Failure predicate held for an intemediate state"
-                , if showFinalStateOnFail testSpec
-                    then "Bad state:" <> prettyprintAnsi bad
-                    else "Run test case with showFinalStateOnFail\
-                         \ to see the final state." ]
+                , if failWithInfo testSpec
+                    then T.unlines
+                        [ "Program:", prettyprintAnsi (source testSpec input)
+                        , "Bad state:" , prettyprintAnsi bad ]
+                    else failWithInfoInfoText ]
         in case L.find (failPredicate testSpec) states of
             Just bad -> counterexample (failurePredicateTrueText bad) False
             Nothing -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> property True
                 _otherwise -> counterexample successPredicateNotTrueText False
+
+failWithInfoInfoText :: Text
+failWithInfoInfoText = "Run test case with failWithInfo to see the final state."

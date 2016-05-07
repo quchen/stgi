@@ -38,7 +38,7 @@ defSpec = MachineStateTestSpec
     , source               = [stg| main = () \n () -> Success () |]
     , maxSteps             = 1024
     , performGc            = PerformGc (const True)
-    , showFinalStateOnFail = False }
+    , failWithInfo = False }
 
 program_add3 :: TestTree
 program_add3 = machineStateTest defSpec

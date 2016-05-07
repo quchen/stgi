@@ -188,14 +188,19 @@ stgRule s@StgState
 -- When reading the source here for educational purposes, you should skip this
 -- rule until you've seen the normal case rule (4) and the normal
 -- primop rule (14).
+--
+-- This rule has the slight modification compared to the paper in that it works
+-- for both bound and unbound default cases.
 stgRule s@StgState
     { stgCode = Eval (Case (AppP op x y) alts) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
     , opXY <- applyPrimOp op xVal yVal
-    , Left (DefaultBound pat expr) <- lookupPrimitiveAlt alts (Literal opXY)
+    , Left defaultAlt <- lookupPrimitiveAlt alts (Literal opXY)
 
-  = let locals' = addLocals [(pat, PrimInt opXY)] locals
+  = let (locals', expr) = case defaultAlt of
+            DefaultBound pat e -> (addLocals [(pat, PrimInt opXY)] locals, e)
+            DefaultNotBound e -> (locals, e)
 
     in s { stgCode = Eval expr locals'
          , stgInfo = Info (StateTransition Eval_Case_Primop_DefaultBound) [] }

@@ -31,7 +31,7 @@ stgFst :: TestTree
 stgFst = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "fst"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \tuple ->
@@ -52,7 +52,7 @@ stgSnd :: TestTree
 stgSnd = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "snd"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \tuple ->
@@ -73,7 +73,7 @@ stgCurry :: TestTree
 stgCurry = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "curry"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \(x,y) ->
@@ -100,7 +100,7 @@ stgUncurry :: TestTree
 stgUncurry = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "uncurry"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \tuple ->
@@ -122,7 +122,7 @@ stgSwap :: TestTree
 stgSwap = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "swap"
     , maxSteps = 1024
-    , showFinalStateOnFail = False
+    , failWithInfo = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \tuple ->

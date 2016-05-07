@@ -88,7 +88,7 @@ defSpec = MachineStateTestSpec
     , source               = [stg| main = () \n () -> Success () |]
     , maxSteps             = 32
     , performGc            = PerformGc (const False)
-    , showFinalStateOnFail = False }
+    , failWithInfo = False }
 
 nonUpdatableFunctionApplication :: TestTree
 nonUpdatableFunctionApplication = machineStateTest defSpec
@@ -291,7 +291,7 @@ primopTest
 primopTest op hOp = HRef.haskellReferenceTest HRef.HaskellReferenceTestSpec
     { HRef.testName = prettyprint op
     , HRef.maxSteps = 1024
-    , HRef.showFinalStateOnFail = True
+    , HRef.failWithInfo = True
     , HRef.successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , HRef.failPredicate = const False
     , HRef.source = \(arg1, NonZero arg2) -> -- arg2 is nonzero or the div/mod

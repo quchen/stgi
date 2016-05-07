@@ -27,19 +27,7 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let tuple = (1,2)
-        prog = Stg.tupleOfNumbers "tuple" tuple
-         <> Stg.int "expectedResult" (snd tuple)
-         <> Stg.snd
-         <> Stg.eq
-         <> [stgProgram|
-
-         main = () \u () ->
-             let actualSnd = () \n () -> snd (tuple)
-             in case eq_Int (expectedResult, actualSnd) of
-                 True () -> Success ();
-                 wrong   -> TestFail (wrong)
-         |]
+    let prog = Stg.lt <> [stg| main = () \n () -> main () |]
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True
         then runStg prettyprintAnsi prog

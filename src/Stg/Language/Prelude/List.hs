@@ -238,8 +238,8 @@ replicate = [stg|
                     0# -> Nil ();
                     default ->
                         let rest = (replicateXPrim, nPrim) \n () ->
-                            case -# nPrim 1# of
-                                nPrimPred -> replicateXPrim (nPrimPred)
+                                case -# nPrim 1# of
+                                    nPrimPred -> replicateXPrim (nPrimPred)
                         in Cons (x, rest)
         in case n () of
             Int# (nPrim) -> replicateXPrim (nPrim);

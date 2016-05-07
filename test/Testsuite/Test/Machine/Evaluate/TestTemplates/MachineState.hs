@@ -29,32 +29,31 @@ import           Test.Tasty.HUnit
 -- | Specify a test that is based on a certain predicate to hold in an
 -- evaluation step.
 data MachineStateTestSpec = MachineStateTestSpec
-    { testName             :: Text
+    { testName           :: Text
         -- ^ Test name to display in the test overview.
 
-    , successPredicate     :: StgState -> Bool
+    , successPredicate   :: StgState -> Bool
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
-    , forbiddenState       :: StgState -> Bool
+    , forbiddenState     :: StgState -> Bool
         -- ^ Fail if this predicate holds. This can be used to constrain the
         -- heap size during the test, for example.
 
-    , someStateSatisfies   :: StgState -> Bool
+    , someStateSatisfies :: StgState -> Bool
         -- ^ Fail if this predicate held for no intermediate state. Useful to
         -- check whether some rule applied, for example.
 
-    , source               :: Program
+    , source             :: Program
         -- ^ STG program to run.
 
-    , maxSteps             :: Integer
+    , maxSteps           :: Integer
         -- ^ Maximum number of steps to take
 
-    , performGc            :: PerformGc
+    , performGc          :: PerformGc
 
-    , showFinalStateOnFail :: Bool
-        -- ^ Print the full final state on failure? If set to 'False', only
-        -- the 'stgInfo' will be printed.
+    , failWithInfo       :: Bool
+        -- ^ Print program code and final state on test failure?
     }
 
 -- | Evaluate the @main@ closure of a STG program, and check whether the
@@ -71,19 +70,24 @@ machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
     test = case L.find (forbiddenState testSpec) states of
         Just bad -> (assertFailure . T.unpack . T.unlines)
             [ "Failure predicate held for an intemediate state"
-            , if showFinalStateOnFail testSpec
-                then "Bad state:" <> prettyprintAnsi bad
-                else "Run test case with showFinalStateOnFail enabled\
-                     \ to see the final state." ]
+            , if failWithInfo testSpec
+                then T.unlines
+                    [ "Program:", prettyprintAnsi (source testSpec)
+                    , "Bad state:", prettyprintAnsi bad ]
+                else failWithInfoInfoText ]
         Nothing -> case L.any (someStateSatisfies testSpec) states of
             True -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> pure ()
                 _otherwise -> (assertFailure . T.unpack . T.unlines)
                     [ "STG failed to satisfy predicate: "
                         <> prettyprintAnsi (stgInfo finalState)
-                    , if showFinalStateOnFail testSpec
-                        then T.unlines ["Final state:", prettyprintAnsi finalState]
-                        else "Run test case with showFinalStateOnFail enabled\
-                             \ to see the final state." ]
+                    , if failWithInfo testSpec
+                        then T.unlines
+                            [ "Program:", prettyprintAnsi (source testSpec)
+                            , "Final state:", prettyprintAnsi finalState]
+                        else failWithInfoInfoText ]
             False -> (assertFailure . T.unpack)
                 "No intermediate state satisfied the required predicate."
+
+failWithInfoInfoText :: Text
+failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
