@@ -26,12 +26,7 @@ import           Test.Orphans                                     ()
 tests :: TestTree
 tests = testGroup "Programs"
     [ program_add3
-    , program_foldrSum
     , program_takeRepeat
-    , program_map
-    , program_filter
-    , program_sort
-    , program_zipWith
     , program_fibonacci ]
 
 defSpec :: MachineStateTestSpec
@@ -69,24 +64,6 @@ program_add3 = machineStateTest defSpec
             default -> Error ()
         |] }
 
-program_foldrSum :: TestTree
-program_foldrSum = machineStateTest defSpec
-    { testName = "Sum of list via foldr"
-    , source = Stg.foldr
-            <> Stg.add
-            <> Stg.int "zero" 0
-            <> Stg.eq
-            <> Stg.listOfNumbers "list" [1..5]
-            <> Stg.int "expected" (sum [1..5])
-            <> [stgProgram|
-        sum = () \n (xs) -> foldr (add, zero, xs);
-        main = () \u () ->
-            let actual = () \u () -> sum (list)
-            in case eq_Int (actual, expected) of
-                True () -> Success ();
-                default -> TestFail ()
-        |] }
-
 program_takeRepeat :: TestTree
 program_takeRepeat = machineStateTest defSpec
     { testName = "take 2 (repeat ())"
@@ -115,85 +92,6 @@ program_takeRepeat = machineStateTest defSpec
                 default -> TestFailure ();
             default -> TestFailure ()
         |] }
-
-program_map :: TestTree
-program_map = machineStateTest defSpec
-    { testName = "map (+1) [1,2,3]"
-    , source = Stg.add
-            <> Stg.map
-            <> Stg.listOfNumbers "inputList" [1,2,3]
-            <> Stg.listOfNumbers "expectedResult" (map (+1) [1,2,3])
-            <> Stg.equals_List_Int
-            <> [stgProgram|
-
-        main = () \u () ->
-            letrec  plusOne = () \u () ->
-                        letrec  one = () \n () -> Int# (1#);
-                                plusOne' = (one) \n (n) -> add (n, one)
-                        in plusOne' ();
-                    actual = (plusOne) \u () -> map (plusOne, inputList)
-            in case equals_List_Int (actual, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_filter :: TestTree
-program_filter = machineStateTest defSpec
-    { testName = "filter list"
-    , source = Stg.listOfNumbers "inputList" [1,-1,2,-2,-3,3]
-            <> Stg.listOfNumbers "expectedResult" (filter (> 0) [1,-1,2,-2,-3,3])
-            <> Stg.int "zero" 0
-            <> Stg.gt
-            <> Stg.equals_List_Int
-            <> Stg.filter
-            <> [stgProgram|
-
-        main = () \u () ->
-            letrec  positive = () \n (x) -> gt_Int (x, zero);
-                    filtered = (positive) \n () -> filter (positive, inputList)
-            in case equals_List_Int (expectedResult, filtered) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_sort :: TestTree
-program_sort = machineStateTest defSpec
-    { testName = "sort"
-    , source = Stg.listOfNumbers "inputList" [3,1,2,4]
-            <> Stg.listOfNumbers "expectedResult" [1,2,3,4]
-            <> Stg.equals_List_Int
-            <> Stg.sort
-            <> [stgProgram|
-
-        main = () \u () ->
-            let sorted = () \u () -> sort (inputList)
-            in case equals_List_Int (expectedResult, sorted) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
-        |] }
-
-program_zipWith :: TestTree
-program_zipWith = machineStateTest defSpec
-    { testName = "zipWith (+)"
-    , source = Stg.equals_List_Int
-            <> Stg.listOfNumbers "list1" list1
-            <> Stg.listOfNumbers "list2" list2
-            <> Stg.listOfNumbers "expectedZipped" zipped
-            <> Stg.add
-            <> Stg.zipWith
-            <> [stgProgram|
-
-        main = () \u () ->
-            let zipped = () \n () -> zipWith (add, list1, list2)
-            in case equals_List_Int (zipped, expectedZipped) of
-                True ()  -> Success ();
-                False () -> TestFail ();
-                err      -> Error_badBool (err)
-        |] }
-  where
-    list1 = [1, 2, 3, 4, 5]
-    list2 = [10, 20, 30]
-    zipped = zipWith (+) list1 list2
 
 program_fibonacci :: TestTree
 program_fibonacci = machineStateTest defSpec
