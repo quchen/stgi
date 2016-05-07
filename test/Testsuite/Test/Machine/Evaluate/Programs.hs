@@ -31,14 +31,14 @@ tests = testGroup "Programs"
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
-    { testName             = "Default medium closure reduction test template"
+    { testName             = "Default program test template"
     , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
     , forbiddenState       = const False
     , someStateSatisfies   = const True
     , source               = [stg| main = () \n () -> Success () |]
     , maxSteps             = 1024
     , performGc            = PerformGc (const True)
-    , failWithInfo = False }
+    , failWithInfo         = False }
 
 add3 :: TestTree
 add3 = machineStateTest defSpec

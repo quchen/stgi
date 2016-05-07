@@ -80,6 +80,7 @@ test-suite stg-test
                      , Test.Language.Prettyprint.ParserInverse
                      , Test.Machine
                      , Test.Machine.Evaluate
+                     , Test.Machine.Evaluate.Errors
                      , Test.Machine.Evaluate.Programs
                      , Test.Machine.Evaluate.Rules
                      , Test.Machine.Evaluate.TestTemplates.HaskellReference

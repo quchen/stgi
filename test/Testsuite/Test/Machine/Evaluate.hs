@@ -11,6 +11,7 @@ module Test.Machine.Evaluate (tests) where
 
 import           Test.Tasty
 
+import qualified Test.Machine.Evaluate.Errors   as Errors
 import qualified Test.Machine.Evaluate.Programs as Programs
 import qualified Test.Machine.Evaluate.Rules    as Rules
 
@@ -19,4 +20,5 @@ import qualified Test.Machine.Evaluate.Rules    as Rules
 tests :: TestTree
 tests = testGroup "Evaluate"
     [ Rules.tests
-    , Programs.tests ]
+    , Programs.tests
+    , Errors.tests ]

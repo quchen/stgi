@@ -166,7 +166,7 @@ newtype MemAddr = MemAddr Int
 
 
 instance Pretty MemAddr where
-    pretty (MemAddr addr) =  "^" <> hexAddr addr
+    pretty (MemAddr addr) =  "0x" <> hexAddr addr
       where
         hexAddr = text . printf "%02x"
 
@@ -484,9 +484,9 @@ data HeapObject =
 instance Pretty HeapObject where
     pretty = \case
         HClosure closure -> "FUN" <+> pretty closure
-        Blackhole tick -> "BLACKHOLE (created in step " <> integer tick <> ")"
+        Blackhole tick -> "BLACKHOLE (from step " <> integer tick <> ")"
 
 instance PrettyAnsi HeapObject where
     prettyAnsi = \case
         HClosure closure -> "FUN" <+> prettyAnsi closure
-        Blackhole tick -> "BLACKHOLE (created in step " <> integer tick <> ")"
+        Blackhole tick -> "BLACKHOLE (from step " <> integer tick <> ")"
