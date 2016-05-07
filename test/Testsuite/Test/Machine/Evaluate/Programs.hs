@@ -25,9 +25,9 @@ import           Test.Orphans                                     ()
 
 tests :: TestTree
 tests = testGroup "Programs"
-    [ program_add3
-    , program_takeRepeat
-    , program_fibonacci ]
+    [ add3
+    , takeRepeat
+    , fibonacci ]
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
@@ -40,8 +40,8 @@ defSpec = MachineStateTestSpec
     , performGc            = PerformGc (const True)
     , failWithInfo = False }
 
-program_add3 :: TestTree
-program_add3 = machineStateTest defSpec
+add3 :: TestTree
+add3 = machineStateTest defSpec
     { testName = "add3(x,y,z) = x+y+z"
     , source = [stgProgram|
         add3 = () \n (x,y,z) -> case x () of
@@ -64,8 +64,8 @@ program_add3 = machineStateTest defSpec
             default -> Error ()
         |] }
 
-program_takeRepeat :: TestTree
-program_takeRepeat = machineStateTest defSpec
+takeRepeat :: TestTree
+takeRepeat = machineStateTest defSpec
     { testName = "take 2 (repeat ())"
     , source = Stg.int "two" 2
             <> Stg.take
@@ -93,8 +93,8 @@ program_takeRepeat = machineStateTest defSpec
             default -> TestFailure ()
         |] }
 
-program_fibonacci :: TestTree
-program_fibonacci = machineStateTest defSpec
+fibonacci :: TestTree
+fibonacci = machineStateTest defSpec
     { testName = "Fibonacci sequence"
     , source = Stg.equals_List_Int
             <> Stg.int "zero" 0

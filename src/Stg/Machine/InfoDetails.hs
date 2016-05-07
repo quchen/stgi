@@ -104,3 +104,10 @@ garbageCollected :: Foldable f => f MemAddr -> InfoDetail
 garbageCollected addrs = InfoDetail ["Removed addresses: " <> prettyAddrs addrs]
   where
     prettyAddrs = prettyprint . commaSep . foldMap (\addr -> [pretty addr])
+
+enterBlackHole :: MemAddr -> InfoDetail
+enterBlackHole addr = InfoDetail
+    [ "Heap address " <> prettyprint addr <> " is a black hole"
+    , "Entering a black hole means a thunk depends on its own evaluation"
+    , "This is the functional equivalent of an infinite loop"
+    , "GHC reports this condition as \"<<loop>>\"" ]

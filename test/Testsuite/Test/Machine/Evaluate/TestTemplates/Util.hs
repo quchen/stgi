@@ -29,6 +29,7 @@ data VarLookupResult =
     VarLookupError Text
     | VarLookupPrim Integer
     | VarLookupClosure Closure
+    | VarLookupBlackhole
     deriving (Eq, Ord, Show)
 
 -- | Look up the value of a 'Var' on the 'Heap' of a 'StgState'.
@@ -37,6 +38,7 @@ varLookup state var =
     case globalVal (stgGlobals state) (AtomVar var) of
         Failure (NotInScope notInScope) -> VarLookupError (T.intercalate ", " (map (\(Var v) -> v) notInScope) <> " not in global scope")
         Success (Addr addr) -> case H.lookup addr (stgHeap state) of
-            Just closure -> VarLookupClosure closure
-            Nothing -> VarLookupError "not found on heap"
+            Just (HClosure closure) -> VarLookupClosure closure
+            Just Blackhole          -> VarLookupBlackhole
+            Nothing                 -> VarLookupError "not found on heap"
         Success (PrimInt i) -> VarLookupPrim i

@@ -40,12 +40,12 @@ splitHeapTest = testGroup "Split heap in dead/alive"
   where
     (~>) = (,)
     dirtyHeap = Heap
-        [ MemAddr 0 ~> Closure [stg| (used1) \n () -> Used (used1) |]
-                               [Addr (MemAddr 1)]
-        , MemAddr 1 ~> Closure [stg| (used2, prim) \n () -> Used (used2, prim) |]
-                               [Addr (MemAddr 2), PrimInt 1]
-        , MemAddr 2 ~> Closure [stg| () \n () -> Used ()   |] []
-        , MemAddr 3 ~> Closure [stg| () \n () -> Unused () |] [] ]
+        [ MemAddr 0 ~> HClosure (Closure [stg| (used1) \n () -> Used (used1) |]
+                                [Addr (MemAddr 1)] )
+        , MemAddr 1 ~> HClosure (Closure [stg| (used2, prim) \n () -> Used (used2, prim) |]
+                                [Addr (MemAddr 2), PrimInt 1] )
+        , MemAddr 2 ~> HClosure (Closure [stg| () \n () -> Used ()   |] [])
+        , MemAddr 3 ~> HClosure (Closure [stg| () \n () -> Unused () |] []) ]
     globals = Globals
         [ "main"  ~> Addr (MemAddr 0) ]
 

@@ -1,7 +1,6 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
 
 -- | Evaluate STG 'Program's.
 module Stg.Machine.Evaluate (
@@ -23,7 +22,6 @@ import           Stg.Machine.Env
 import qualified Stg.Machine.Heap        as H
 import qualified Stg.Machine.InfoDetails as InfoDetail
 import           Stg.Machine.Types
-import           Stg.Parser
 import           Stg.Util
 
 
@@ -119,7 +117,8 @@ stgRule s@StgState
     { stgCode  = Enter addr
     , stgStack = stack
     , stgHeap  = heap }
-    | Just (Closure (LambdaForm free NoUpdate bound body) freeVals) <- H.lookup addr heap
+    | Just (HClosure (Closure (LambdaForm free NoUpdate bound body) freeVals))
+        <- H.lookup addr heap
     , Just (frames, stack') <- bound `S.forEachPop` stack
     , all isArgFrame frames
     , args <- [ arg | ArgumentFrame arg <- frames ]
@@ -142,16 +141,16 @@ stgRule s@StgState
 
     -- TODO: Refactor this fugly mess, apologies for writing it - David/quchen
   = let (vars, lambdaForms) = unzip (M.assocs binds)
-        dummyClosures = map
-            (const (Closure [stg| () \n () -> Let_rule_dummy () |] []))
-            vars
+        dummyHeapObjs = map (const Blackhole) vars
         stuffNeeded =
-            let (addrsX, heapWithDummies) = H.allocMany dummyClosures heap
+            let (addrsX, heapWithDummies) = H.allocMany dummyHeapObjs heap
                 localsX' = makeLocals' vars addrsX
                 v'closures = makeClosures lambdaForms localsX'
             in case v'closures of
                 Success closures ->
-                    let heapX' = H.updateMany addrsX closures heapWithDummies
+                    let heapX' = H.updateMany addrsX
+                                              (map HClosure closures)
+                                              heapWithDummies
                     in Success (localsX', addrsX, heapX')
                 Failure err -> Failure err
     in case stuffNeeded of
@@ -283,7 +282,7 @@ stgRule s@StgState
     | Left (DefaultBound v expr) <- lookupAlgebraicAlt alts con
 
   = let locals' = addLocals [(v, Addr addr)] locals
-        (addr, heap') = H.alloc closure heap
+        (addr, heap') = H.alloc (HClosure closure) heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
         vs = let newVar _old i = Var ("alg8_" <> show' ticks <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
@@ -385,13 +384,16 @@ stgRule s@StgState
     { stgCode  = Enter addr
     , stgStack = stack
     , stgHeap  = heap }
-    | Just (Closure (LambdaForm free Update [] body) freeVals) <- H.lookup addr heap
+    | Just (HClosure (Closure (LambdaForm free Update [] body) freeVals))
+        <- H.lookup addr heap
 
   = let stack' = UpdateFrame addr :< stack
         locals = makeLocals (zip free freeVals)
+        heap' = H.update addr Blackhole heap
 
     in s { stgCode  = Eval body locals
          , stgStack = stack'
+         , stgHeap  = heap'
          , stgInfo  = Info (StateTransition Enter_UpdatableClosure)
                            (InfoDetail.enterUpdatable addr) }
 
@@ -403,11 +405,12 @@ stgRule s@StgState
     , stgStack = UpdateFrame addr :< stack'
     , stgHeap  = heap
     , stgTicks = ticks }
+    | Just Blackhole <- H.lookup addr heap
 
   = let vs = let newVar _old i = Var ("upd16_" <> show' ticks <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
-        heap' = H.update addr (Closure lf ws) heap
+        heap' = H.update addr (HClosure (Closure lf ws)) heap
 
     in s { stgCode  = ReturnCon con ws
          , stgStack = stack'
@@ -423,8 +426,10 @@ stgRule s@StgState
     , stgStack = stack
     , stgHeap  = heap
     , stgTicks = ticks }
-    | Just (Closure (LambdaForm _vs NoUpdate xs _body) _wsf) <- H.lookup addrEnter heap
-    , Just (argFrames, UpdateFrame addrUpdate :< stack') <- popArgsUntilUpdate stack xs
+    | Just (HClosure (Closure (LambdaForm _vs NoUpdate xs _body) _wsf))
+        <- H.lookup addrEnter heap
+    , Just (argFrames, UpdateFrame addrUpdate :< stack')
+        <- popArgsUntilUpdate stack xs
 
   = let xs1 = zipWith const xs (F.toList argFrames)
         f = Var ("upd17a_" <> show' ticks)
@@ -435,7 +440,7 @@ stgRule s@StgState
             freeVars
         updatedClosure = Closure (LambdaForm freeVars NoUpdate [] fxs1) freeVals
 
-        heap' = H.update addrUpdate updatedClosure heap
+        heap' = H.update addrUpdate (HClosure updatedClosure) heap
 
     in s { stgCode  = Enter addrEnter
          , stgStack = argFrames <>> stack'
@@ -468,12 +473,13 @@ stgRule s = noRuleApplies s
 -- them from each other.
 noRuleApplies :: StgState -> StgState
 
--- Page 39, 2nd paragraph: "[...] closures with non-emptyargument lists are
+-- Page 39, 2nd paragraph: "[...] closures with non-empty argument lists are
 -- never updatable [...]"
 noRuleApplies s@StgState
     { stgCode = Enter addr
     , stgHeap = heap }
-    | Just (Closure (LambdaForm _ Update (_:_) _) _) <- H.lookup addr heap
+    | Just (HClosure (Closure (LambdaForm _ Update (_:_) _) _))
+        <- H.lookup addr heap
   = s { stgInfo = Info (StateError UpdatableClosureWithArgs) [] }
 
 
@@ -533,6 +539,18 @@ noRuleApplies s@StgState
     | Failure notInScope <- traverse (localVal locals) ([x,y] :: [Atom])
 
   = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
+
+
+
+-- Entering a black hole
+noRuleApplies s@StgState
+    { stgCode  = Enter addr
+    , stgHeap  = heap }
+    | Just Blackhole <- H.lookup addr heap
+
+  = s { stgInfo = Info (StateError EnterBlackhole)
+                       (InfoDetail.enterBlackHole addr) }
+
 
 
 

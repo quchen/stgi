@@ -18,6 +18,7 @@ module Stg.Machine.Types (
     Locals(..),
     Closure(..),
     Heap(..),
+    HeapObject(..),
 
     -- * State information
     Info(..),
@@ -375,6 +376,7 @@ data StateError =
     | AlgReturnToPrimAlts
     | PrimReturnToAlgAlts
     | InitialStateCreationFailed
+    | EnterBlackhole
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty StateError where
@@ -391,6 +393,8 @@ instance Pretty StateError where
             -> "Primitive return to algebraic alternatives"
         InitialStateCreationFailed
             -> "Initial state creation failed"
+        EnterBlackhole
+            -> "Entering black hole"
 
 instance PrettyAnsi StateError where
     prettyAnsi = \case
@@ -452,7 +456,7 @@ instance PrettyAnsi Closure where
             freeVals )
 
 -- | The heap stores closures addressed by memory location.
-newtype Heap = Heap (Map MemAddr Closure)
+newtype Heap = Heap (Map MemAddr HeapObject)
     deriving (Eq, Ord, Show, Monoid)
 
 instance Pretty Heap where
@@ -460,3 +464,25 @@ instance Pretty Heap where
 
 instance PrettyAnsi Heap where
     prettyAnsi (Heap heap) = prettyAnsiMap heap
+
+data HeapObject =
+      HClosure Closure
+    | Blackhole
+        -- ^ When an updatable closure is entered, it is overwritten by a
+        -- black hole. This has two main benefits:
+        --
+        -- 1. Memory mentioned only in the closure is now ready to be collected
+        -- 2. Entering a black hole means a thunk depends on itself, allowing
+        --    the interpreter to catch some non-terminating computations with
+        --    a useful error
+    deriving (Eq, Ord, Show)
+
+instance Pretty HeapObject where
+    pretty = \case
+        HClosure closure -> "FUN" <+> pretty closure
+        Blackhole -> "BLACKHOLE"
+
+instance PrettyAnsi HeapObject where
+    prettyAnsi = \case
+        HClosure closure -> "FUN" <+> prettyAnsi closure
+        Blackhole -> "BLACKHOLE"

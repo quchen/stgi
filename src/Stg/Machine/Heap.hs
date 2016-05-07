@@ -29,33 +29,33 @@ size :: Heap -> Int
 size (Heap heap) = M.size heap
 
 -- | Look up a value on the heap.
-lookup :: MemAddr -> Heap -> Maybe Closure
+lookup :: MemAddr -> Heap -> Maybe HeapObject
 lookup addr (Heap heap) = M.lookup addr heap
 
 -- | Update a value on the heap.
-update :: MemAddr -> Closure -> Heap -> Heap
-update addr cl (Heap h) = Heap (M.adjust (const cl) addr h)
+update :: MemAddr -> HeapObject -> Heap -> Heap
+update addr obj (Heap h) = Heap (M.adjust (const obj) addr h)
 
 -- | Update many values on the heap.
-updateMany :: [MemAddr] -> [Closure] -> Heap -> Heap
-updateMany addrs cls heap =
-    L.foldl' (\h (addr, cl) -> update addr cl h) heap (zip addrs cls)
+updateMany :: [MemAddr] -> [HeapObject] -> Heap -> Heap
+updateMany addrs objs heap =
+    L.foldl' (\h (addr, obj) -> update addr obj h) heap (zip addrs objs)
 
 -- | Store a value in the heap at an unused address.
-alloc :: Closure -> Heap -> (MemAddr, Heap)
+alloc :: HeapObject -> Heap -> (MemAddr, Heap)
 alloc lambdaForm heap = (addr, heap')
   where
     ([addr], heap') = allocMany [lambdaForm] heap
 
 -- | Store many values in the heap at unused addresses, and return them
 -- in input order.
-allocMany :: [Closure] -> Heap -> ([MemAddr], Heap)
-allocMany closures (Heap heap) = (addrs, heap')
+allocMany :: [HeapObject] -> Heap -> ([MemAddr], Heap)
+allocMany heapObjects (Heap heap) = (addrs, heap')
   where
     addrs = takeMatchingLength
         (L.filter (\i -> M.notMember i heap) (map MemAddr [0..]))
-        closures
-    heap' = Heap (heap <> M.fromList (zip addrs closures))
+        heapObjects
+    heap' = Heap (heap <> M.fromList (zip addrs heapObjects))
 
 -- | Take as many elements from one list as there are in another.
 --

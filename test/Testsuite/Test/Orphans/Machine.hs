@@ -54,6 +54,10 @@ instance Arbitrary Closure where
 instance Arbitrary Heap where
     arbitrary = arbitrary1 (Heap . M.fromList)
 
+instance Arbitrary HeapObject where
+    arbitrary = oneof [ arbitrary1 HClosure
+                      , pure Blackhole ]
+
 instance Arbitrary Info where
     arbitrary = arbitrary2 Info
 

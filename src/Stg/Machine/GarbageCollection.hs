@@ -134,6 +134,11 @@ instance Addresses Locals where
 instance Addresses Closure where
     addrs (Closure lf free) = addrs lf <> addrs free
 
+instance Addresses HeapObject where
+    addrs = \case
+        HClosure (Closure lf free) -> addrs lf <> addrs free
+        Blackhole -> mempty
+
 instance Addresses LambdaForm where
     addrs (LambdaForm _free _upd _bound expr) = addrs expr
 
