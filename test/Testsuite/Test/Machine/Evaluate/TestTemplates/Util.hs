@@ -34,7 +34,7 @@ data VarLookupResult =
 -- | Look up the value of a 'Var' on the 'Heap' of a 'StgState'.
 varLookup :: StgState -> Var -> VarLookupResult
 varLookup state var =
-    case globalVal (stgGlobals state) var of
+    case globalVal (stgGlobals state) (AtomVar var) of
         Failure (NotInScope notInScope) -> VarLookupError (T.intercalate ", " (map (\(Var v) -> v) notInScope) <> " not in global scope")
         Success (Addr addr) -> case H.lookup addr (stgHeap state) of
             Just closure -> VarLookupClosure closure

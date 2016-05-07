@@ -25,6 +25,7 @@ module Stg.Machine.Types (
     InfoDetail(..),
     StateTransition(..),
     StateError(..),
+    NotInScope(..),
 ) where
 
 
@@ -357,8 +358,18 @@ instance Pretty StateTransition where
 
 instance PrettyAnsi StateTransition
 
+-- | Type safety wrapper.
+newtype NotInScope = NotInScope [Var]
+    deriving (Eq, Ord, Show, Monoid)
+
+instance Pretty NotInScope where
+    pretty (NotInScope vars) = commaSep (map pretty vars)
+
+instance PrettyAnsi NotInScope where
+    prettyAnsi (NotInScope vars) = commaSep (map prettyAnsi vars)
+
 data StateError =
-      VariablesNotInScope [Var]
+      VariablesNotInScope NotInScope
     | UpdatableClosureWithArgs
     | ReturnIntWithEmptyReturnStack
     | AlgReturnToPrimAlts
@@ -368,8 +379,8 @@ data StateError =
 
 instance Pretty StateError where
     pretty = \case
-        VariablesNotInScope vars
-            -> commaSep (map pretty vars) <+> "not in scope"
+        VariablesNotInScope notInScope
+            -> pretty notInScope <+> "not in scope"
         UpdatableClosureWithArgs
             -> "Closures with non-empty argument lists are never updatable"
         ReturnIntWithEmptyReturnStack
@@ -383,8 +394,8 @@ instance Pretty StateError where
 
 instance PrettyAnsi StateError where
     prettyAnsi = \case
-        VariablesNotInScope vars
-            -> commaSep (map prettyAnsi vars) <+> "not in scope"
+        VariablesNotInScope notInScope
+            -> prettyAnsi notInScope <+> "not in scope"
         x -> pretty x
 
 -- | Detailed information that may be useful to the user. Not used

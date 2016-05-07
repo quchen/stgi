@@ -339,7 +339,7 @@ stgIterate = haskellReferenceTest HaskellReferenceTestSpec
 
 stgLength :: TestTree
 stgLength = haskellReferenceTest HaskellReferenceTestSpec
-    { testName = "iterate (+take)"
+    { testName = "length"
     , maxSteps = 1024
     , showFinalStateOnFail = False
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]

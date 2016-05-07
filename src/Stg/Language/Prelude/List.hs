@@ -153,11 +153,10 @@ take = [stgProgram|
                     0# -> Nil ();
                     default -> case xs () of
                         Nil () -> Nil ();
-                        Cons (x,xs) -> case 1# of
-                            one ->
-                                let rest = (takePrim, xs, nPrim, one) \u () -> case -# nPrim one of
-                                        nPrimPred -> takePrim (nPrimPred, xs)
-                                in Cons (x,rest);
+                        Cons (x,xs) ->
+                            let rest = (takePrim, xs, nPrim) \u () -> case -# nPrim 1# of
+                                    nPrimPred -> takePrim (nPrimPred, xs)
+                            in Cons (x,rest);
                         badList -> Error_take_badList (badList)
         in case n () of
             Int# (nPrim) -> takePrim (nPrim);
@@ -235,12 +234,12 @@ replicate = [stg|
     replicate = () \n (n, x) ->
         letrec
             replicateXPrim = (replicateXPrim, x) \n (nPrim) ->
-                case 0# of zero -> case ># nPrim zero of
+                case ># nPrim 0# of
                     0# -> Nil ();
                     default ->
-                        let rest = (replicateXPrim, nPrim) \n () -> case 1# of
-                                one -> case -# nPrim one of
-                                    nPrimPred -> replicateXPrim (nPrimPred)
+                        let rest = (replicateXPrim, nPrim) \n () ->
+                            case -# nPrim 1# of
+                                nPrimPred -> replicateXPrim (nPrimPred)
                         in Cons (x, rest)
         in case n () of
             Int# (nPrim) -> replicateXPrim (nPrim);
@@ -380,9 +379,8 @@ length = [stgProgram|
         letrec
             length' = (length') \n (n, xs) -> case xs () of
                 Nil () -> Int# (n);
-                Cons (y,ys) -> case 1# of
-                    one -> case +# n one of
-                        n' -> length' (n', ys);
+                Cons (y,ys) -> case +# n 1# of
+                    n' -> length' (n', ys);
                 badList -> Error_length (badList)
         in length' (0#)
     |]

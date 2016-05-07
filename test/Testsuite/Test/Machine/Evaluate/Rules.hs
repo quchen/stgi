@@ -1,4 +1,5 @@
 {-# LANGUAGE NumDecimals       #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
@@ -13,12 +14,15 @@ module Test.Machine.Evaluate.Rules (tests) where
 import           Test.Tasty
 
 import           Stg.Language
+import           Stg.Language.Prettyprint
 import           Stg.Machine
 import           Stg.Machine.Types
 import           Stg.Parser
 
+import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
 import           Test.Machine.Evaluate.TestTemplates.MachineState
-import           Test.Orphans                                     ()
+import           Test.Orphans                                         ()
+import           Test.QuickCheck.Modifiers
 
 
 
@@ -52,7 +56,7 @@ tests = testGroup "Rules"
     , constructorApplication
     , literalEvaluation
     , literalApplication
-    , testGroup "Primitive functions (rule 14)"
+    , testGroup "Primitive operations"
         [ testGroup "Integer arithmetic"
             [ addition
             , subtraction
@@ -280,148 +284,43 @@ literalApplication = machineStateTest defSpec
                 x  -> TestFail (x)
         |] }
 
-addition :: TestTree
-addition = machineStateTest defSpec
-    { testName = "Addition       +#"
-    , source = [stg|
-        op = () \n (x,y) -> case +# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (1#, 2#) of
-            Int# (x) -> case x () of
-                3# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
+primopTest
+    :: PrimOp -- ^ STG primop
+    -> (Integer -> Integer -> Integer) -- ^ Haskell version of the primop
+    -> TestTree
+primopTest op hOp = HRef.haskellReferenceTest HRef.HaskellReferenceTestSpec
+    { HRef.testName = prettyprint op
+    , HRef.maxSteps = 1024
+    , HRef.showFinalStateOnFail = True
+    , HRef.successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , HRef.failPredicate = const False
+    , HRef.source = \(arg1, NonZero arg2) -> -- arg2 is nonzero or the div/mod
+                                             -- tests fail. Having their own
+                                             -- tests is probably not worth the
+                                             --  code duplication, so we just
+                                             -- throw out the baby with the
+                                             -- bathwater here.
+        Program (Binds
+            [(Var "main", LambdaForm [] Update []
+                (Case (AppP op (AtomLit (Literal arg1)) (AtomLit (Literal arg2))) (Alts
+                    [PrimitiveAlt (Literal (hOp arg1 arg2)) (AppC (Constr "Success") [])]
+                    (DefaultBound (Var "wrong") (AppC (Constr "TestFail") [AtomVar (Var "wrong")])) )))])}
 
-subtraction :: TestTree
-subtraction = machineStateTest defSpec
-    { testName = "Subtraction    -#"
-    , source = [stg|
-        op = () \n (x,y) -> case -# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (3#, 2#) of
-            Int# (x) -> case x () of
-                1# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
+addition , subtraction , multiplication , division , modulo :: TestTree
+equal , less , lessOrEqual , greater , greaterOrEqual , unequal :: TestTree
+addition       = primopTest Add (+)
+subtraction    = primopTest Sub (-)
+multiplication = primopTest Mul (*)
+division       = primopTest Div div
+modulo         = primopTest Mod mod
+equal          = primopTest Eq  (\x y -> if x == y then 1 else 0)
+less           = primopTest Lt  (\x y -> if x < y  then 1 else 0)
+lessOrEqual    = primopTest Leq (\x y -> if x <= y then 1 else 0)
+greater        = primopTest Gt  (\x y -> if x > y  then 1 else 0)
+greaterOrEqual = primopTest Geq (\x y -> if x >= y then 1 else 0)
+unequal        = primopTest Neq (\x y -> if x /= y then 1 else 0)
 
-multiplication :: TestTree
-multiplication = machineStateTest defSpec
-    { testName = "Multiplication *#"
-    , source = [stg|
-        op = () \n (x,y) -> case *# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (3#, 2#) of
-            Int# (x) -> case x () of
-                6# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
 
-division :: TestTree
-division = machineStateTest defSpec
-    { testName = "Division       /#"
-    , source = [stg|
-        op = () \n (x,y) -> case /# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (6#, 2#) of
-            Int# (x) -> case x () of
-                3# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
-
-modulo :: TestTree
-modulo = machineStateTest defSpec
-    { testName = "Modulo         %#"
-    , source = [stg|
-        op = () \n (x,y) -> case %# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (5#, 2#) of
-            Int# (x) -> case x () of
-                1# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
-
-less :: TestTree
-less = machineStateTest defSpec
-    { testName = "Less than        <#"
-    , source = [stg|
-        op = () \n (x,y) -> case <# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (1#, 2#) of
-            Int# (x) -> case x () of
-                1# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
-
-lessOrEqual :: TestTree
-lessOrEqual = machineStateTest defSpec
-    { testName = "Less or equal    <=#"
-    , source = [stg|
-        op = () \n (x,y) -> case <=# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (1#, 2#) of
-            Int# (x) -> case x () of
-                1# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
-
-equal :: TestTree
-equal = machineStateTest defSpec
-    { testName = "Equality         ==#"
-    , source = [stg|
-        op = () \n (x,y) -> case ==# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (2#, 2#) of
-            Int# (x) -> case x () of
-                1# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
-
-unequal :: TestTree
-unequal = machineStateTest defSpec
-    { testName = "Inequality       /=#"
-    , source = [stg|
-        op = () \n (x,y) -> case /=# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (1#, 2#) of
-            Int# (x) -> case x () of
-                1# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
-
-greaterOrEqual :: TestTree
-greaterOrEqual = machineStateTest defSpec
-    { testName = "Greater or equal >=#"
-    , source = [stg|
-        op = () \n (x,y) -> case >=# x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (2#, 1#) of
-            Int# (x) -> case x () of
-                1# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
-
-greater :: TestTree
-greater = machineStateTest defSpec
-    { testName = "Greater than     >#"
-    , source = [stg|
-        op = () \n (x,y) -> case ># x y of
-            v  -> Int# (v);
-        main = () \u () -> case op (2#, 1#) of
-            Int# (x) -> case x () of
-                1# -> Success ();
-                v  -> TestFail (v);
-            default -> Error ()
-        |] }
 
 enterUpdatableClosure :: TestTree
 enterUpdatableClosure = machineStateTest defSpec
@@ -473,11 +372,10 @@ primopShortcut_defaultBound :: TestTree
 primopShortcut_defaultBound = machineStateTest defSpec
     { testName = "Default bound match shortcut (rule 18)"
     , source = [stg|
-        main = () \u () -> case 1# of
-            v1 -> case 2# of
-                v2 -> case +# v1 v2 of
-                    3#      -> Success ();
-                    default -> TestFail ()
+        main = () \u () -> case +# 1# 2# of
+            1# -> TestFail (1#);
+            2# -> TestFail (2#);
+            v  -> Success ()
         |]
     , forbiddenState = \state -> case stgCode state of
         Eval AppP{} _ -> True -- The point of the shortcut is to never reach
@@ -490,11 +388,9 @@ primopShortcut_normalMatch = machineStateTest defSpec
     { testName = "Standard match shortcut (rule 19)"
     , source = [stg|
         main = () \u () -> case 1# of
-            v1 -> case 2# of
-                v2 -> case +# v1 v2 of
-                    v -> case v () of
-                        3# -> Success ();
-                        wrong -> TestFail (wrong)
+            one -> case +# one 2# of
+                3# -> Success ();
+                wrong -> TestFail (wrong)
         |]
     , forbiddenState = \state -> case stgCode state of
         Eval AppP{} _ -> True -- The point of the shortcut is to never reach

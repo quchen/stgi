@@ -56,7 +56,7 @@ lookupAlt matchingAlt alts def = case L.find matchingAlt alts of
 
 liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure
 liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
-    case traverse (first (:[]) . localVal localsLift) free of
+    case traverse (first (:[]) . localVal localsLift . AtomVar) free of
         Success freeVals   -> Success (Closure lf freeVals)
         Failure notInScope -> Failure (mconcat notInScope)
 
@@ -68,8 +68,8 @@ applyPrimOp = \case
     Add -> (+)
     Sub -> (-)
     Mul -> (*)
-    Div -> quot
-    Mod -> rem
+    Div -> div
+    Mod -> mod
     Eq  -> boolToPrim (==)
     Lt  -> boolToPrim (<)
     Leq -> boolToPrim (<=)
@@ -160,7 +160,7 @@ stgRule s@StgState
               , stgHeap = heap'
               , stgInfo = Info (StateTransition (Eval_Let rec))
                                (InfoDetail.evalLet vars addrs) }
-        Failure (NotInScope notInScope) ->
+        Failure notInScope ->
             s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
   where
     makeLocals' :: [Var] -> [MemAddr] -> Locals
@@ -189,7 +189,7 @@ stgRule s@StgState
 -- rule until you've seen the normal case rule (4) and the normal
 -- primop rule (14).
 stgRule s@StgState
-    { stgCode = Eval (Case (AppP op (AtomVar x) (AtomVar y)) alts) locals }
+    { stgCode = Eval (Case (AppP op x y) alts) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
     , opXY <- applyPrimOp op xVal yVal
@@ -205,7 +205,7 @@ stgRule s@StgState
 -- (19) Like (18) a shortcut for evaluating primops. See (18) for more
 -- information.
 stgRule s@StgState
-    { stgCode = Eval (Case (AppP op (AtomVar x) (AtomVar y)) alts) locals }
+    { stgCode = Eval (Case (AppP op x y) alts) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
     , opXY <- applyPrimOp op xVal yVal
@@ -345,14 +345,28 @@ stgRule s@StgState
 
 
 -- (14) Primitive function application
+--
+-- This rule has been modified to take not only primitive-valued variables, but
+-- also primitive values directly as arguments.
+--
+-- Without this modification, you cannot evaluate @+# 1# 2#@, you have to
+-- write
+--
+-- @
+-- case 1# of one -> case 2# of two -> case +# one two of ...
+-- @
+--
+-- which is a bit silly. I think this might be an oversight in the 1992 paper.
+-- The fast curry paper does not seem to impose this restriction.
 stgRule s@StgState
-    { stgCode = Eval (AppP op (AtomVar x) (AtomVar y)) locals }
+    { stgCode = Eval (AppP op x y) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
 
   = s { stgCode = ReturnInt (applyPrimOp op xVal yVal)
       , stgInfo = Info (StateTransition Eval_AppP)
-                       (InfoDetail.unusedLocals [x,y] locals) }
+                       (InfoDetail.unusedLocals [var | AtomVar var <- [x,y]]
+                                                locals) }
 
 
 
@@ -470,7 +484,7 @@ noRuleApplies s@StgState
 noRuleApplies s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
-    | Failure (NotInScope notInScope) <- vals locals globals (AtomVar f : xs)
+    | Failure notInScope <- vals locals globals (AtomVar f : xs)
 
   = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
 
@@ -480,7 +494,7 @@ noRuleApplies s@StgState
 noRuleApplies s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
-    | Failure (NotInScope notInScope) <- vals locals globals xs
+    | Failure notInScope <- vals locals globals xs
 
   = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
 
@@ -501,6 +515,14 @@ noRuleApplies s@StgState
     , stgStack = ReturnFrame (Alts (PrimitiveAlt{}:_) _) _ :< _ }
 
   = s { stgInfo = Info (StateError PrimReturnToAlgAlts) [] }
+
+
+
+noRuleApplies s@StgState
+    { stgCode = Eval (AppP _op x y) locals }
+    | Failure notInScope <- traverse (localVal locals) ([x,y] :: [Atom])
+
+  = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
 
 
 

@@ -1,5 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | Defines operations on local and global variable environments.
 module Stg.Machine.Env (
@@ -28,12 +27,6 @@ import           Stg.Util
 
 
 
--- | Type safety wrapper.
-newtype NotInScope = NotInScope [Var]
-    deriving (Eq, Ord, Show, Monoid)
-
-
-
 -- | Add a list of bindings to the local environment.
 --
 -- Already existing variables will be shadowed (i.e. overwritten).
@@ -59,9 +52,9 @@ vals :: Locals -> Globals -> [Atom] -> Validate NotInScope [Value]
 vals locals globals = traverse (val locals globals)
 
 -- | Look up the value of a variable in the local environment.
-localVal :: Locals -> Var -> Validate NotInScope Value
-localVal locals = val locals mempty . AtomVar
+localVal :: Locals -> Atom -> Validate NotInScope Value
+localVal locals = val locals mempty
 
 -- | Look up the value of a variable in the global environment.
-globalVal :: Globals -> Var -> Validate NotInScope Value
-globalVal globals = val mempty globals . AtomVar
+globalVal :: Globals -> Atom -> Validate NotInScope Value
+globalVal globals = val mempty globals
