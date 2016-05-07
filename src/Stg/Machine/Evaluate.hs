@@ -141,7 +141,7 @@ stgRule s@StgState
 
     -- TODO: Refactor this fugly mess, apologies for writing it - David/quchen
   = let (vars, lambdaForms) = unzip (M.assocs binds)
-        dummyHeapObjs = map (const Blackhole) vars
+        dummyHeapObjs = map (const (Blackhole 0)) vars
         stuffNeeded =
             let (addrsX, heapWithDummies) = H.allocMany dummyHeapObjs heap
                 localsX' = makeLocals' vars addrsX
@@ -383,13 +383,14 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = Enter addr
     , stgStack = stack
-    , stgHeap  = heap }
+    , stgHeap  = heap
+    , stgTicks = tick }
     | Just (HClosure (Closure (LambdaForm free Update [] body) freeVals))
         <- H.lookup addr heap
 
   = let stack' = UpdateFrame addr :< stack
         locals = makeLocals (zip free freeVals)
-        heap' = H.update addr Blackhole heap
+        heap' = H.update addr (Blackhole tick) heap
 
     in s { stgCode  = Eval body locals
          , stgStack = stack'
@@ -405,7 +406,7 @@ stgRule s@StgState
     , stgStack = UpdateFrame addr :< stack'
     , stgHeap  = heap
     , stgTicks = ticks }
-    | Just Blackhole <- H.lookup addr heap
+    | Just (Blackhole _bhTick) <- H.lookup addr heap
 
   = let vs = let newVar _old i = Var ("upd16_" <> show' ticks <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
@@ -546,10 +547,10 @@ noRuleApplies s@StgState
 noRuleApplies s@StgState
     { stgCode  = Enter addr
     , stgHeap  = heap }
-    | Just Blackhole <- H.lookup addr heap
+    | Just (Blackhole bhTick) <- H.lookup addr heap
 
   = s { stgInfo = Info (StateError EnterBlackhole)
-                       (InfoDetail.enterBlackHole addr) }
+                       (InfoDetail.enterBlackHole addr bhTick) }
 
 
 

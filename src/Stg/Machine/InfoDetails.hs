@@ -47,7 +47,9 @@ unusedLocals vars (Locals locals) = InfoDetail (
 enterNonUpdatable :: MemAddr -> [Value] -> InfoDetail
 enterNonUpdatable addr args = (InfoDetail . map prettyprint)
     [ "Enter closure at " <> pretty addr
-    , "Pop arguments " <> commaSep (foldMap (\arg -> [pretty arg]) args) <> " from the stack" ]
+    , if null args
+        then pretty addr <+> "is a value, so no arguments are popped"
+        else "Pop arguments " <> commaSep (foldMap (\arg -> [pretty arg]) args) <> " from the stack" ]
 
 
 
@@ -70,7 +72,8 @@ evalCase = InfoDetail [ "Save alternatives and local environment as a stack fram
 
 enterUpdatable :: MemAddr -> InfoDetail
 enterUpdatable addr = InfoDetail
-    [ "Push a new update frame with the entered address " <> prettyprint addr ]
+    [ "Push a new update frame with the entered address " <> prettyprint addr
+    , "Overwrite the heap object at " <> prettyprint addr <> " with a black hole" ]
 
 
 
@@ -105,9 +108,12 @@ garbageCollected addrs = InfoDetail ["Removed addresses: " <> prettyAddrs addrs]
   where
     prettyAddrs = prettyprint . commaSep . foldMap (\addr -> [pretty addr])
 
-enterBlackHole :: MemAddr -> InfoDetail
-enterBlackHole addr = InfoDetail
-    [ "Heap address " <> prettyprint addr <> " is a black hole"
+enterBlackHole
+    :: MemAddr
+    -> Integer -- ^ Tick in which the hole was created
+    -> InfoDetail
+enterBlackHole addr tick = InfoDetail
+    [ "Heap address " <> prettyprint addr <> " is a black hole, created in step " <> prettyprint tick
     , "Entering a black hole means a thunk depends on its own evaluation"
     , "This is the functional equivalent of an infinite loop"
     , "GHC reports this condition as \"<<loop>>\"" ]

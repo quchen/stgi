@@ -56,7 +56,7 @@ instance Arbitrary Heap where
 
 instance Arbitrary HeapObject where
     arbitrary = oneof [ arbitrary1 HClosure
-                      , pure Blackhole ]
+                      , arbitrary1 Blackhole ]
 
 instance Arbitrary Info where
     arbitrary = arbitrary2 Info

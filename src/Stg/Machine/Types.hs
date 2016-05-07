@@ -467,7 +467,7 @@ instance PrettyAnsi Heap where
 
 data HeapObject =
       HClosure Closure
-    | Blackhole
+    | Blackhole Integer
         -- ^ When an updatable closure is entered, it is overwritten by a
         -- black hole. This has two main benefits:
         --
@@ -475,14 +475,18 @@ data HeapObject =
         -- 2. Entering a black hole means a thunk depends on itself, allowing
         --    the interpreter to catch some non-terminating computations with
         --    a useful error
+        --
+        -- To make the black hole a bit more transparent, it is tagged with
+        -- the STG tick in which it was introduced. This tag is used only for
+        -- display purposes.
     deriving (Eq, Ord, Show)
 
 instance Pretty HeapObject where
     pretty = \case
         HClosure closure -> "FUN" <+> pretty closure
-        Blackhole -> "BLACKHOLE"
+        Blackhole tick -> "BLACKHOLE (created in step " <> integer tick <> ")"
 
 instance PrettyAnsi HeapObject where
     prettyAnsi = \case
         HClosure closure -> "FUN" <+> prettyAnsi closure
-        Blackhole -> "BLACKHOLE"
+        Blackhole tick -> "BLACKHOLE (created in step " <> integer tick <> ")"

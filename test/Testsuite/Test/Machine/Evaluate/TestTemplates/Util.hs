@@ -38,7 +38,7 @@ varLookup state var =
     case globalVal (stgGlobals state) (AtomVar var) of
         Failure (NotInScope notInScope) -> VarLookupError (T.intercalate ", " (map (\(Var v) -> v) notInScope) <> " not in global scope")
         Success (Addr addr) -> case H.lookup addr (stgHeap state) of
-            Just (HClosure closure) -> VarLookupClosure closure
-            Just Blackhole          -> VarLookupBlackhole
-            Nothing                 -> VarLookupError "not found on heap"
+            Just (HClosure closure)  -> VarLookupClosure closure
+            Just (Blackhole _bhTick) -> VarLookupBlackhole
+            Nothing                  -> VarLookupError "not found on heap"
         Success (PrimInt i) -> VarLookupPrim i
