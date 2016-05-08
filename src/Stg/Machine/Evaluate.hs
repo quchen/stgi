@@ -406,7 +406,6 @@ stgRule s@StgState
     , stgStack = UpdateFrame addr :< stack'
     , stgHeap  = heap
     , stgTicks = ticks }
-    | Just (Blackhole _bhTick) <- H.lookup addr heap
 
   = let vs = let newVar _old i = Var ("upd16_" <> show' ticks <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
