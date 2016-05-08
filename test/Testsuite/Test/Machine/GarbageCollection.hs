@@ -50,7 +50,7 @@ splitHeapTest = testGroup "Split heap in dead/alive"
         [ "main"  ~> Addr (MemAddr 0) ]
 
     dummyState = StgState
-        { stgCode        = ReturnInt 1
+        { stgCode    = ReturnInt 1
         , stgStack   = mempty
         , stgHeap    = dirtyHeap
         , stgGlobals = globals

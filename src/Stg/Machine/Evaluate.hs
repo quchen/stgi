@@ -222,7 +222,7 @@ stgRule s@StgState
 
 -- (4) Case evaluation
 stgRule s@StgState
-    { stgCode = (Eval (Case expr alts) locals)
+    { stgCode  = Eval (Case expr alts) locals
     , stgStack = stack }
 
   = let stack' = ReturnFrame alts locals :< stack
