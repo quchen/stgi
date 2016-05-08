@@ -66,6 +66,11 @@ Differences from the 1992 paper
   synchronously anyway. This makes the current location in the evaluation much
   clearer, since the stack is always popped from the top. For example, having a
   return frame at the top means the program is close to a `case` expression.
+- There are different objects on the heap, not just closures:
+    - Closures can be on the heap, as usual
+    - Black holes overwrite updatable closures upon entering, allowing for
+      `<<loop>>` detection and avoiding certain space leaks (... apparently,
+      at least the 1992 paper says so)
 
 
 GHC's current STG
