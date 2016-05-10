@@ -12,11 +12,11 @@ module Test.Machine.Evaluate.TestTemplates.HaskellReference (
 
 
 import qualified Data.List                                as L
-import           Data.Monoid
 import           Data.Text                                (Text)
 import qualified Data.Text                                as T
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
+import           Text.PrettyPrint.ANSI.Leijen             hiding ((<>))
 
 import           Stg.Language
 import           Stg.Language.Prettyprint
@@ -66,23 +66,23 @@ haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test
                 (PerformGc (const False))
                 program
             finalState = last states
-            successPredicateNotTrueText = (T.unpack . T.unlines)
-                [ "STG version of "
-                    <> testName testSpec
-                    <> " does not match Haskell's reference implementation."
-                , "Failure because: "
-                    <> prettyprintAnsi (stgInfo finalState)
+            successPredicateNotTrueText = (T.unpack . prettyprintAnsi . vsep)
+                [ "STG version of"
+                    <+> (text . T.unpack . testName) testSpec
+                    <+> "does not match Haskell's reference implementation."
+                , "Failure because:"
+                    <+> prettyAnsi (stgInfo finalState)
                 , if failWithInfo testSpec
-                    then T.unlines
-                        [ "Program:", prettyprintAnsi (source testSpec input)
-                        , "Final state:", prettyprintAnsi finalState ]
+                    then vsep
+                        [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec input)])
+                        , hang 4 (vsep ["Final state:", prettyAnsi finalState]) ]
                     else failWithInfoInfoText ]
-            failurePredicateTrueText bad = (T.unpack . T.unlines)
+            failurePredicateTrueText bad = (T.unpack . prettyprintAnsi . vsep)
                 [ "Failure predicate held for an intemediate state"
                 , if failWithInfo testSpec
-                    then T.unlines
-                        [ "Program:", prettyprintAnsi (source testSpec input)
-                        , "Bad state:" , prettyprintAnsi bad ]
+                    then vsep
+                        [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec input)])
+                        , hang 4 (vsep ["Bad state:" , prettyAnsi bad]) ]
                     else failWithInfoInfoText ]
         in case L.find (failPredicate testSpec) states of
             Just bad -> counterexample (failurePredicateTrueText bad) False
@@ -90,5 +90,5 @@ haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test
                 Info HaltedByPredicate _ -> property True
                 _otherwise -> counterexample successPredicateNotTrueText False
 
-failWithInfoInfoText :: Text
+failWithInfoInfoText :: Doc
 failWithInfoInfoText = "Run test case with failWithInfo to see the final state."

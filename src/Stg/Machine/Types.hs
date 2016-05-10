@@ -155,8 +155,8 @@ instance PrettyAnsi StackFrame where
     prettyAnsi = \case
         ArgumentFrame val -> "(Argument)" <+> prettyAnsi val
         ReturnFrame alts locals -> "(Return)" <+>
-            (align . vsep) [ fill 7 "Alts:" <+> align (prettyAnsi alts)
-                           , fill 7 "Locals:" <+> align (prettyAnsi locals) ]
+            (align . vsep) [ fill 7 (headline colour "Alts:")   <+> align (prettyAnsi alts)
+                           , fill 7 (headline colour "Locals:") <+> align (prettyAnsi locals) ]
         UpdateFrame addr -> "(Update)" <+> prettyAnsi addr
 
 -- | A memory address.

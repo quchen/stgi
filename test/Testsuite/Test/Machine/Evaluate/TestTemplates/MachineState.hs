@@ -14,6 +14,7 @@ import qualified Data.List                                as L
 import           Data.Monoid
 import           Data.Text                                (Text)
 import qualified Data.Text                                as T
+import           Text.PrettyPrint.ANSI.Leijen             hiding ((<>))
 
 import           Stg.Language
 import           Stg.Language.Prettyprint
@@ -68,26 +69,26 @@ machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
                         program
     finalState = last states
     test = case L.find (forbiddenState testSpec) states of
-        Just bad -> (assertFailure . T.unpack . T.unlines)
+        Just bad -> (assertFailure . T.unpack . prettyprintAnsi . vsep)
             [ "Failure predicate held for an intemediate state"
             , if failWithInfo testSpec
-                then T.unlines
-                    [ "Program:", prettyprintAnsi (source testSpec)
-                    , "Bad state:", prettyprintAnsi bad ]
+                then vsep
+                    [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec)])
+                    , hang 4 (vsep ["Bad state:", prettyAnsi bad]) ]
                 else failWithInfoInfoText ]
         Nothing -> case L.any (someStateSatisfies testSpec) states of
             True -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> pure ()
-                _otherwise -> (assertFailure . T.unpack . T.unlines)
+                _otherwise -> (assertFailure . T.unpack . prettyprintAnsi . vsep)
                     [ "STG failed to satisfy predicate: "
-                        <> prettyprintAnsi (stgInfo finalState)
+                        <> prettyAnsi (stgInfo finalState)
                     , if failWithInfo testSpec
-                        then T.unlines
-                            [ "Program:", prettyprintAnsi (source testSpec)
-                            , "Final state:", prettyprintAnsi finalState]
+                        then vsep
+                            [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec)])
+                            , hang 4 (vsep ["Final state:", prettyAnsi finalState]) ]
                         else failWithInfoInfoText ]
             False -> (assertFailure . T.unpack)
                 "No intermediate state satisfied the required predicate."
 
-failWithInfoInfoText :: Text
+failWithInfoInfoText :: Doc
 failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
