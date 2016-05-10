@@ -37,7 +37,6 @@ library
                      , Stg.Machine.Evaluate
                      , Stg.Machine.GarbageCollection
                      , Stg.Machine.Heap
-                     , Stg.Machine.InfoDetails
                      , Stg.Machine.Types
                      , Stg.Parser
                      , Stg.Parser.Parser

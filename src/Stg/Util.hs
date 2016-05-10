@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Useful utilities that don't really fit in a specific location.
 module Stg.Util (
     show',
@@ -6,6 +8,7 @@ module Stg.Util (
     -- * Prettyprinter extensions
     commaSep,
     tupled',
+    bulletList,
 ) where
 
 
@@ -57,3 +60,7 @@ commaSep = encloseSep mempty mempty (comma <> space)
 -- | Like 'tupled', but comma-space separated.
 tupled' :: [Doc] -> Doc
 tupled' = encloseSep lparen rparen (comma <> space)
+
+-- | Prefix all contained documents with a bullet symbol.
+bulletList :: [Doc] -> Doc
+bulletList = align . vsep . map (("  - " <>) . align)

@@ -5,7 +5,6 @@ module Test.Orphans.Machine () where
 
 
 import qualified Data.Map              as M
-import qualified Data.Text             as T
 import           Test.Tasty.QuickCheck
 
 import           Stg.Machine.Types
@@ -70,8 +69,51 @@ instance Arbitrary InfoShort where
                       , pure StateInitial ]
 
 instance Arbitrary InfoDetail where
-    arbitrary = arbitrary1 (InfoDetail . map T.pack)
+    arbitrary = oneof
+        [ arbitrary2 Detail_FunctionApplication
+        , arbitrary2 Detail_UnusedLocalVariables
+        , arbitrary2 Detail_EnterNonUpdatable
+        , arbitrary2 Detail_EvalLet
+        , arbitrary0 Detail_EvalCase
+        , arbitrary1 Detail_EnterUpdatable
+        , arbitrary2 Detail_ConUpdate
+        , arbitrary1 Detail_PapUpdate
+        , arbitrary0 Detail_ReturnIntCannotUpdate
+        , arbitrary0 Detail_StackNotEmpty
+        , arbitrary1 Detail_GarbageCollected
+        , arbitrary2 Detail_EnterBlackHole ]
 
-instance Arbitrary StateTransition
+instance Arbitrary StateTransition where
+    arbitrary = oneof
+        [ arbitrary0 Enter_NonUpdatableClosure
+        , arbitrary0 Enter_PartiallyAppliedUpdate
+        , arbitrary0 Enter_UpdatableClosure
+        , arbitrary0 Eval_AppC
+        , arbitrary0 Eval_AppP
+        , arbitrary0 Eval_Case
+        , arbitrary0 Eval_Case_Primop_Normal
+        , arbitrary0 Eval_Case_Primop_DefaultBound
+        , arbitrary0 Eval_FunctionApplication
+        , arbitrary1 Eval_Let
+        , arbitrary0 Eval_Lit
+        , arbitrary0 Eval_LitApp
+        , arbitrary0 ReturnCon_DefBound
+        , arbitrary0 ReturnCon_DefUnbound
+        , arbitrary0 ReturnCon_Match
+        , arbitrary0 ReturnCon_Update
+        , arbitrary0 ReturnInt_DefBound
+        , arbitrary0 ReturnInt_DefUnbound
+        , arbitrary0 ReturnInt_Match ]
 
-instance Arbitrary StateError
+instance Arbitrary StateError where
+    arbitrary = oneof
+        [ arbitrary1 VariablesNotInScope
+        , arbitrary0 UpdatableClosureWithArgs
+        , arbitrary0 ReturnIntWithEmptyReturnStack
+        , arbitrary0 AlgReturnToPrimAlts
+        , arbitrary0 PrimReturnToAlgAlts
+        , arbitrary0 InitialStateCreationFailed
+        , arbitrary0 EnterBlackhole ]
+
+instance Arbitrary NotInScope where
+    arbitrary = arbitrary1 NotInScope

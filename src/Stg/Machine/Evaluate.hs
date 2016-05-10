@@ -10,17 +10,16 @@ module Stg.Machine.Evaluate (
 
 
 import           Data.Bifunctor
-import qualified Data.Foldable           as F
-import qualified Data.List               as L
-import qualified Data.Map                as M
-import           Data.Monoid             hiding (Alt)
+import qualified Data.Foldable     as F
+import qualified Data.List         as L
+import qualified Data.Map          as M
+import           Data.Monoid       hiding (Alt)
 
-import           Stack                   (Stack (..), (<>>))
-import qualified Stack                   as S
+import           Stack             (Stack (..), (<>>))
+import qualified Stack             as S
 import           Stg.Language
 import           Stg.Machine.Env
-import qualified Stg.Machine.Heap        as H
-import qualified Stg.Machine.InfoDetails as InfoDetail
+import qualified Stg.Machine.Heap  as H
 import           Stg.Machine.Types
 import           Stg.Util
 
@@ -107,8 +106,8 @@ stgRule s@StgState
          , stgStack = stack'
          , stgInfo  = Info
              (StateTransition Eval_FunctionApplication)
-             (mconcat [ InfoDetail.appF f xs
-                      , InfoDetail.unusedLocals (f : [ var | AtomVar var <- xs ]) locals ])}
+             [ Detail_FunctionApplication f xs
+             , Detail_UnusedLocalVariables (f : [ var | AtomVar var <- xs ]) locals ]}
 
 
 
@@ -130,7 +129,7 @@ stgRule s@StgState
     in s { stgCode  = Eval body locals
          , stgStack = stack'
          , stgInfo  = Info (StateTransition Enter_NonUpdatableClosure)
-                           (InfoDetail.enterNonUpdatable addr args) }
+                           [Detail_EnterNonUpdatable addr args] }
 
 
 
@@ -158,7 +157,7 @@ stgRule s@StgState
             s { stgCode = Eval expr locals'
               , stgHeap = heap'
               , stgInfo = Info (StateTransition (Eval_Let rec))
-                               (InfoDetail.evalLet vars addrs) }
+                               [Detail_EvalLet vars addrs] }
         Failure notInScope ->
             s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
   where
@@ -230,7 +229,7 @@ stgRule s@StgState
     in s { stgCode  = Eval expr locals
          , stgStack = stack'
          , stgInfo  = Info (StateTransition Eval_Case)
-                           InfoDetail.evalCase }
+                           [Detail_EvalCase] }
 
 
 
@@ -243,7 +242,7 @@ stgRule s@StgState
   = s { stgCode = ReturnCon con valsXs
       , stgInfo = Info
           (StateTransition Eval_AppC)
-          (InfoDetail.unusedLocals [ var | AtomVar var <- xs ] locals) }
+          [Detail_UnusedLocalVariables [ var | AtomVar var <- xs ] locals] }
 
 
 
@@ -306,7 +305,7 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
 
   = s { stgCode = ReturnInt k
       , stgInfo = Info (StateTransition Eval_LitApp)
-                       (InfoDetail.unusedLocals [f] locals)}
+                       [Detail_UnusedLocalVariables [f] locals] }
 
 
 
@@ -374,8 +373,8 @@ stgRule s@StgState
 
   = s { stgCode = ReturnInt (applyPrimOp op xVal yVal)
       , stgInfo = Info (StateTransition Eval_AppP)
-                       (InfoDetail.unusedLocals [var | AtomVar var <- [x,y]]
-                                                locals) }
+                       [Detail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
+                                                    locals] }
 
 
 
@@ -396,7 +395,7 @@ stgRule s@StgState
          , stgStack = stack'
          , stgHeap  = heap'
          , stgInfo  = Info (StateTransition Enter_UpdatableClosure)
-                           (InfoDetail.enterUpdatable addr) }
+                           [Detail_EnterUpdatable addr] }
 
 
 
@@ -416,7 +415,7 @@ stgRule s@StgState
          , stgStack = stack'
          , stgHeap  = heap'
          , stgInfo  = Info (StateTransition ReturnCon_Update)
-                           (InfoDetail.conUpdate con addr) }
+                           [Detail_ConUpdate con addr] }
 
 
 
@@ -446,7 +445,7 @@ stgRule s@StgState
          , stgStack = argFrames <>> stack'
          , stgHeap  = heap'
          , stgInfo  = Info (StateTransition Enter_PartiallyAppliedUpdate)
-                           (InfoDetail.papUpdate addrUpdate) }
+                           [Detail_PapUpdate addrUpdate] }
 
   where
 
@@ -492,7 +491,7 @@ noRuleApplies s@StgState
     , stgStack = Empty }
 
   = s { stgInfo = Info (StateError ReturnIntWithEmptyReturnStack)
-                       InfoDetail.returnIntCannotUpdate}
+                       [Detail_ReturnIntCannotUpdate] }
 
 
 
@@ -549,7 +548,7 @@ noRuleApplies s@StgState
     | Just (Blackhole bhTick) <- H.lookup addr heap
 
   = s { stgInfo = Info (StateError EnterBlackhole)
-                       (InfoDetail.enterBlackHole addr bhTick) }
+                       [Detail_EnterBlackHole addr bhTick] }
 
 
 
@@ -560,4 +559,4 @@ noRuleApplies s@StgState { stgStack = S.Empty }
 
 
 
-noRuleApplies s = s { stgInfo = Info NoRulesApply InfoDetail.stackNotEmpty }
+noRuleApplies s = s { stgInfo = Info NoRulesApply [Detail_StackNotEmpty] }

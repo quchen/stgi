@@ -16,14 +16,14 @@ module Stg.Machine.GarbageCollection (
 
 
 
-import qualified Data.Map                as M
-import           Data.Monoid             hiding (Alt)
-import           Data.Set                (Set)
-import qualified Data.Set                as S
+import           Data.Foldable
+import qualified Data.Map          as M
+import           Data.Monoid       hiding (Alt)
+import           Data.Set          (Set)
+import qualified Data.Set          as S
 
 import           Stg.Language
-import qualified Stg.Machine.Heap        as H
-import qualified Stg.Machine.InfoDetails as InfoDetail
+import qualified Stg.Machine.Heap  as H
 import           Stg.Machine.Types
 
 
@@ -35,7 +35,7 @@ garbageCollect state
         then state { stgHeap  = cleanHeap
                    , stgTicks = stgTicks state + 1
                    , stgInfo  = Info GarbageCollection
-                                     (InfoDetail.garbageCollected (H.addresses deadHeap)) }
+                                     [Detail_GarbageCollected (toList (H.addresses deadHeap))] }
         else state
 
 -- | Alive objects.

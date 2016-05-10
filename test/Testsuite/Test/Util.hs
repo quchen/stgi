@@ -5,6 +5,7 @@
 module Test.Util (
     scaled,
     allEnums,
+    arbitrary0,
     arbitrary1,
     arbitrary2,
     arbitrary3,
@@ -32,6 +33,9 @@ scaled factor = scale (\n -> n * numerator factor `quot` denominator factor)
 
 allEnums :: (Enum a, Bounded a) => Gen a
 allEnums = elements [minBound ..]
+
+arbitrary0 :: $(arbitraryNType 0)
+arbitrary0 = $(arbitraryNValue 0)
 
 arbitrary1 :: $(arbitraryNType 1)
 arbitrary1 = $(arbitraryNValue 1)
