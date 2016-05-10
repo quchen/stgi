@@ -437,17 +437,20 @@ prettyInfoDetail ppr items = bulletList (case items of
     Detail_FunctionApplication val [] ->
         ["Inspect value" <+> ppr val]
     Detail_FunctionApplication function args ->
-        ["Apply function" <+> ppr function <+> "to arguments" <+> commaSep (map ppr args)]
+        [ "Apply function"
+          <+> ppr function
+          <+> "to argument" <> pluralS args
+          <+> commaSep (map ppr args) ]
 
     Detail_UnusedLocalVariables vars (Locals locals) ->
-        let used   = M.fromList [ (var, ()) | var <- vars ]
+        let used = M.fromList [ (var, ()) | var <- vars ]
             unused = locals `M.difference` used
             pprDiscardedBind var val = [ppr var <+> "(" <> ppr val <> ")"]
         in if
             | M.null locals -> ["No local values were present, so none was discarded"]
             | M.null unused -> ["All locals were used, so none was discarded"]
             | otherwise ->
-                ["Unused local variables discarded:"
+                ["Unused local variable" <> pluralS (M.toList unused) <+> "discarded:"
                  <+> commaSep (M.foldMapWithKey pprDiscardedBind unused)]
 
     Detail_EnterNonUpdatable addr args ->
@@ -461,8 +464,8 @@ prettyInfoDetail ppr items = bulletList (case items of
             [ "Local environment extended by"
             , commaSep (foldMap (\var -> [ppr var]) vars) ]
         , hsep
-            [ "Allocate new closures at"
-            , commaSep (foldMap (\addr -> [ppr addr]) addrs)
+            [ "Allocate new closure" <> pluralS vars <+> "at"
+            , commaSep (zipWith (\var addr -> ppr addr <+> "(" <> ppr var <> ")") vars addrs)
             , "on the heap" ]]
 
     Detail_EvalCase ->
@@ -478,8 +481,7 @@ prettyInfoDetail ppr items = bulletList (case items of
 
     Detail_PapUpdate updAddr ->
         [ "Not enough arguments on the stack"
-        , "Try to reveal more arguments by performing the update for" <+> ppr updAddr
-        ]
+        , "Try to reveal more arguments by performing the update for" <+> ppr updAddr ]
 
     Detail_ReturnIntCannotUpdate ->
         ["No closure has primitive type, so we cannot update one with a primitive int"]
@@ -489,9 +491,11 @@ prettyInfoDetail ppr items = bulletList (case items of
         , "The lack of a better description is a bug in the STG evaluator."
         , "Please report this to the project maintainers!" ]
 
-    Detail_GarbageCollected addrs ->  ["Removed addresses:" <+> pprAddrs addrs]
+    Detail_GarbageCollected addrs ->  ["Removed address" <> pluralES addrs <> ":" <+> pprAddrs addrs]
       where
         pprAddrs = ppr . commaSep . foldMap (\addr -> [ppr addr])
+        pluralES [_] = ""
+        pluralES _ = "es"
 
     Detail_EnterBlackHole addr tick ->
         [ "Heap address" <+> ppr addr <+> "is a black hole, created in step" <+> ppr tick

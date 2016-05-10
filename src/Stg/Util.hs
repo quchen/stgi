@@ -9,6 +9,7 @@ module Stg.Util (
     commaSep,
     tupled',
     bulletList,
+    pluralS,
 ) where
 
 
@@ -64,3 +65,7 @@ tupled' = encloseSep lparen rparen (comma <> space)
 -- | Prefix all contained documents with a bullet symbol.
 bulletList :: [Doc] -> Doc
 bulletList = align . vsep . map (("  - " <>) . align)
+
+pluralS :: [a] -> Doc
+pluralS [_] = ""
+pluralS _ = "s"
