@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NumDecimals       #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -14,7 +15,6 @@ module Test.Machine.Evaluate.Rules (tests) where
 import           Test.Tasty
 
 import           Stg.Language
-import           Stg.Language.Prettyprint
 import           Stg.Machine
 import           Stg.Machine.Types
 import           Stg.Parser
@@ -56,21 +56,7 @@ tests = testGroup "Rules"
     , constructorApplication
     , literalEvaluation
     , literalApplication
-    , testGroup "Primitive operations"
-        [ testGroup "Integer arithmetic"
-            [ addition
-            , subtraction
-            , multiplication
-            , division
-            , modulo ]
-        , testGroup "Integer comparisons"
-            [ less
-            , lessOrEqual
-            , equal
-            , unequal
-            , greaterOrEqual
-            , greater ]
-        ]
+    , primops
     , enterUpdatableClosure
     , algebraicReturnUpdate
     , missingArgsUpdate
@@ -284,43 +270,36 @@ literalApplication = machineStateTest defSpec
                 x  -> TestFail (x)
         |] }
 
-primopTest
-    :: PrimOp -- ^ STG primop
-    -> (Integer -> Integer -> Integer) -- ^ Haskell version of the primop
-    -> TestTree
-primopTest op hOp = HRef.haskellReferenceTest HRef.HaskellReferenceTestSpec
-    { HRef.testName = prettyprint op
+primops :: TestTree
+primops = HRef.haskellReferenceTest HRef.HaskellReferenceTestSpec
+    { HRef.testName = "Primops"
     , HRef.maxSteps = 1024
     , HRef.failWithInfo = True
     , HRef.successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , HRef.failPredicate = const False
-    , HRef.source = \(arg1, NonZero arg2) -> -- arg2 is nonzero or the div/mod
-                                             -- tests fail. Having their own
-                                             -- tests is probably not worth the
-                                             --  code duplication, so we just
-                                             -- throw out the baby with the
-                                             -- bathwater here.
+    , HRef.source = \(op, arg1, NonZero arg2) ->
+            -- arg2 is nonzero or the div/mod tests fail. Having their own tests
+            -- is probably not worth the code duplication, so we just throw out
+            -- the baby with the bathwater here.
         Program (Binds
             [(Var "main", LambdaForm [] Update []
                 (Case (AppP op (AtomLit (Literal arg1)) (AtomLit (Literal arg2))) (Alts
-                    [PrimitiveAlt (Literal (hOp arg1 arg2)) (AppC (Constr "Success") [])]
+                    [PrimitiveAlt (Literal (haskell op arg1 arg2)) (AppC (Constr "Success") [])]
                     (DefaultBound (Var "wrong") (AppC (Constr "TestFail") [AtomVar (Var "wrong")])) )))])}
-
-addition , subtraction , multiplication , division , modulo :: TestTree
-equal , less , lessOrEqual , greater , greaterOrEqual , unequal :: TestTree
-addition       = primopTest Add (+)
-subtraction    = primopTest Sub (-)
-multiplication = primopTest Mul (*)
-division       = primopTest Div div
-modulo         = primopTest Mod mod
-equal          = primopTest Eq  (\x y -> if x == y then 1 else 0)
-less           = primopTest Lt  (\x y -> if x < y  then 1 else 0)
-lessOrEqual    = primopTest Leq (\x y -> if x <= y then 1 else 0)
-greater        = primopTest Gt  (\x y -> if x > y  then 1 else 0)
-greaterOrEqual = primopTest Geq (\x y -> if x >= y then 1 else 0)
-unequal        = primopTest Neq (\x y -> if x /= y then 1 else 0)
-
-
+  where
+    boolToPrim op x y = if op x y then 1 else 0
+    haskell = \case
+        Add -> (+)
+        Sub -> (-)
+        Mul -> (*)
+        Div -> div
+        Mod -> mod
+        Eq  -> boolToPrim (==)
+        Lt  -> boolToPrim (<)
+        Leq -> boolToPrim (<=)
+        Gt  -> boolToPrim (>)
+        Geq -> boolToPrim (>=)
+        Neq -> boolToPrim (/=)
 
 enterUpdatableClosure :: TestTree
 enterUpdatableClosure = machineStateTest defSpec
