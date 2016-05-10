@@ -51,11 +51,18 @@ library
                      , template-haskell
                      , text
                      , th-lift
-  default-extensions:
-  other-extensions:    LambdaCase
-                     , TemplateHaskell
-                     , DeriveGeneric
+  other-extensions:    DeriveGeneric
+                     , FlexibleInstances
+                     , GeneralizedNewtypeDeriving
+                     , LambdaCase
+                     , OverloadedLists
                      , OverloadedStrings
+                     , QuasiQuotes
+                     , RankNTypes
+                     , TemplateHaskell
+                     , TupleSections
+                     , TypeFamilies
+
   default-language:    Haskell2010
 
 executable stg-exe
@@ -66,7 +73,6 @@ executable stg-exe
                      , stg
                      , text
                      , ansi-terminal
-  default-extensions:  OverloadedStrings
   default-language:    Haskell2010
 
 test-suite stg-test
@@ -117,6 +123,13 @@ test-suite stg-test
                      , text
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
+  other-extensions:    LambdaCase
+                     , NumDecimals
+                     , OverloadedLists
+                     , OverloadedStrings
+                     , QuasiQuotes
+                     , RankNTypes
+                     , TemplateHaskell
 
 test-suite doctest
   type:                exitcode-stdio-1.0
