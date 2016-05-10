@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -6,11 +8,12 @@ module Test.Orphans.Language () where
 
 
 
-import qualified Data.Map              as M
-import           Data.Monoid           hiding (Alt)
+import qualified Data.Map               as M
+import           Data.Monoid            hiding (Alt)
 import           Data.Ratio
-import           Data.Text             (Text)
-import qualified Data.Text             as T
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import           Test.SmallCheck.Series
 import           Test.Tasty.QuickCheck
 
 import           Stg.Language
@@ -52,7 +55,7 @@ reservedKeywords = ["let", "in", "case", "of"]
 
 
 --------------------------------------------------------------------------------
--- Instances
+-- QuickCheck
 
 instance Arbitrary Program where
     arbitrary = arbitrary1 Program
@@ -146,3 +149,12 @@ instance Arbitrary Constr where
         xs <- extendedLetters
         (pure . Constr) (x <> xs)
     shrink (Constr constr) = map Constr (shrinkBut1stLetter constr)
+
+
+--------------------------------------------------------------------------------
+-- SmallCheck
+
+instance Monad m => Serial m Literal
+instance Monad m => Serial m PrimOp
+instance Monad m => Serial m Rec
+instance Monad m => Serial m UpdateFlag
