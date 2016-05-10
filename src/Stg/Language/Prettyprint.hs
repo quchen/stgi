@@ -13,8 +13,8 @@ module Stg.Language.Prettyprint (
     PrettyParserInverse,
 
     -- * ANSI terminal styled
+    PrettyAnsi(..),
     prettyprintAnsi,
-    PrettyAnsi,
 
 ) where
 

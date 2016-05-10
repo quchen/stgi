@@ -381,20 +381,13 @@ data StateError =
 
 instance Pretty StateError where
     pretty = \case
-        VariablesNotInScope notInScope
-            -> pretty notInScope <+> "not in scope"
-        UpdatableClosureWithArgs
-            -> "Closures with non-empty argument lists are never updatable"
-        ReturnIntWithEmptyReturnStack
-            -> "ReturnInt state with empty return stack"
-        AlgReturnToPrimAlts
-            -> "Algebraic constructor return to primitive alternatives"
-        PrimReturnToAlgAlts
-            -> "Primitive return to algebraic alternatives"
-        InitialStateCreationFailed
-            -> "Initial state creation failed"
-        EnterBlackhole
-            -> "Entering black hole"
+        VariablesNotInScope notInScope -> pretty notInScope <+> "not in scope"
+        UpdatableClosureWithArgs -> "Closures with non-empty argument lists are never updatable"
+        ReturnIntWithEmptyReturnStack -> "ReturnInt state with empty return stack"
+        AlgReturnToPrimAlts -> "Algebraic constructor return to primitive alternatives"
+        PrimReturnToAlgAlts -> "Primitive return to algebraic alternatives"
+        InitialStateCreationFailed -> "Initial state creation failed"
+        EnterBlackhole -> "Entering black hole"
 
 instance PrettyAnsi StateError where
     prettyAnsi = \case

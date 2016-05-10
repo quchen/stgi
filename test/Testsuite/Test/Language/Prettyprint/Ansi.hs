@@ -4,19 +4,18 @@ module Test.Language.Prettyprint.Ansi (tests) where
 
 
 
-import           Data.Text                     (Text)
-import qualified Data.Text                     as T
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
 import           Test.QuickCheck.Property
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 import           Text.Megaparsec.Text
-import           Text.PrettyPrint.ANSI.Leijen  (plain)
+import           Text.PrettyPrint.ANSI.Leijen (plain)
 
 import           Stg.Language.Prettyprint
-import           Stg.Language.Prettyprint.Ansi
-import           Stg.Parser.Parser             as Parser
+import           Stg.Parser.Parser            as Parser
 
-import           Test.Orphans                  ()
+import           Test.Orphans                 ()
 
 
 
