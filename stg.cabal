@@ -54,6 +54,7 @@ library
                      , FlexibleInstances
                      , GeneralizedNewtypeDeriving
                      , LambdaCase
+                     , MultiWayIf
                      , OverloadedLists
                      , OverloadedStrings
                      , QuasiQuotes

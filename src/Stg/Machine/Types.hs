@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE MultiWayIf                 #-}
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
@@ -261,10 +262,19 @@ data Info = Info InfoShort [InfoDetail]
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty Info where
-    pretty (Info short []) = pretty short
-    pretty (Info short details) = vsep (pretty short : map pretty details)
+    pretty = prettyInfo pretty prettyList
 
-instance PrettyAnsi Info
+instance PrettyAnsi Info where
+    prettyAnsi = prettyInfo prettyAnsi prettyAnsiList
+
+prettyInfo
+    :: (forall a. PrettyAnsi a => a -> Doc)
+    -> (forall a. PrettyAnsi a => [a] -> Doc)
+    -> Info
+    -> Doc
+prettyInfo ppr pprList = \case
+    Info short []      -> ppr short
+    Info short details -> vsep [ppr short, pprList details]
 
 -- | Short machine status info. This field may be used programmatically, in
 -- particular it tells the stepper whether the machine has halted.
@@ -298,14 +308,23 @@ data InfoShort =
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty InfoShort where
-    pretty = \case
-        HaltedByPredicate -> "Halting predicate held"
-        NoRulesApply      -> "No further rules apply"
-        MaxStepsExceeded  -> "Maximum number of steps exceeded"
-        StateError err    -> "Errorenous state: " <+> pretty err
-        StateTransition t -> "State transition:" <+> pretty t
-        StateInitial      -> "Initial state"
-        GarbageCollection -> "Garbage collection"
+    pretty = prettyInfoShort pretty
+
+instance PrettyAnsi InfoShort where
+    prettyAnsi = prettyInfoShort prettyAnsi
+
+prettyInfoShort
+    :: (forall a. PrettyAnsi a => a -> Doc)
+    -> InfoShort
+    -> Doc
+prettyInfoShort ppr = \case
+    HaltedByPredicate -> "Halting predicate held"
+    NoRulesApply      -> "No further rules apply"
+    MaxStepsExceeded  -> "Maximum number of steps exceeded"
+    StateError err    -> "Errorenous state: " <+> ppr err
+    StateTransition t -> "State transition:" <+> ppr t
+    StateInitial      -> "Initial state"
+    GarbageCollection -> "Garbage collection"
 
 data StateTransition =
       Enter_NonUpdatableClosure
@@ -406,63 +425,79 @@ data InfoDetail =
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty InfoDetail where
-    pretty items = bulletList (case items of
-        Detail_FunctionApplication val [] -> ["Inspect value" <+> pretty val]
-        Detail_FunctionApplication function args -> [hsep
-            [ "Apply function"
-            , pretty function
-            , "to arguments"
-            , commaSep (map pretty args) ]]
+    pretty = prettyInfoDetail pretty
+    prettyList = vsep . map pretty
 
-        Detail_UnusedLocalVariables vars (Locals locals) ->
-            let used   = M.fromList [ (var, ()) | var <- vars ]
-                unused = locals `M.difference` used
-                prettyDiscardedBind var val = [pretty var <+> lparen <> pretty val <> rparen]
-            in if M.null unused
-                then []
-                else ["Unused local variables discarded:"
-                      <+> commaSep (M.foldMapWithKey prettyDiscardedBind unused)]
+instance PrettyAnsi InfoDetail where
+    prettyAnsi = prettyInfoDetail prettyAnsi
+    prettyAnsiList = vsep . map prettyAnsi
 
-        Detail_EnterNonUpdatable addr args ->
-            [ "Enter closure at " <> pretty addr
-            , if null args
-                then pretty addr <+> "is a value, so no arguments are popped"
-                else "Pop arguments " <> commaSep (foldMap (\arg -> [pretty arg]) args) <> " from the stack" ]
+prettyInfoDetail :: (forall a. PrettyAnsi a => a -> Doc) -> InfoDetail -> Doc
+prettyInfoDetail ppr items = bulletList (case items of
+    Detail_FunctionApplication val [] ->
+        ["Inspect value" <+> ppr val]
+    Detail_FunctionApplication function args ->
+        ["Apply function" <+> ppr function <+> "to arguments" <+> commaSep (map ppr args)]
 
-        Detail_EvalLet vars addrs ->
-            [ hsep
-                [ "Local environment extended by"
-                , commaSep (foldMap (\var -> [pretty var]) vars) ]
-            , hsep
-                [ "Allocate new closures at"
-                , commaSep (foldMap (\addr -> [pretty addr]) addrs)
-                , "on the heap" ]]
-        Detail_EvalCase ->
-            ["Save alternatives and local environment as a stack frame"]
-        Detail_EnterUpdatable addr ->
-            [ "Push a new update frame with the entered address" <+> pretty addr
-            , "Overwrite the heap object at" <+> pretty addr <+> "with a black hole" ]
-        Detail_ConUpdate con addrU ->
-            [ "Trying to return" <+> pretty con <+> ", but there is no return frame on the top of the stack"
-            , "Update closure at" <+> pretty addrU <+> "given by the update frame with returned constructor"  ]
-        Detail_PapUpdate updAddr ->
-            [ "Not enough arguments on the stack"
-            , "Try to reveal more arguments by performing the update for" <+> pretty updAddr
-            ]
-        Detail_ReturnIntCannotUpdate ->
-            ["No closure has primitive type, so we cannot update one with a primitive int"]
-        Detail_StackNotEmpty ->
-            [ "The stack is not empty; the program terminated unexpectedly."
-            , "The lack of a better description is a bug in the STG evaluator."
-            , "Please report this to the project maintainers!" ]
-        Detail_GarbageCollected addrs ->  ["Removed addresses:" <+> prettyAddrs addrs]
-          where
-            prettyAddrs = pretty . commaSep . foldMap (\addr -> [pretty addr])
-        Detail_EnterBlackHole addr tick ->
-            [ "Heap address" <+> pretty addr <+> "is a black hole, created in step" <> pretty tick
-            , "Entering a black hole means a thunk depends on its own evaluation"
-            , "This is the functional equivalent of an infinite loop"
-            , "GHC reports this condition as \"<<loop>>\"" ] )
+    Detail_UnusedLocalVariables vars (Locals locals) ->
+        let used   = M.fromList [ (var, ()) | var <- vars ]
+            unused = locals `M.difference` used
+            pprDiscardedBind var val = [ppr var <+> "(" <> ppr val <> ")"]
+        in if
+            | M.null locals -> ["No local values were present, so none was discarded"]
+            | M.null unused -> ["All locals were used, so none was discarded"]
+            | otherwise ->
+                ["Unused local variables discarded:"
+                 <+> commaSep (M.foldMapWithKey pprDiscardedBind unused)]
+
+    Detail_EnterNonUpdatable addr args ->
+        [ "Enter closure at" <+> ppr addr
+        , if null args
+            then ppr addr <+> "is a value, so no arguments are popped"
+            else "Pop arguments" <+> commaSep (foldMap (\arg -> [ppr arg]) args) <+> "from the stack" ]
+
+    Detail_EvalLet vars addrs ->
+        [ hsep
+            [ "Local environment extended by"
+            , commaSep (foldMap (\var -> [ppr var]) vars) ]
+        , hsep
+            [ "Allocate new closures at"
+            , commaSep (foldMap (\addr -> [ppr addr]) addrs)
+            , "on the heap" ]]
+
+    Detail_EvalCase ->
+        ["Save alternatives and local environment as a stack frame"]
+
+    Detail_EnterUpdatable addr ->
+        [ "Push a new update frame with the entered address" <+> ppr addr
+        , "Overwrite the heap object at" <+> ppr addr <+> "with a black hole" ]
+
+    Detail_ConUpdate con addrU ->
+        [ "Trying to return" <+> ppr con <+> ", but there is no return frame on the top of the stack"
+        , "Update closure at" <+> ppr addrU <+> "given by the update frame with returned constructor"  ]
+
+    Detail_PapUpdate updAddr ->
+        [ "Not enough arguments on the stack"
+        , "Try to reveal more arguments by performing the update for" <+> ppr updAddr
+        ]
+
+    Detail_ReturnIntCannotUpdate ->
+        ["No closure has primitive type, so we cannot update one with a primitive int"]
+
+    Detail_StackNotEmpty ->
+        [ "The stack is not empty; the program terminated unexpectedly."
+        , "The lack of a better description is a bug in the STG evaluator."
+        , "Please report this to the project maintainers!" ]
+
+    Detail_GarbageCollected addrs ->  ["Removed addresses:" <+> pprAddrs addrs]
+      where
+        pprAddrs = ppr . commaSep . foldMap (\addr -> [ppr addr])
+
+    Detail_EnterBlackHole addr tick ->
+        [ "Heap address" <+> ppr addr <+> "is a black hole, created in step" <+> ppr tick
+        , "Entering a black hole means a thunk depends on its own evaluation"
+        , "This is the functional equivalent of an infinite loop"
+        , "GHC reports this condition as \"<<loop>>\"" ] )
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]
