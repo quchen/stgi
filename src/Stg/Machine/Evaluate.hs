@@ -288,7 +288,8 @@ stgRule s@StgState
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
          , stgHeap  = heap'
-         , stgInfo  = Info (StateTransition ReturnCon_DefBound) [] }
+         , stgInfo  = Info (StateTransition ReturnCon_DefBound)
+                           [Detail_ReturnConDefBound v addr] }
 
 
 
@@ -331,7 +332,8 @@ stgRule s@StgState
 
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
-         , stgInfo  = Info (StateTransition ReturnInt_DefBound) [] }
+         , stgInfo  = Info (StateTransition ReturnInt_DefBound)
+                           [Detail_ReturnIntDefBound v k] }
 
 
 

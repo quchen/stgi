@@ -220,19 +220,24 @@ instance PrettyAnsi Code where
         ReturnCon constr args -> "ReturnCon" <+> prettyAnsi constr <+> prettyAnsiList args
         ReturnInt i -> "ReturnInt" <+> prettyAnsi (Literal i)
 
+-- | Wrapper for nice 'Pretty' instances
+data Mapping k v = Mapping k v
+
+instance (Pretty k, Pretty v) => Pretty (Mapping k v) where
+    pretty (Mapping k v) = pretty k <+> "->" <+> pretty v
+
+instance (PrettyAnsi k, PrettyAnsi v) => PrettyAnsi (Mapping k v) where
+    prettyAnsi (Mapping k v) = prettyAnsi k <+> "->" <+> prettyAnsi v
+
 -- | Prettyprint a 'Map', @key -> value@.
 prettyMap :: (Pretty k, Pretty v) => Map k v -> Doc
 prettyMap m | M.null m = "(empty)"
-prettyMap m = (align . vsep)
-    [ pretty k <+> "->" <+> pretty v
-    | (k,v) <- M.assocs m ]
+prettyMap m = (align . vsep) [ pretty (Mapping k v) | (k,v) <- M.assocs m ]
 
 -- | ANSI-prettyprint a 'Map', @key -> value@.
 prettyAnsiMap :: (PrettyAnsi k, PrettyAnsi v) => Map k v -> Doc
 prettyAnsiMap m | M.null m = "(empty)"
-prettyAnsiMap m = (align . vsep)
-    [ prettyAnsi k <+> "->" <+> prettyAnsi v
-    | (k,v) <- M.assocs m ]
+prettyAnsiMap m = (align . vsep) [ prettyAnsi (Mapping k v) | (k,v) <- M.assocs m ]
 
 -- | The global environment consists of the mapping from top-level definitions
 -- to their respective values.
@@ -355,9 +360,9 @@ instance Pretty StateTransition where
         Enter_UpdatableClosure        -> "Enter updatable closure"
         Eval_AppC                     -> "Constructor application"
         Eval_AppP                     -> "Primitive function application"
-        Eval_Case                     -> "case evaluation"
-        Eval_Case_Primop_Normal       -> "case evaluation of primop: taking a shortcut, standard match"
-        Eval_Case_Primop_DefaultBound -> "case evaluation of primop: taking a shortcut, bound default match"
+        Eval_Case                     -> "Case evaluation"
+        Eval_Case_Primop_Normal       -> "Case evaluation of primop: taking a shortcut, standard match"
+        Eval_Case_Primop_DefaultBound -> "Case evaluation of primop: taking a shortcut, bound default match"
         Eval_FunctionApplication      -> "Function application"
         Eval_Let NonRecursive         -> "Let evaluation"
         Eval_Let Recursive            -> "Letrec evaluation"
@@ -417,6 +422,8 @@ data InfoDetail =
     | Detail_EnterNonUpdatable MemAddr [Value]
     | Detail_EvalLet [Var] [MemAddr]
     | Detail_EvalCase
+    | Detail_ReturnConDefBound Var MemAddr
+    | Detail_ReturnIntDefBound Var Integer
     | Detail_EnterUpdatable MemAddr
     | Detail_ConUpdate Constr MemAddr
     | Detail_PapUpdate MemAddr
@@ -474,12 +481,19 @@ prettyInfoDetail ppr items = bulletList (case items of
     Detail_EvalCase ->
         ["Save alternatives and local environment as a stack frame"]
 
+    Detail_ReturnConDefBound var addr ->
+        [ "Allocate closure at" <+> pretty addr <+> "for the bound value"
+        , "Extend local environment with" <+> ppr (Mapping var addr) ]
+
+    Detail_ReturnIntDefBound var i ->
+        [ "Extend local environment with" <+> ppr (Mapping var (PrimInt i)) ]
+
     Detail_EnterUpdatable addr ->
         [ "Push a new update frame with the entered address" <+> ppr addr
         , "Overwrite the heap object at" <+> ppr addr <+> "with a black hole" ]
 
     Detail_ConUpdate con addrU ->
-        [ "Trying to return" <+> ppr con <+> ", but there is no return frame on the top of the stack"
+        [ "Trying to return" <+> ppr con <> ", but there is no return frame on the top of the stack"
         , "Update closure at" <+> ppr addrU <+> "given by the update frame with returned constructor"  ]
 
     Detail_PapUpdate updAddr ->
@@ -523,10 +537,7 @@ instance Pretty Closure where
                      pretty
                      lambda
       where
-        prettyFree vars = tupled' (zipWith
-            (\var val -> pretty var <+> "->" <+> pretty val)
-            vars
-            freeVals )
+        prettyFree vars = tupled' (zipWith (\k v -> pretty (Mapping k v)) vars freeVals)
 
 instance PrettyAnsi Closure where
     prettyAnsi (Closure lambdaForm []) = prettyAnsi lambdaForm
@@ -538,10 +549,7 @@ instance PrettyAnsi Closure where
                      prettyAnsi
                      lambda
       where
-        prettyFree vars = tupled' (zipWith
-            (\var val -> prettyAnsi var <+> "->" <+> prettyAnsi val)
-            vars
-            freeVals )
+        prettyFree vars = tupled' (zipWith (\k v -> prettyAnsi (Mapping k v)) vars freeVals)
 
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr HeapObject)
@@ -572,8 +580,8 @@ data HeapObject =
 prettyHeapObject :: (Closure -> Doc) -> HeapObject -> Doc
 prettyHeapObject pprClosure = \case
     HClosure closure@(Closure lambda _freeVals) ->
-        classify lambda <+> pprClosure closure
-    Blackhole tick -> "BLACKHOLE (from step " <> integer tick <> ")"
+        bold (classify lambda) <+> pprClosure closure
+    Blackhole tick -> bold "BLACKHOLE" <+> "(from step " <> integer tick <> ")"
   where
     classify = \case
         LambdaForm _ _ [] AppC{} -> "CON"
