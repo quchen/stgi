@@ -391,6 +391,7 @@ data StateError =
     | PrimReturnToAlgAlts
     | InitialStateCreationFailed
     | EnterBlackhole
+    | UpdateClosureWithPrimitive
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty StateError where
@@ -402,6 +403,7 @@ instance Pretty StateError where
         PrimReturnToAlgAlts -> "Primitive return to algebraic alternatives"
         InitialStateCreationFailed -> "Initial state creation failed"
         EnterBlackhole -> "Entering black hole"
+        UpdateClosureWithPrimitive -> "Update closure with primitive value"
 
 instance PrettyAnsi StateError where
     prettyAnsi = \case
@@ -422,6 +424,7 @@ data InfoDetail =
     | Detail_StackNotEmpty
     | Detail_GarbageCollected [MemAddr]
     | Detail_EnterBlackHole MemAddr Integer
+    | Detail_UpdateClosureWithPrimitive
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty InfoDetail where
@@ -501,7 +504,10 @@ prettyInfoDetail ppr items = bulletList (case items of
         [ "Heap address" <+> ppr addr <+> "is a black hole, created in step" <+> ppr tick
         , "Entering a black hole means a thunk depends on its own evaluation"
         , "This is the functional equivalent of an infinite loop"
-        , "GHC reports this condition as \"<<loop>>\"" ] )
+        , "GHC reports this condition as \"<<loop>>\"" ]
+
+    Detail_UpdateClosureWithPrimitive ->
+        [ "A closure never has primitive type, so it cannot be updated with a primitive value" ] )
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]

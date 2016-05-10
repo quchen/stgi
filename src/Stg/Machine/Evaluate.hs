@@ -552,6 +552,16 @@ noRuleApplies s@StgState
 
 
 
+-- Update closure with primitive value
+noRuleApplies s@StgState
+    { stgCode  = ReturnInt _
+    , stgStack = UpdateFrame _ :< _}
+
+  = s { stgInfo  = Info (StateError UpdateClosureWithPrimitive)
+                        [Detail_UpdateClosureWithPrimitive] }
+
+
+
 
 -- Successful, ordinary termination
 noRuleApplies s@StgState { stgStack = S.Empty }
