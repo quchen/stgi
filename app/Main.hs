@@ -28,23 +28,21 @@ import           Stg.Util
 
 main :: IO ()
 main = do
-    let prog =     Stg.equals_List_Int
-                <> Stg.int "zero" 0
-                <> Stg.int "one" 1
-                <> Stg.add
-                <> Stg.foldl'
-                <> Stg.take
-                <> Stg.zipWith
-                <> [stgProgram|
+    let prog = mconcat
+            [ Stg.add
+            , Stg.int "zero" 0
+            , Stg.foldl'
+            , Stg.zipWith ] <> [stgProgram|
 
         sum = () \u () -> foldl' (add, zero);
         main = () \u () ->
             letrec
-                fibos = (fibo) \n () -> take (numFibos, fibo);
                 fibo = () \u () ->
                     letrec
                         fib0 = (fib1) \u () -> Cons (zero, fib1);
-                        fib1 = (fib2) \u () -> Cons (one, fib2);
+                        fib1 = (fib2)  \u () ->
+                            let one = () \n () -> Int# (1#)
+                            in Cons (one, fib2);
                         fib2 = (fib0, fib1) \u () -> zipWith (add, fib0, fib1)
                     in fib0 ()
             in sum (fibo)
