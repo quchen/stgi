@@ -481,12 +481,22 @@ data HeapObject =
         -- display purposes.
     deriving (Eq, Ord, Show)
 
+prettyHeapObject :: (Closure -> Doc) -> HeapObject -> Doc
+prettyHeapObject pprClosure = \case
+    HClosure closure@(Closure lambda _freeVals) ->
+        classify lambda <+> pprClosure closure
+    Blackhole tick -> "BLACKHOLE (from step " <> integer tick <> ")"
+  where
+    classify = \case
+        LambdaForm _ _ [] AppC{} -> "CON"
+        LambdaForm _ _ (_:_) _   -> "FUN"
+        LambdaForm _ _ []    _   -> "THUNK"
+        LambdaForm{} -> "" -- Fallthrough pattern to silence inexhaustive
+                           -- warning by GHC 7.10.3. Probably a compiler
+                           -- bug.
+
 instance Pretty HeapObject where
-    pretty = \case
-        HClosure closure -> "FUN" <+> pretty closure
-        Blackhole tick -> "BLACKHOLE (from step " <> integer tick <> ")"
+    pretty = prettyHeapObject pretty
 
 instance PrettyAnsi HeapObject where
-    prettyAnsi = \case
-        HClosure closure -> "FUN" <+> prettyAnsi closure
-        Blackhole tick -> "BLACKHOLE (from step " <> integer tick <> ")"
+    prettyAnsi = prettyHeapObject prettyAnsi
