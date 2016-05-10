@@ -322,7 +322,7 @@ prettyInfoShort ppr = \case
     NoRulesApply      -> "No further rules apply"
     MaxStepsExceeded  -> "Maximum number of steps exceeded"
     StateError err    -> "Errorenous state: " <+> ppr err
-    StateTransition t -> "State transition:" <+> ppr t
+    StateTransition t -> ppr t
     StateInitial      -> "Initial state"
     GarbageCollection -> "Garbage collection"
 
@@ -359,8 +359,8 @@ instance Pretty StateTransition where
         Eval_Case_Primop_Normal       -> "case evaluation of primop: taking a shortcut, standard match"
         Eval_Case_Primop_DefaultBound -> "case evaluation of primop: taking a shortcut, bound default match"
         Eval_FunctionApplication      -> "Function application"
-        Eval_Let NonRecursive         -> "let evaluation"
-        Eval_Let Recursive            -> "letrec evaluation"
+        Eval_Let NonRecursive         -> "Let evaluation"
+        Eval_Let Recursive            -> "Letrec evaluation"
         Eval_Lit                      -> "Literal evaluation"
         Eval_LitApp                   -> "Literal application"
         ReturnCon_DefBound            -> "Algebraic constructor return, bound default match"
