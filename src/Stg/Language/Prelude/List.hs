@@ -292,14 +292,14 @@ map = [stg|
 -- @
 --
 -- @
--- numbers = () \u () ->
+-- numbers = () \\u () ->
 --     letrec
---         int_'2 = () \n () -> Int# (-2#);
---         int_1 = () \n () -> Int# (1#);
---         int_3 = () \n () -> Int# (3#);
---         list_ix0_int_1 = (int_1,list_ix1_int_'2) \u () -> Cons (int_1,list_ix1_int_'2);
---         list_ix1_int_'2 = (int_'2,list_ix2_int_3) \u () -> Cons (int_'2,list_ix2_int_3);
---         list_ix2_int_3 = (int_3) \u () -> Cons (int_3,nil)
+--         int_'2 = () \\n () -> Int\# (-2\#);
+--         int_1 = () \\n () -> Int\# (1\#);
+--         int_3 = () \\n () -> Int\# (3\#);
+--         list_ix0_int_1 = (int_1,list_ix1_int_'2) \\u () -> Cons (int_1,list_ix1_int_'2);
+--         list_ix1_int_'2 = (int_'2,list_ix2_int_3) \\u () -> Cons (int_'2,list_ix2_int_3);
+--         list_ix2_int_3 = (int_3) \\u () -> Cons (int_3,nil)
 --     in list_ix0_int_1 ();
 -- nil = () \n () -> Nil ()
 -- @
@@ -369,7 +369,6 @@ equals_List_Int = Num.eq <> [stgProgram|
     |]
 
 -- | Length of a list.
--- UNTESTED
 --
 -- @
 -- length : [a] -> [a] -> Bool
@@ -387,7 +386,6 @@ length = [stgProgram|
 
 -- | Zip two lists into one. If one list is longer than the other, ignore the
 -- exceeding elements.
--- UNTESTED
 --
 -- @
 -- zip [1,2,3,4,5] [10,20,30] ==> [(1,10),(2,20),(3,30)]

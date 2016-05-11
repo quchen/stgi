@@ -67,10 +67,14 @@ Differences from the 1992 paper
   clearer, since the stack is always popped from the top. For example, having a
   return frame at the top means the program is close to a `case` expression.
 - There are different objects on the heap, not just closures:
-    - Closures can be on the heap, as usual
+    - Closures are classified in three groups for the user:
+        - Constructors are closures with a constructor application body, and
+          only free variables.
+        - Other closures with only free variables are thunks.
+        - Closures with non-empty argument lists are functions.
     - Black holes overwrite updatable closures upon entering, allowing for
       `<<loop>>` detection and avoiding certain space leaks (... apparently,
-      at least the 1992 paper says so)
+      at least the 1992 paper says so).
 
 
 GHC's current STG

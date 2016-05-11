@@ -29,12 +29,13 @@ import           Stg.Util
 main :: IO ()
 main = do
     let prog = mconcat
-            [ Stg.add
+            [ Stg.seq
+            , Stg.add
             , Stg.int "zero" 0
             , Stg.foldl'
             , Stg.zipWith ] <> [stgProgram|
 
-        sum = () \u () -> foldl' (add, zero);
+        force = () \n (acc, x) -> seq (x,x);
         main = () \u () ->
             letrec
                 fibo = () \u () ->
@@ -45,7 +46,7 @@ main = do
                             in Cons (one, fib2);
                         fib2 = (fib0, fib1) \u () -> zipWith (add, fib0, fib1)
                     in fib0 ()
-            in sum (fibo)
+            in foldl' (force, zero, fibo)
         |]
     ansiSupport <- hSupportsANSI stdout
     if ansiSupport || True

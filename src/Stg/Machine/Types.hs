@@ -482,7 +482,7 @@ prettyInfoDetail ppr items = bulletList (case items of
         ["Save alternatives and local environment as a stack frame"]
 
     Detail_ReturnConDefBound var addr ->
-        [ "Allocate closure at" <+> pretty addr <+> "for the bound value"
+        [ "Allocate closure at" <+> ppr addr <+> "for the bound value"
         , "Extend local environment with" <+> ppr (Mapping var addr) ]
 
     Detail_ReturnIntDefBound var i ->
@@ -577,11 +577,11 @@ data HeapObject =
         -- display purposes.
     deriving (Eq, Ord, Show)
 
-prettyHeapObject :: (Closure -> Doc) -> HeapObject -> Doc
-prettyHeapObject pprClosure = \case
+prettyHeapObject :: (Closure -> Doc) -> (Doc -> Doc) -> HeapObject -> Doc
+prettyHeapObject pprClosure style = \case
     HClosure closure@(Closure lambda _freeVals) ->
-        bold (classify lambda) <+> pprClosure closure
-    Blackhole tick -> bold "BLACKHOLE" <+> "(from step " <> integer tick <> ")"
+        style (classify lambda) <+> align (pprClosure closure)
+    Blackhole tick -> style "BLACKHOLE" <+> "(from step " <> integer tick <> ")"
   where
     classify = \case
         LambdaForm _ _ [] AppC{} -> "CON"
@@ -592,7 +592,7 @@ prettyHeapObject pprClosure = \case
                            -- bug.
 
 instance Pretty HeapObject where
-    pretty = prettyHeapObject pretty
+    pretty = prettyHeapObject pretty id
 
 instance PrettyAnsi HeapObject where
-    prettyAnsi = prettyHeapObject prettyAnsi
+    prettyAnsi = prettyHeapObject prettyAnsi bold
