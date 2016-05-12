@@ -10,10 +10,10 @@ module Stg.Language.Prelude.Function (
 
 
 
-import           Prelude      ()
+import Prelude ()
 
-import           Stg.Language (Program)
-import           Stg.Parser
+import Stg.Language (Program)
+import Stg.Parser
 
 
 

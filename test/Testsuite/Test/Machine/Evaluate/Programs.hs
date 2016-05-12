@@ -12,11 +12,11 @@ module Test.Machine.Evaluate.Programs (tests) where
 
 
 
-import           Data.Foldable
-import           Data.Monoid
-import           Test.Tasty
+import Data.Foldable
+import Data.Monoid
+import Test.Tasty
 
-import qualified Stg.Language.Prelude                                 as Stg
+import qualified Stg.Language.Prelude as Stg
 import           Stg.Machine
 import           Stg.Machine.Types
 import           Stg.Parser

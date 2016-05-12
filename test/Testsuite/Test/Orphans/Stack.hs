@@ -4,12 +4,12 @@ module Test.Orphans.Stack () where
 
 
 
-import           GHC.Exts
-import           Test.Tasty.QuickCheck as QC
+import GHC.Exts
+import Test.Tasty.QuickCheck as QC
 
-import           Stack                 (Stack)
+import Stack (Stack)
 
-import           Test.Util
+import Test.Util
 
 
 

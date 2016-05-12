@@ -16,10 +16,10 @@ import           Test.Tasty.SmallCheck        as SC
 import           Text.Megaparsec.Text
 import           Text.PrettyPrint.ANSI.Leijen (plain)
 
-import           Stg.Language.Prettyprint
-import           Stg.Parser.Parser            as Parser
+import Stg.Language.Prettyprint
+import Stg.Parser.Parser        as Parser
 
-import           Test.Orphans                 ()
+import Test.Orphans ()
 
 
 

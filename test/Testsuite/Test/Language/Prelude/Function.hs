@@ -4,8 +4,8 @@ module Test.Language.Prelude.Function (tests) where
 
 
 
-import           Test.Orphans ()
-import           Test.Tasty
+import Test.Orphans ()
+import Test.Tasty
 
 
 

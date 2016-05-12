@@ -2,7 +2,7 @@ module Test.Language.Prettyprint (tests) where
 
 
 
-import           Test.Tasty
+import Test.Tasty
 
 import qualified Test.Language.Prettyprint.Ansi          as PrettyAnsi
 import qualified Test.Language.Prettyprint.ParserInverse as PrettyInv

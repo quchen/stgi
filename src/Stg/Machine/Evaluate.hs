@@ -10,10 +10,10 @@ module Stg.Machine.Evaluate (
 
 
 import           Data.Bifunctor
-import qualified Data.Foldable     as F
-import qualified Data.List         as L
-import qualified Data.Map          as M
-import           Data.Monoid       hiding (Alt)
+import qualified Data.Foldable  as F
+import qualified Data.List      as L
+import qualified Data.Map       as M
+import           Data.Monoid    hiding (Alt)
 
 import           Stack             (Stack (..), (<>>))
 import qualified Stack             as S

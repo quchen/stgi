@@ -17,10 +17,10 @@ module Stg.Machine.GarbageCollection (
 
 
 import           Data.Foldable
-import qualified Data.Map          as M
-import           Data.Monoid       hiding (Alt)
-import           Data.Set          (Set)
-import qualified Data.Set          as S
+import qualified Data.Map      as M
+import           Data.Monoid   hiding (Alt)
+import           Data.Set      (Set)
+import qualified Data.Set      as S
 
 import           Stg.Language
 import qualified Stg.Machine.Heap  as H

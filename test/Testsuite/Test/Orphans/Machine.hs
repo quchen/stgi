@@ -7,11 +7,11 @@ module Test.Orphans.Machine () where
 import qualified Data.Map              as M
 import           Test.Tasty.QuickCheck
 
-import           Stg.Machine.Types
+import Stg.Machine.Types
 
-import           Test.Orphans.Language ()
-import           Test.Orphans.Stack    ()
-import           Test.Util
+import Test.Orphans.Language ()
+import Test.Orphans.Stack    ()
+import Test.Util
 
 
 instance Arbitrary StgState where

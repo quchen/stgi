@@ -5,10 +5,10 @@ module Test.Parser.QuasiQuoter (tests) where
 
 
 
-import           Test.Tasty
-import           Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.HUnit
 
-import           Stg.Parser
+import Stg.Parser
 
 
 

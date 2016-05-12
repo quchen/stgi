@@ -12,12 +12,12 @@ module Test.Machine.Evaluate.Rules (tests) where
 
 
 
-import           Test.Tasty
+import Test.Tasty
 
-import           Stg.Language
-import           Stg.Machine
-import           Stg.Machine.Types
-import           Stg.Parser
+import Stg.Language
+import Stg.Machine
+import Stg.Machine.Types
+import Stg.Parser
 
 import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
 import           Test.Machine.Evaluate.TestTemplates.MachineState

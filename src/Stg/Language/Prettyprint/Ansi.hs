@@ -13,7 +13,7 @@ import qualified Data.Text                    as T
 import           Prelude                      hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
-import           Stg.Language
+import Stg.Language
 
 
 

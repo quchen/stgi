@@ -17,12 +17,12 @@ module Stg.Language.Prelude.Tuple (
 
 
 import           Data.Monoid
-import qualified Data.Text                   as T
-import qualified Prelude                     as P
+import qualified Data.Text   as T
+import qualified Prelude     as P
 
-import           Stg.Language
-import           Stg.Language.Prelude.Number
-import           Stg.Parser
+import Stg.Language
+import Stg.Language.Prelude.Number
+import Stg.Parser
 
 
 

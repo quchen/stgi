@@ -2,7 +2,7 @@ module Test.Language.Prelude (tests) where
 
 
 
-import           Test.Tasty
+import Test.Tasty
 
 import qualified Test.Language.Prelude.Bool     as Bool
 import qualified Test.Language.Prelude.Function as Function

@@ -9,7 +9,7 @@ module Test.Machine.Evaluate (tests) where
 
 
 
-import           Test.Tasty
+import Test.Tasty
 
 import qualified Test.Machine.Evaluate.Errors   as Errors
 import qualified Test.Machine.Evaluate.Programs as Programs

@@ -7,14 +7,14 @@ module Test.Language.Prelude.Tuple (tests) where
 
 
 import           Data.Monoid
-import qualified Data.Tuple                                           as T
+import qualified Data.Tuple  as T
 
-import qualified Stg.Language.Prelude                                 as Stg
+import qualified Stg.Language.Prelude as Stg
 import           Stg.Parser
 
-import           Test.Machine.Evaluate.TestTemplates.HaskellReference
-import           Test.Orphans                                         ()
-import           Test.Tasty
+import Test.Machine.Evaluate.TestTemplates.HaskellReference
+import Test.Orphans                                         ()
+import Test.Tasty
 
 
 

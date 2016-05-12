@@ -48,7 +48,7 @@ import qualified Text.Megaparsec.Char  as C
 import qualified Text.Megaparsec.Lexer as L
 import           Text.Megaparsec.Text
 
-import           Stg.Language
+import Stg.Language
 
 -- $setup
 -- >>> :set -XOverloadedStrings

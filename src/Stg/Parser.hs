@@ -32,7 +32,7 @@ import           Data.Text              (Text)
 import qualified Stg.Parser.Parser      as P
 import           Stg.Parser.QuasiQuoter
 
-import           Stg.Language
+import Stg.Language
 
 
 

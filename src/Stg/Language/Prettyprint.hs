@@ -20,13 +20,13 @@ module Stg.Language.Prettyprint (
 
 
 
-import           Data.Text                              (Text)
-import qualified Data.Text                              as T
-import           Prelude                                hiding ((<$>))
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import           Prelude                      hiding ((<$>))
 import           Text.PrettyPrint.ANSI.Leijen
 
-import           Stg.Language.Prettyprint.Ansi
-import           Stg.Language.Prettyprint.ParserInverse
+import Stg.Language.Prettyprint.Ansi
+import Stg.Language.Prettyprint.ParserInverse
 
 
 

@@ -11,21 +11,21 @@ module Test.Machine.Evaluate.TestTemplates.HaskellReference (
 
 
 
-import qualified Data.List                                as L
-import           Data.Text                                (Text)
-import qualified Data.Text                                as T
+import qualified Data.List                    as L
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
-import           Text.PrettyPrint.ANSI.Leijen             hiding ((<>))
+import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
-import           Stg.Language
-import           Stg.Language.Prettyprint
-import           Stg.Machine
-import           Stg.Machine.Types
-import           Stg.Parser
+import Stg.Language
+import Stg.Language.Prettyprint
+import Stg.Machine
+import Stg.Machine.Types
+import Stg.Parser
 
-import           Test.Machine.Evaluate.TestTemplates.Util
-import           Test.Orphans                             ()
+import Test.Machine.Evaluate.TestTemplates.Util
+import Test.Orphans                             ()
 
 
 

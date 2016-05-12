@@ -14,13 +14,13 @@ module Stg.Machine.Heap (
 
 
 
-import qualified Data.List         as L
-import qualified Data.Map          as M
+import qualified Data.List   as L
+import qualified Data.Map    as M
 import           Data.Monoid
-import           Data.Set          (Set)
-import           Prelude           hiding (lookup)
+import           Data.Set    (Set)
+import           Prelude     hiding (lookup)
 
-import           Stg.Machine.Types
+import Stg.Machine.Types
 
 
 

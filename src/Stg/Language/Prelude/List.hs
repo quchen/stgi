@@ -28,18 +28,18 @@ module Stg.Language.Prelude.List (
 
 
 
-import qualified Prelude                     as P
+import qualified Prelude as P
 
-import qualified Data.Map                    as M
+import qualified Data.Map    as M
 import           Data.Monoid
-import           Data.Text                   (Text)
-import qualified Data.Text                   as T
+import           Data.Text   (Text)
+import qualified Data.Text   as T
 
-import           Stg.Language
-import           Stg.Parser
-import           Stg.Util
+import Stg.Language
+import Stg.Parser
+import Stg.Util
 
-import           Stg.Language.Prelude.Number as Num
+import Stg.Language.Prelude.Number as Num
 
 
 

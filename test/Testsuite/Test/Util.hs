@@ -15,11 +15,11 @@ module Test.Util (
 
 
 
-import           Data.Ratio
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+import Data.Ratio
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 
-import           Test.QuickCheck
-import           Test.UtilTH
+import Test.QuickCheck
+import Test.UtilTH
 
 
 

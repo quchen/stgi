@@ -6,14 +6,14 @@ module Test.Machine.Evaluate.Errors (tests) where
 
 
 
-import           Test.Tasty
+import Test.Tasty
 
-import           Stg.Machine
-import           Stg.Machine.Types
-import           Stg.Parser
+import Stg.Machine
+import Stg.Machine.Types
+import Stg.Parser
 
-import           Test.Machine.Evaluate.TestTemplates.MachineState
-import           Test.Orphans                                     ()
+import Test.Machine.Evaluate.TestTemplates.MachineState
+import Test.Orphans                                     ()
 
 
 

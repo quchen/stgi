@@ -24,13 +24,13 @@ module Stg.Language.Prelude.Number (
 
 
 
-import           Prelude      (Integer)
+import Prelude (Integer)
 
-import           Data.Monoid  ((<>))
-import           Data.Text    (Text)
+import Data.Monoid ((<>))
+import Data.Text   (Text)
 
-import           Stg.Language
-import           Stg.Parser
+import Stg.Language
+import Stg.Parser
 
 -- $setup
 -- >>> :set -XOverloadedStrings

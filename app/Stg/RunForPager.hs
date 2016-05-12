@@ -8,15 +8,15 @@ module Stg.RunForPager (runForPager) where
 
 import           Data.Foldable
 import           Data.Monoid
-import           Data.Text                (Text)
-import qualified Data.Text                as T
-import qualified Data.Text.IO             as T
+import           Data.Text     (Text)
+import qualified Data.Text     as T
+import qualified Data.Text.IO  as T
 
-import           Stg.Language
-import           Stg.Language.Prettyprint
-import           Stg.Machine
-import           Stg.Machine.Types
-import           Stg.Util
+import Stg.Language
+import Stg.Language.Prettyprint
+import Stg.Machine
+import Stg.Machine.Types
+import Stg.Util
 
 
 

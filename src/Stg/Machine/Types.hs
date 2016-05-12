@@ -33,17 +33,17 @@ module Stg.Machine.Types (
 
 
 import           Data.Foldable
-import           Data.Map                      (Map)
-import qualified Data.Map                      as M
+import           Data.Map                     (Map)
+import qualified Data.Map                     as M
 import           Data.Monoid
 import           GHC.Generics
-import           Text.PrettyPrint.ANSI.Leijen  hiding ((<>))
+import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 import           Text.Printf
 
-import           Stack
-import           Stg.Language
-import           Stg.Language.Prettyprint.Ansi
-import           Stg.Util
+import Stack
+import Stg.Language
+import Stg.Language.Prettyprint.Ansi
+import Stg.Util
 
 
 

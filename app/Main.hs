@@ -4,9 +4,9 @@
 module Main (main) where
 
 
-import           Data.Monoid
-import           System.Console.ANSI      (hSupportsANSI)
-import           System.IO                (stdout)
+import Data.Monoid
+import System.Console.ANSI (hSupportsANSI)
+import System.IO           (stdout)
 
 import           Stg.Language
 import qualified Stg.Language.Prelude     as Stg

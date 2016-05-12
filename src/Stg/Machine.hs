@@ -21,10 +21,10 @@ module Stg.Machine (
 
 
 
-import           Stg.Language
-import           Stg.Machine.Evaluate
-import           Stg.Machine.GarbageCollection
-import           Stg.Machine.Types
+import Stg.Language
+import Stg.Machine.Evaluate
+import Stg.Machine.GarbageCollection
+import Stg.Machine.Types
 
 
 

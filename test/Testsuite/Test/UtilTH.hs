@@ -8,10 +8,10 @@ module Test.UtilTH (
 
 
 
-import           GHC.Natural
-import           Language.Haskell.TH
+import GHC.Natural
+import Language.Haskell.TH
 
-import           Test.QuickCheck
+import Test.QuickCheck
 
 
 
