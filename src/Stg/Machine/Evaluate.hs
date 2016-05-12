@@ -60,19 +60,25 @@ liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
 boolToPrim :: (a -> b -> Bool) -> a -> b -> Integer
 boolToPrim p a b = if p a b then 1 else 0
 
-applyPrimOp :: PrimOp -> Integer -> Integer -> Integer
-applyPrimOp = \case
-    Add -> (+)
-    Sub -> (-)
-    Mul -> (*)
-    Div -> div
-    Mod -> mod
-    Eq  -> boolToPrim (==)
-    Lt  -> boolToPrim (<)
-    Leq -> boolToPrim (<=)
-    Gt  -> boolToPrim (>)
-    Geq -> boolToPrim (>=)
-    Neq -> boolToPrim (/=)
+data PrimError = Div0
+
+applyPrimOp :: PrimOp -> Integer -> Integer -> Validate PrimError Integer
+applyPrimOp Div _ 0 = Failure Div0
+applyPrimOp Mod _ 0 = Failure Div0
+applyPrimOp op x y = Success (opToFunc op x y)
+  where
+    opToFunc = \case
+        Add -> (+)
+        Sub -> (-)
+        Mul -> (*)
+        Div -> div
+        Mod -> mod
+        Eq  -> boolToPrim (==)
+        Lt  -> boolToPrim (<)
+        Leq -> boolToPrim (<=)
+        Gt  -> boolToPrim (>)
+        Geq -> boolToPrim (>=)
+        Neq -> boolToPrim (/=)
 
 isArgFrame :: StackFrame -> Bool
 isArgFrame ArgumentFrame{} = True
@@ -193,7 +199,7 @@ stgRule s@StgState
     { stgCode = Eval (Case (AppP op x y) alts) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
-    , opXY <- applyPrimOp op xVal yVal
+    , Success opXY <- applyPrimOp op xVal yVal
     , Left defaultAlt <- lookupPrimitiveAlt alts (Literal opXY)
 
   = let (locals', expr) = case defaultAlt of
@@ -211,7 +217,7 @@ stgRule s@StgState
     { stgCode = Eval (Case (AppP op x y) alts) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
-    , opXY <- applyPrimOp op xVal yVal
+    , Success opXY <- applyPrimOp op xVal yVal
     , Right (PrimitiveAlt _opXY expr) <- lookupPrimitiveAlt alts (Literal opXY)
 
   = s { stgCode = Eval expr locals
@@ -372,8 +378,9 @@ stgRule s@StgState
     { stgCode = Eval (AppP op x y) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
+    , Success result <- applyPrimOp op xVal yVal
 
-  = s { stgCode = ReturnInt (applyPrimOp op xVal yVal)
+  = s { stgCode = ReturnInt result
       , stgInfo = Info (StateTransition Eval_AppP)
                        [Detail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
                                                     locals] }
@@ -570,6 +577,16 @@ noRuleApplies s@StgState -- TODO: Make sure this catches the right states
     , stgStack = ReturnFrame{} :< _}
 
   = s { stgInfo  = Info (StateError NonAlgPrimScrutinee) [] }
+
+
+noRuleApplies s@StgState
+    { stgCode = Eval (AppP op x y) locals }
+    | Success (PrimInt xVal) <- localVal locals x
+    , Success (PrimInt yVal) <- localVal locals y
+    , Failure Div0 <- applyPrimOp op xVal yVal
+
+  = s { stgInfo  = Info (StateError DivisionByZero) [] }
+
 
 
 

@@ -396,6 +396,7 @@ data StateError =
     | EnterBlackhole
     | UpdateClosureWithPrimitive
     | NonAlgPrimScrutinee
+    | DivisionByZero
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty StateError where
@@ -409,6 +410,7 @@ instance Pretty StateError where
         EnterBlackhole -> "Entering black hole"
         UpdateClosureWithPrimitive -> "Update closure with primitive value"
         NonAlgPrimScrutinee -> "Non-algebraic/primitive case scrutinee"
+        DivisionByZero -> "Division by zero"
 
 instance PrettyAnsi StateError where
     prettyAnsi = \case

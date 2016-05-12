@@ -20,7 +20,11 @@ import Test.Orphans                                     ()
 tests :: TestTree
 tests = testGroup "Error conditions"
     [ loopEnterBlackHole
-    , functionScrutinee ]
+    , functionScrutinee
+    , testGroup "Invalid operations"
+        [ divisionByZero
+        , moduloZero ]
+    ]
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
@@ -44,7 +48,7 @@ loopEnterBlackHole = machineStateTest defSpec
 functionScrutinee :: TestTree
 functionScrutinee = machineStateTest defSpec
     { testName = "Function scrutinee"
-    , failWithInfo = True
+    , failWithInfo = False
     , source = [stg|
         id = () \n (x) -> x ();
         main = () \u () -> case id () of
@@ -52,4 +56,28 @@ functionScrutinee = machineStateTest defSpec
         |]
     , successPredicate = \state -> case stgInfo state of
         Info (StateError NonAlgPrimScrutinee) _ -> True
+        _otherwise -> False }
+
+divisionByZero :: TestTree
+divisionByZero = machineStateTest defSpec
+    { testName = "Division by zero"
+    , failWithInfo = False
+    , source = [stg|
+        main = () \u () -> case /# 1# 0# of
+            default -> Failure ()
+        |]
+    , successPredicate = \state -> case stgInfo state of
+        Info (StateError DivisionByZero) _ -> True
+        _otherwise -> False }
+
+moduloZero :: TestTree
+moduloZero = machineStateTest defSpec
+    { testName = "Modulo by zero"
+    , failWithInfo = False
+    , source = [stg|
+        main = () \u () -> case %# 1# 0# of
+            default -> Failure ()
+        |]
+    , successPredicate = \state -> case stgInfo state of
+        Info (StateError DivisionByZero) _ -> True
         _otherwise -> False }
