@@ -129,8 +129,8 @@ stgRule s@StgState
     , args <- [ arg | ArgumentFrame arg <- frames ]
 
   = let locals = makeLocals (freeLocals <> boundLocals)
-        freeLocals = zip free freeVals
-        boundLocals = zip bound args
+        freeLocals = zipWith Binding free freeVals
+        boundLocals = zipWith Binding bound args
 
     in s { stgCode  = Eval body locals
          , stgStack = stack'
@@ -141,45 +141,44 @@ stgRule s@StgState
 
 -- (3) let(rec)
 stgRule s@StgState
-    { stgCode = Eval (Let rec (Binds binds) expr) locals
+    { stgCode = Eval (Let rec (Binds letBinds) expr) locals
     , stgHeap = heap }
 
-    -- TODO: Refactor this fugly mess, apologies for writing it - David/quchen
-  = let (vars, lambdaForms) = unzip (M.assocs binds)
-        dummyHeapObjs = map (const (Blackhole 0)) vars
-        stuffNeeded =
-            let (addrsX, heapWithDummies) = H.allocMany dummyHeapObjs heap
-                localsX' = makeLocals' vars addrsX
-                v'closures = makeClosures lambdaForms localsX'
-            in case v'closures of
-                Success closures ->
-                    let heapX' = H.updateMany addrsX
-                                              (map HClosure closures)
-                                              heapWithDummies
-                    in Success (localsX', addrsX, heapX')
-                Failure err -> Failure err
-    in case stuffNeeded of
-        Success (locals', addrs, heap') ->
-            s { stgCode = Eval expr locals'
-              , stgHeap = heap'
-              , stgInfo = Info (StateTransition (Eval_Let rec))
-                               [Detail_EvalLet vars addrs] }
+  = let (letVars, letLambdaForms) = unzip (M.assocs letBinds)
+
+        -- We'll need the memory addresses to be created on the heap at this
+        -- point already, so we pre-allocate enough already. If everything goes
+        -- fine (i.e. all variables referenced in the 'let' are in scope), these
+        -- dummy objects can later be overwritten by the actual closures formed
+        -- in the 'let' block.
+        (newAddrs, heapWithPreallocations) =
+            let preallocatedObjs = map (const (Blackhole 0)) letVars
+            in H.allocMany preallocatedObjs heap
+
+        -- The local environment enriched by the definitions in the 'let'.
+        locals' = let newBindings = zipWith Binding letVars (map Addr newAddrs)
+                  in makeLocals newBindings <> locals
+
+        -- The local environment applicable in the lambda forms defined in the
+        -- 'let' binding.
+        localsRhs = case rec of
+            NonRecursive -> locals  -- New bindings are invisible
+            Recursive    -> locals' -- New bindings are in scope
+
+    in case traverse (liftLambdaToClosure localsRhs) letLambdaForms of
+        Success closures ->
+                -- As promised above, the preallocated dummy closures are now
+                -- discarded, and replaced with the newly formed closures.
+            let heap' = H.updateMany
+                    newAddrs
+                    (map HClosure closures)
+                    heapWithPreallocations
+            in s { stgCode = Eval expr locals'
+                 , stgHeap = heap'
+                 , stgInfo = Info (StateTransition (Eval_Let rec))
+                                  [Detail_EvalLet letVars newAddrs] }
         Failure notInScope ->
             s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
-  where
-    makeLocals' :: [Var] -> [MemAddr] -> Locals
-    makeLocals' vars addrs = locals'
-      where
-        locals' = locals <> newLocals
-        newLocals = makeLocals (zipWith makeLocal vars addrs)
-        makeLocal n a = (n, Addr a)
-
-    makeClosures :: [LambdaForm] -> Locals -> Validate NotInScope [Closure]
-    makeClosures lambdaForms locals' = traverse (liftLambdaToClosure localsRhs) lambdaForms
-      where
-        localsRhs = case rec of
-            NonRecursive -> locals
-            Recursive    -> locals'
 
 
 
@@ -203,7 +202,7 @@ stgRule s@StgState
     , Left defaultAlt <- lookupPrimitiveAlt alts (Literal opXY)
 
   = let (locals', expr) = case defaultAlt of
-            DefaultBound pat e -> (addLocals [(pat, PrimInt opXY)] locals, e)
+            DefaultBound pat e -> (addLocals [Binding pat (PrimInt opXY)] locals, e)
             DefaultNotBound e -> (locals, e)
 
     in s { stgCode = Eval expr locals'
@@ -258,7 +257,7 @@ stgRule s@StgState
     , stgStack = ReturnFrame alts locals :< stack' }
     | Right (AlgebraicAlt _con vars expr) <- lookupAlgebraicAlt alts con
 
-  = let locals' = addLocals (zip vars ws) locals
+  = let locals' = addLocals (zipWith Binding vars ws) locals
 
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
@@ -286,7 +285,7 @@ stgRule s@StgState
     , stgTicks = ticks }
     | Left (DefaultBound v expr) <- lookupAlgebraicAlt alts con
 
-  = let locals' = addLocals [(v, Addr addr)] locals
+  = let locals' = addLocals [Binding v (Addr addr)] locals
         (addr, heap') = H.alloc (HClosure closure) heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
         vs = let newVar _old i = Var ("alg8_" <> show' ticks <> "-" <> show' i)
@@ -334,7 +333,7 @@ stgRule s@StgState
     , stgStack = ReturnFrame alts locals :< stack' }
     | Left (DefaultBound v expr) <- lookupPrimitiveAlt alts (Literal k)
 
-  = let locals' = addLocals [(v, PrimInt k)] locals
+  = let locals' = addLocals [Binding v (PrimInt k)] locals
 
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
@@ -397,7 +396,7 @@ stgRule s@StgState
         <- H.lookup addr heap
 
   = let stack' = UpdateFrame addr :< stack
-        locals = makeLocals (zip free freeVals)
+        locals = makeLocals (zipWith Binding free freeVals)
         heap' = H.update addr (Blackhole tick) heap
 
     in s { stgCode  = Eval body locals

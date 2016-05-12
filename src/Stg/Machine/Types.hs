@@ -15,6 +15,7 @@ module Stg.Machine.Types (
     MemAddr(..),
     Value(..),
     Code(..),
+    Binding(..),
     Globals(..),
     Locals(..),
     Closure(..),
@@ -250,6 +251,9 @@ instance Pretty Globals where
 instance PrettyAnsi Globals where
     prettyAnsi (Globals globals) = prettyAnsiMap globals
 
+-- | A single association from 'Var'iable to 'Value'.
+data Binding = Binding Var Value
+    deriving (Eq, Ord, Show)
 
 -- | The global environment consists if the mapping from local definitions
 -- to their respective values.
