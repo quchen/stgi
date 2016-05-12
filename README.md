@@ -84,12 +84,8 @@ GHC's current STG
 
 Since 1992, the STG has undergone one notable revision, documented in [the 2004
 paper *How to make a fast curry*][fastcurry], which treats function application
-a bit different. Due to the large change necessary to adapt to this change, and
-the small amount of knowledge to be gained compared to having an actual working
-STG, I *currently* have no plans to migrate. The most important questions are
-answered by both versions of the machine alike; it merely turned out that one of
-them is more efficient as an actual high-performance Haskell compiler backend
-language.
+a bit different. I don't have plans to support this evaluation model right now,
+but it's on my list of long-term goals (alongside the current push/enter).
 
 [ghc]: https://www.haskell.org/ghc/
 [stg1992]: http://research.microsoft.com/apps/pubs/default.aspx?id=67083
