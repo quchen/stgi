@@ -39,7 +39,7 @@ testFst = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.int "expectedResult" (fst tuple)
         <> Stg.fst
         <> Stg.eq
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let actualFst = () \n () -> fst (tuple)
@@ -60,7 +60,7 @@ testSnd = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.int "expectedResult" (snd tuple)
         <> Stg.snd
         <> Stg.eq
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let actualSnd = () \n () -> snd (tuple)
@@ -83,7 +83,7 @@ testCurry = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.curry
         <> Stg.add
         <> Stg.eq
-        <> [stgProgram|
+        <> [stg|
 
         addTuple = () \n (tuple) -> case tuple () of
             Tuple (a,b) -> add (a,b);
@@ -109,7 +109,7 @@ testUncurry = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.uncurry
         <> Stg.add
         <> Stg.eq
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let actual = () \n () -> uncurry (add, tuple)
@@ -130,7 +130,7 @@ testSwap = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.tupleOfNumbers "expectedResult" (T.swap tuple)
         <> Stg.swap
         <> Stg.equals_Tuple_Int
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let actual = () \n () -> swap (tuple)

@@ -55,7 +55,7 @@ testFilter = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.gt
         <> Stg.equals_List_Int
         <> Stg.filter
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             letrec
@@ -78,7 +78,7 @@ testSort = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.listOfNumbers "expectedResult" (L.sort xs)
         <> Stg.equals_List_Int
         <> Stg.sort
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let sorted = () \u () -> sort (inputList)
@@ -101,7 +101,7 @@ testMap = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.listOfNumbers "inputList" xs
         <> Stg.listOfNumbers "expectedResult" (map (+offset) xs)
         <> Stg.equals_List_Int
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             letrec
@@ -126,7 +126,7 @@ testZipWith = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.listOfNumbers "expectedResult" (zipWith (+) list1 list2)
         <> Stg.add
         <> Stg.zipWith
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let zipped = () \n () -> zipWith (add, list1, list2)
@@ -182,7 +182,7 @@ foldSumTemplate foldName foldF foldStg failP
         <> Stg.int "z" z
         <> Stg.listOfNumbers "input" xs
         <> Stg.int "expected" (foldF (+) z xs)
-        <> [stgProgram|
+        <> [stg|
         main = () \u () ->
             let actual = () \u () -> fold (add, z, input)
             in case eq_Int (actual, expected) of
@@ -203,7 +203,7 @@ testConcat2 = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.listOfNumbers "list2" list2
         <> Stg.listOfNumbers "expectedResult" (list1 ++ list2)
         <> Stg.concat2
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let concatenated = () \n () -> concat2 (list1, list2)
@@ -224,7 +224,7 @@ testReverse = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.listOfNumbers "input" xs
         <> Stg.listOfNumbers "expectedResult" (reverse xs)
         <> Stg.reverse
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let reversed = () \n () -> reverse (input)
@@ -248,7 +248,7 @@ testCycle = haskellReferenceTest HaskellReferenceTestSpec
                                                     (cycle list) )
         <> Stg.take
         <> Stg.cycle
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             letrec
@@ -273,7 +273,7 @@ testRepeat = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.listOfNumbers "expectedResult" (replicate (fromInteger n) item)
         <> Stg.take
         <> Stg.repeat
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             letrec
@@ -300,7 +300,7 @@ testReplicate = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.listOfNumbers "expectedResult" (replicate (fromInteger n) item)
         <> Stg.take
         <> Stg.replicate
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let replicated = () \n () -> replicate (n, item)
@@ -326,7 +326,7 @@ testIterate = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.add
         <> Stg.take
         <> Stg.iterate
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             letrec
@@ -351,7 +351,7 @@ testLength = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.int "expectedResult" (fromIntegral (length xs))
         <> Stg.listOfNumbers "input" xs
         <> Stg.length
-        <> [stgProgram|
+        <> [stg|
 
         main = () \u () ->
             let len = () \n () -> length (input)
