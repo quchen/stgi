@@ -8,6 +8,7 @@ import           Data.Monoid
 import           System.Console.ANSI      (hSupportsANSI)
 import           System.IO                (stdout)
 
+import           Stg.Language
 import qualified Stg.Language.Prelude     as Stg
 import           Stg.Language.Prettyprint
 import           Stg.Parser

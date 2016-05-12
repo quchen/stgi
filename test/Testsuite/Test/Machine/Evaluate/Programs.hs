@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE NumDecimals       #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
@@ -11,15 +12,19 @@ module Test.Machine.Evaluate.Programs (tests) where
 
 
 
+import           Data.Foldable
 import           Data.Monoid
 import           Test.Tasty
 
-import qualified Stg.Language.Prelude                             as Stg
+import qualified Stg.Language.Prelude                                 as Stg
 import           Stg.Machine
+import           Stg.Machine.Types
 import           Stg.Parser
 
+import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
 import           Test.Machine.Evaluate.TestTemplates.MachineState
-import           Test.Orphans                                     ()
+import           Test.Orphans                                         ()
+import           Test.QuickCheck.Modifiers
 
 
 
@@ -27,7 +32,12 @@ tests :: TestTree
 tests = testGroup "Programs"
     [ add3
     , takeRepeat
-    , fibonacci ]
+    , fibonacci
+    , testGroup "mean of a list"
+        [ meanNaive
+        , meanNaiveWithFoldl'
+        , meanGood ]
+    ]
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
@@ -123,3 +133,98 @@ fibonacci = machineStateTest defSpec
     fibo = 0 : 1 : zipWith (+) fibo (tail fibo)
     numFibos :: Num a => a
     numFibos = 10
+
+meanTestTemplate :: HRef.HaskellReferenceTestSpec (NonEmptyList Integer)
+meanTestTemplate =
+    let mean :: [Integer] -> Integer
+        mean xs = let (total, count) = foldl' go (0,0) xs
+                      go (!t, !c) x = (t+x, c+1)
+                  in total `div` count
+    in HRef.HaskellReferenceTestSpec
+        { HRef.testName = "Mena test template"
+        , HRef.maxSteps = 1024
+        , HRef.failWithInfo = False
+        , HRef.successPredicate = "main" ===> [stg| () \n () -> Success () |]
+        , HRef.failPredicate = const False
+        , HRef.source = \(NonEmpty inputList) -> mconcat
+                [ Stg.eq
+                , Stg.add
+                , Stg.div
+                , Stg.int "zero" 0
+                , Stg.int "one" 1
+                , Stg.listOfNumbers "inputList" inputList
+                , Stg.int "expectedOutput" (mean inputList) ]
+            <> [stgProgram|
+            main = () \u () -> case mean (inputList) of
+                actual -> case eq_Int (actual, expectedOutput) of
+                    True () -> Success ();
+                    False () -> TestFailure (actual);
+                    badBool -> Error_badBool (badBool)
+        |] }
+
+meanNaive :: TestTree
+meanNaive = HRef.haskellReferenceTest meanTestTemplate
+    { HRef.testName = "Naïve: foldl and lazy tuple"
+    , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
+        <> Stg.foldl
+        <> [stgProgram|
+        mean = () \n (xs) ->
+            letrec
+                totals = (go, zeroTuple) \n () -> foldl (go, zeroTuple);
+                zeroTuple = () \n () -> Tuple (zero, zero);
+                go = () \n (acc, x) -> case acc () of
+                    Tuple (t,n) ->
+                        let tx = (t,x) \u () -> add (t,x);
+                            n1 = (n) \u () -> add (n,one)
+                        in Tuple (tx, n1);
+                    badTuple -> Error_mean1 (badTuple)
+            in case totals (xs) of
+                Tuple (t,n) -> div (t,n);
+                badTuple -> Error_mean2 (badTuple)
+        |] }
+
+meanNaiveWithFoldl' :: TestTree
+meanNaiveWithFoldl' = HRef.haskellReferenceTest meanTestTemplate
+    { HRef.testName = "Naïve with insufficient optimization: foldl'"
+    , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
+        <> Stg.foldl'
+        <> [stgProgram|
+        mean = () \n (xs) ->
+            letrec
+                totals = (go, zeroTuple) \n () -> foldl' (go, zeroTuple);
+                zeroTuple = () \n () -> Tuple (zero, zero);
+                go = () \n (acc, x) -> case acc () of
+                    Tuple (t,n) ->
+                        let tx = (t,x) \u () -> add (t,x);
+                            n1 = (n) \u () -> add (n,one)
+                        in Tuple (tx, n1);
+                    badTuple -> Error_mean1 (badTuple)
+            in case totals (xs) of
+                Tuple (t,n) -> div (t,n);
+                badTuple -> Error_mean2 (badTuple)
+        |] }
+
+meanGood :: TestTree
+meanGood = HRef.haskellReferenceTest meanTestTemplate
+    { HRef.testName = "Proper: foldl' and strict tuple"
+    , HRef.failWithInfo = True
+    , HRef.failPredicate = \stgState -> length (stgStack stgState) >= 9
+    , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
+        <> Stg.foldl'
+        <> [stgProgram|
+        mean = () \n (xs) ->
+            letrec
+                totals = (go, zeroTuple) \n () -> foldl' (go, zeroTuple);
+                zeroTuple = () \n () -> Tuple (zero, zero);
+                go = () \n (acc, x) -> case acc () of
+                    Tuple (t,n) ->
+                        let tx = (t,x) \u () -> add (t,x);
+                            n1 = (n) \u () -> add (n,one)
+                        in case tx () of
+                            default -> case n1 () of
+                                default -> Tuple (tx, n1);
+                    badTuple -> Error_mean1 (badTuple)
+            in case totals (xs) of
+                Tuple (t,n) -> div (t,n);
+                badTuple -> Error_mean2 (badTuple)
+        |] }
