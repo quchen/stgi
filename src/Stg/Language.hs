@@ -72,7 +72,8 @@ instance Show Binds where
     show (Binds binds) = "(Binds " <> show (M.assocs binds) <> ")"
 
 -- | A lambda form unifies free and bound variables associated with a function
--- body.
+-- body. The lambda body must not be of primitive type, as this would imply
+-- the value is both boxed and unboxed.
 --
 -- >>> [stg| (x) \n (y, z) -> expr (x,z) |]
 -- LambdaForm [Var "x"] NoUpdate [Var "y",Var "z"] (AppF (Var "expr") [AtomVar (Var "x"),AtomVar (Var "z")])
