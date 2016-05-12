@@ -65,29 +65,41 @@ haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test
                 (PerformGc (const False))
                 program
             finalState = last states
-            successPredicateNotTrueText = (T.unpack . prettyprintAnsi . vsep)
-                [ "STG version of"
-                    <+> (text . T.unpack . testName) testSpec
-                    <+> "does not match Haskell's reference implementation."
-                , "Failure because:"
-                    <+> prettyAnsi (stgInfo finalState)
-                , if failWithInfo testSpec
-                    then vsep
-                        [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec input)])
-                        , hang 4 (vsep ["Final state:", prettyAnsi finalState]) ]
-                    else failWithInfoInfoText ]
-            failurePredicateTrueText bad = (T.unpack . prettyprintAnsi . vsep)
-                [ "Failure predicate held for an intemediate state"
-                , if failWithInfo testSpec
-                    then vsep
-                        [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec input)])
-                        , hang 4 (vsep ["Bad state:" , prettyAnsi bad]) ]
-                    else failWithInfoInfoText ]
         in case L.find (failPredicate testSpec) states of
-            Just bad -> counterexample (failurePredicateTrueText bad) False
+            Just badState -> fail_failPredicateTrue testSpec input badState
             Nothing -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> property True
-                _otherwise -> counterexample successPredicateNotTrueText False
+                _otherwise -> fail_successPredicateNotTrue testSpec input finalState
 
 failWithInfoInfoText :: Doc
 failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
+
+fail_successPredicateNotTrue :: HaskellReferenceTestSpec a -> a -> StgState -> Property
+fail_successPredicateNotTrue testSpec input finalState = counterexample failText False
+  where
+    failText = (T.unpack . prettyprintAnsi . vsep)
+        [ "STG version of"
+            <+> (text . T.unpack . testName) testSpec
+            <+> "does not match Haskell's reference implementation."
+        , "Failure because:"
+            <+> prettyAnsi (stgInfo finalState)
+        , if failWithInfo testSpec
+            then vsep
+                [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec input)])
+                , hang 4 (vsep ["Final state:", prettyAnsi finalState]) ]
+            else failWithInfoInfoText ]
+
+fail_failPredicateTrue
+    :: HaskellReferenceTestSpec a
+    -> a
+    -> StgState
+    -> Property
+fail_failPredicateTrue testSpec input badState = counterexample failText False
+  where
+    failText = (T.unpack . prettyprintAnsi . vsep)
+        [ "Failure predicate held for an intemediate state"
+        , if failWithInfo testSpec
+            then vsep
+                [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec input)])
+                , hang 4 (vsep ["Bad state:" , prettyAnsi badState]) ]
+            else failWithInfoInfoText ]

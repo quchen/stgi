@@ -69,26 +69,34 @@ machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
                         program
     finalState = last states
     test = case L.find (forbiddenState testSpec) states of
-        Just bad -> (assertFailure . T.unpack . prettyprintAnsi . vsep)
-            [ "Failure predicate held for an intemediate state"
-            , if failWithInfo testSpec
-                then vsep
-                    [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec)])
-                    , hang 4 (vsep ["Bad state:", prettyAnsi bad]) ]
-                else failWithInfoInfoText ]
+        Just badState -> fail_failPredicateTrue testSpec badState
         Nothing -> case L.any (someStateSatisfies testSpec) states of
             True -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> pure ()
-                _otherwise -> (assertFailure . T.unpack . prettyprintAnsi . vsep)
-                    [ "STG failed to satisfy predicate: "
-                        <> prettyAnsi (stgInfo finalState)
-                    , if failWithInfo testSpec
-                        then vsep
-                            [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec)])
-                            , hang 4 (vsep ["Final state:", prettyAnsi finalState]) ]
-                        else failWithInfoInfoText ]
+                _otherwise -> fail_successPredicateNotTrue testSpec finalState
             False -> (assertFailure . T.unpack)
                 "No intermediate state satisfied the required predicate."
 
 failWithInfoInfoText :: Doc
 failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
+
+fail_successPredicateNotTrue :: MachineStateTestSpec -> StgState -> Assertion
+fail_successPredicateNotTrue testSpec finalState
+  = (assertFailure . T.unpack . prettyprintAnsi . vsep)
+        [ "STG failed to satisfy predicate: "
+            <> prettyAnsi (stgInfo finalState)
+        , if failWithInfo testSpec
+            then vsep
+                [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec)])
+                , hang 4 (vsep ["Final state:", prettyAnsi finalState]) ]
+            else failWithInfoInfoText ]
+
+fail_failPredicateTrue :: MachineStateTestSpec -> StgState -> Assertion
+fail_failPredicateTrue testSpec badState
+  = (assertFailure . T.unpack . prettyprintAnsi . vsep)
+        [ "Failure predicate held for an intemediate state"
+        , if failWithInfo testSpec
+            then vsep
+                [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec)])
+                , hang 4 (vsep ["Bad state:", prettyAnsi badState]) ]
+            else failWithInfoInfoText ]
