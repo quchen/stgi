@@ -72,11 +72,11 @@ data GcState = GcState
         -- ^ Heap of closures known to be alive.
         --   Has no overlap with the old heap.
 
-    , evacuate  :: Alive (Set MemAddr)
+    , evacuate :: Alive (Set MemAddr)
         -- ^ Memory addresses known to be alive,
         --   but not yet scavenged from the old heap.
 
-    , oldHeap   :: Heap
+    , oldHeap :: Heap
         -- ^ The old heap, containing both dead
         --   and not-yet-found alive closures.
     } deriving (Eq, Ord, Show)

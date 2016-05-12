@@ -19,17 +19,17 @@ import           Stg.Language
 
 -- | Package of colour definitions used in this module.
 data StgStateColours = StgStateColours
-    { keyword     :: Doc -> Doc
+    { keyword :: Doc -> Doc
         -- ^ Keyword style
-    , prim        :: Doc -> Doc
+    , prim :: Doc -> Doc
         -- ^ Primitive style, for literals and functions
-    , variable    :: Doc -> Doc
+    , variable :: Doc -> Doc
         -- ^ Variable style
     , constructor :: Doc -> Doc
         -- ^ Constructor style
-    , lambdaHead  :: Doc -> Doc
+    , lambdaHead :: Doc -> Doc
         -- ^ Head of a lambda form
-    , semicolon   :: Doc -> Doc
+    , semicolon :: Doc -> Doc
         -- ^ Semicolons separating lists of bindings and alternatives
     }
 
@@ -57,7 +57,7 @@ colour = StgStateColours
 -- 'plain' . 'prettyAnsiList' ≡ 'prettyList'
 -- @
 class Pretty a => PrettyAnsi a where
-    prettyAnsi  :: a -> Doc
+    prettyAnsi :: a -> Doc
     prettyAnsi = pretty
     prettyAnsiList :: [a] -> Doc
     prettyAnsiList = prettyList

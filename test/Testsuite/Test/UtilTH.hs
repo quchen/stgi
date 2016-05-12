@@ -32,7 +32,7 @@ arbitraryNValue n = lamE [varP f] [| $(chainOfArbitraries n) |]
 --
 -- @
 -- arbitraryN n
---    :: (Arbitrary a, Arbitrary b, ...)
+-- :: (Arbitrary a, Arbitrary b, ...)
 --    -> (a -> b -> ... -> g)
 --    -> Gen g
 -- @

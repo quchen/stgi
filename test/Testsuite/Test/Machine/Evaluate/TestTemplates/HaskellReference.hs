@@ -31,29 +31,28 @@ import           Test.Orphans                             ()
 
 -- | Specifies a test that is based on the reduction of a closure.
 data HaskellReferenceTestSpec a = HaskellReferenceTestSpec
-    { testName         :: Text
+    { testName :: Text
         -- ^ The reference function's name. Used only for display purposes.
 
     , successPredicate :: StgState -> Bool
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
-    , failPredicate    :: StgState -> Bool
+    , failPredicate :: StgState -> Bool
         -- ^ Fail if this predicate holds. This can be used to constrain the
         -- heap size during the test, for example.
 
-    , source           :: a -> Program
+    , source :: a -> Program
         -- ^ STG program to run.
 
-    , maxSteps         :: Integer
+    , maxSteps :: Integer
         -- ^ Maximum number of steps to take
 
-    , failWithInfo     :: Bool
+    , failWithInfo :: Bool
         -- ^ Print program code and final state on test failure?
     }
 
-haskellReferenceTest
-    :: (Show a, Arbitrary a)
+haskellReferenceTest :: (Show a, Arbitrary a)
     => HaskellReferenceTestSpec a
     -> TestTree
 haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test

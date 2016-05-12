@@ -49,26 +49,26 @@ import           Stg.Util
 
 -- | The internal state of an STG.
 data StgState = StgState
-    { stgCode    :: Code
+    { stgCode :: Code
         -- ^ Operation the STG should perform next
 
-    , stgStack   :: Stack StackFrame
+    , stgStack :: Stack StackFrame
         -- ^ The stack stores not-yet-used arguments (argument stack part),
         -- computations to return to once case evaluation has finished
         -- (return stack part), and instructions to update heap entries
         -- once computation of a certain value is done.
 
-    , stgHeap    :: Heap
+    , stgHeap :: Heap
         -- ^ The heap stores values allocated at the top level or in @let(rec)@
         --   expressions.
 
     , stgGlobals :: Globals
         -- ^ The environment consisting of the top-level definitions.
 
-    , stgTicks   :: Integer
+    , stgTicks :: Integer
         -- ^ A counter, used to generte fresh variable names from.
 
-    , stgInfo    :: Info
+    , stgInfo :: Info
         -- ^ Information about the current state
     }
     deriving (Eq, Ord, Show, Generic)
@@ -78,7 +78,7 @@ data StgStateColours = StgStateColours
     { headline :: Doc -> Doc
         -- ^ Style of headlines in the state overview, such as \"Heap" and
         --   "Frame i".
-    , address  :: Doc -> Doc
+    , address :: Doc -> Doc
         -- ^ Style of memory addresses.
     }
 
@@ -272,8 +272,7 @@ instance Pretty Info where
 instance PrettyAnsi Info where
     prettyAnsi = prettyInfo prettyAnsi prettyAnsiList
 
-prettyInfo
-    :: (forall a. PrettyAnsi a => a -> Doc)
+prettyInfo :: (forall a. PrettyAnsi a => a -> Doc)
     -> (forall a. PrettyAnsi a => [a] -> Doc)
     -> Info
     -> Doc
@@ -318,8 +317,7 @@ instance Pretty InfoShort where
 instance PrettyAnsi InfoShort where
     prettyAnsi = prettyInfoShort prettyAnsi
 
-prettyInfoShort
-    :: (forall a. PrettyAnsi a => a -> Doc)
+prettyInfoShort :: (forall a. PrettyAnsi a => a -> Doc)
     -> InfoShort
     -> Doc
 prettyInfoShort ppr = \case
