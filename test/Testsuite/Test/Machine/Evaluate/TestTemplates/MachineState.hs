@@ -10,34 +10,34 @@ module Test.Machine.Evaluate.TestTemplates.MachineState (
 
 
 
-import qualified Data.List                                as L
+import qualified Data.List                    as L
 import           Data.Monoid
-import           Data.Text                                (Text)
-import qualified Data.Text                                as T
-import           Text.PrettyPrint.ANSI.Leijen             hiding ((<>))
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
-import           Stg.Language
-import           Stg.Language.Prettyprint
-import           Stg.Machine
-import           Stg.Machine.Types
+import Stg.Language
+import Stg.Language.Prettyprint
+import Stg.Machine
+import Stg.Machine.Types
 
-import           Test.Machine.Evaluate.TestTemplates.Util
-import           Test.Tasty
-import           Test.Tasty.HUnit
+import Test.Machine.Evaluate.TestTemplates.Util
+import Test.Tasty
+import Test.Tasty.HUnit
 
 
 
 -- | Specify a test that is based on a certain predicate to hold in an
 -- evaluation step.
 data MachineStateTestSpec = MachineStateTestSpec
-    { testName           :: Text
+    { testName :: Text
         -- ^ Test name to display in the test overview.
 
-    , successPredicate   :: StgState -> Bool
+    , successPredicate :: StgState -> Bool
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
-    , forbiddenState     :: StgState -> Bool
+    , forbiddenState :: StgState -> Bool
         -- ^ Fail if this predicate holds. This can be used to constrain the
         -- heap size during the test, for example.
 
@@ -45,15 +45,15 @@ data MachineStateTestSpec = MachineStateTestSpec
         -- ^ Fail if this predicate held for no intermediate state. Useful to
         -- check whether some rule applied, for example.
 
-    , source             :: Program
+    , source :: Program
         -- ^ STG program to run.
 
-    , maxSteps           :: Integer
+    , maxSteps :: Integer
         -- ^ Maximum number of steps to take
 
-    , performGc          :: PerformGc
+    , performGc :: PerformGc
 
-    , failWithInfo       :: Bool
+    , failWithInfo :: Bool
         -- ^ Print program code and final state on test failure?
     }
 

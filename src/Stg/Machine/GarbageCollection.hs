@@ -17,10 +17,10 @@ module Stg.Machine.GarbageCollection (
 
 
 import           Data.Foldable
-import qualified Data.Map          as M
-import           Data.Monoid       hiding (Alt)
-import           Data.Set          (Set)
-import qualified Data.Set          as S
+import qualified Data.Map      as M
+import           Data.Monoid   hiding (Alt)
+import           Data.Set      (Set)
+import qualified Data.Set      as S
 
 import           Stg.Language
 import qualified Stg.Machine.Heap  as H
@@ -72,11 +72,11 @@ data GcState = GcState
         -- ^ Heap of closures known to be alive.
         --   Has no overlap with the old heap.
 
-    , evacuate  :: Alive (Set MemAddr)
+    , evacuate :: Alive (Set MemAddr)
         -- ^ Memory addresses known to be alive,
         --   but not yet scavenged from the old heap.
 
-    , oldHeap   :: Heap
+    , oldHeap :: Heap
         -- ^ The old heap, containing both dead
         --   and not-yet-found alive closures.
     } deriving (Eq, Ord, Show)

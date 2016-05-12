@@ -68,10 +68,10 @@ module Stg.Language.Prelude (
 
 
 
-import           Prelude                       ()
+import Prelude ()
 
-import           Stg.Language.Prelude.Bool
-import           Stg.Language.Prelude.Function
-import           Stg.Language.Prelude.List
-import           Stg.Language.Prelude.Number
-import           Stg.Language.Prelude.Tuple
+import Stg.Language.Prelude.Bool
+import Stg.Language.Prelude.Function
+import Stg.Language.Prelude.List
+import Stg.Language.Prelude.Number
+import Stg.Language.Prelude.Tuple

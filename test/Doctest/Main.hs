@@ -2,7 +2,7 @@ module Main (main) where
 
 
 
-import           Test.DocTest
+import Test.DocTest
 
 
 

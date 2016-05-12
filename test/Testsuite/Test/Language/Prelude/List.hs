@@ -6,19 +6,19 @@ module Test.Language.Prelude.List (tests) where
 
 
 
-import qualified Data.List                                            as L
+import qualified Data.List   as L
 import           Data.Monoid
-import           Data.Text                                            (Text)
+import           Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Language.Prelude                                 as Stg
+import qualified Stg.Language.Prelude as Stg
 import           Stg.Machine.Types
 import           Stg.Parser
 
-import           Test.Machine.Evaluate.TestTemplates.HaskellReference
-import           Test.Orphans                                         ()
-import           Test.QuickCheck.Modifiers
-import           Test.Tasty
+import Test.Machine.Evaluate.TestTemplates.HaskellReference
+import Test.Orphans                                         ()
+import Test.QuickCheck.Modifiers
+import Test.Tasty
 
 
 

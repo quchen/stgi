@@ -21,9 +21,9 @@ import           Control.Applicative
 import qualified Data.Map            as M
 import           Data.Monoid
 
-import           Stg.Language
-import           Stg.Machine.Types
-import           Stg.Util
+import Stg.Language
+import Stg.Machine.Types
+import Stg.Util
 
 
 

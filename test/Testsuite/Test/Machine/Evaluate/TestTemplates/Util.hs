@@ -6,14 +6,14 @@ module Test.Machine.Evaluate.TestTemplates.Util (
 
 
 import           Data.Monoid
-import           Data.Text         (Text)
-import qualified Data.Text         as T
+import           Data.Text   (Text)
+import qualified Data.Text   as T
 
-import           Stg.Language
-import           Stg.Machine.Env
-import           Stg.Machine.Heap  as H
-import           Stg.Machine.Types
-import           Stg.Util
+import Stg.Language
+import Stg.Machine.Env
+import Stg.Machine.Heap  as H
+import Stg.Machine.Types
+import Stg.Util
 
 
 

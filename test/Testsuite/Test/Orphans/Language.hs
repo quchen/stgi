@@ -16,9 +16,9 @@ import qualified Data.Text              as T
 import           Test.SmallCheck.Series
 import           Test.Tasty.QuickCheck
 
-import           Stg.Language
+import Stg.Language
 
-import           Test.Util
+import Test.Util
 
 
 

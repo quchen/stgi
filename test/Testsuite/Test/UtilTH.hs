@@ -8,10 +8,10 @@ module Test.UtilTH (
 
 
 
-import           GHC.Natural
-import           Language.Haskell.TH
+import GHC.Natural
+import Language.Haskell.TH
 
-import           Test.QuickCheck
+import Test.QuickCheck
 
 
 
@@ -32,7 +32,7 @@ arbitraryNValue n = lamE [varP f] [| $(chainOfArbitraries n) |]
 --
 -- @
 -- arbitraryN n
---    :: (Arbitrary a, Arbitrary b, ...)
+-- :: (Arbitrary a, Arbitrary b, ...)
 --    -> (a -> b -> ... -> g)
 --    -> Gen g
 -- @

@@ -8,9 +8,9 @@ module Stg.Language.Prettyprint.ParserInverse (
 
 
 
-import           Text.PrettyPrint.ANSI.Leijen
+import Text.PrettyPrint.ANSI.Leijen
 
-import           Stg.Language
+import Stg.Language
 
 
 

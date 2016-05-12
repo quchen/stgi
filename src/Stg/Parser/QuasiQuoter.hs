@@ -37,7 +37,7 @@ import           Language.Haskell.TH.Lift
 import           Language.Haskell.TH.Quote
 import           Text.Megaparsec.Text
 
-import           Stg.Parser.Parser
+import Stg.Parser.Parser
 
 -- $setup
 -- >>> :set -XTemplateHaskell

@@ -2,15 +2,15 @@ module Test.Stack (tests) where
 
 
 
-import           Data.Foldable
-import           Data.Monoid
-import           GHC.Exts              (fromList)
-import           Test.Tasty
-import           Test.Tasty.QuickCheck as QC
+import Data.Foldable
+import Data.Monoid
+import GHC.Exts              (fromList)
+import Test.Tasty
+import Test.Tasty.QuickCheck as QC
 
-import           Stack
+import Stack
 
-import           Test.Orphans          ()
+import Test.Orphans ()
 
 
 

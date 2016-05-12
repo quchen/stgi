@@ -2,7 +2,7 @@ module Test.Parser (tests) where
 
 
 
-import           Test.Tasty
+import Test.Tasty
 
 import qualified Test.Parser.Parser      as Parser
 import qualified Test.Parser.QuasiQuoter as QuasiQuoter
