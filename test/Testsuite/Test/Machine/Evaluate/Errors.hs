@@ -19,7 +19,8 @@ import Test.Orphans                                     ()
 
 tests :: TestTree
 tests = testGroup "Error conditions"
-    [ loopEnterBlackHole ]
+    [ loopEnterBlackHole
+    , functionScrutinee ]
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
@@ -38,4 +39,17 @@ loopEnterBlackHole = machineStateTest defSpec
     , source = [stg| main = () \u () -> main () |]
     , successPredicate = \state -> case stgInfo state of
         Info (StateError EnterBlackhole) _ -> True
+        _otherwise -> False }
+
+functionScrutinee :: TestTree
+functionScrutinee = machineStateTest defSpec
+    { testName = "Function scrutinee"
+    , failWithInfo = True
+    , source = [stg|
+        id = () \n (x) -> x ();
+        main = () \u () -> case id () of
+            default -> Success ()
+        |]
+    , successPredicate = \state -> case stgInfo state of
+        Info (StateError NonAlgPrimScrutinee) _ -> True
         _otherwise -> False }

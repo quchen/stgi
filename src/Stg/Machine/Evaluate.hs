@@ -564,6 +564,15 @@ noRuleApplies s@StgState
 
 
 
+-- Non-algebraic scrutinee
+noRuleApplies s@StgState -- TODO: Make sure this catches the right states
+    { stgCode  = Enter _
+    , stgStack = ReturnFrame{} :< _}
+
+  = s { stgInfo  = Info (StateError NonAlgPrimScrutinee) [] }
+
+
+
 
 -- Successful, ordinary termination
 noRuleApplies s@StgState { stgStack = S.Empty }

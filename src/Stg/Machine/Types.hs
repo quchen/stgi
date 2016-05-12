@@ -395,6 +395,7 @@ data StateError =
     | InitialStateCreationFailed
     | EnterBlackhole
     | UpdateClosureWithPrimitive
+    | NonAlgPrimScrutinee
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty StateError where
@@ -407,6 +408,7 @@ instance Pretty StateError where
         InitialStateCreationFailed -> "Initial state creation failed"
         EnterBlackhole -> "Entering black hole"
         UpdateClosureWithPrimitive -> "Update closure with primitive value"
+        NonAlgPrimScrutinee -> "Non-algebraic/primitive case scrutinee"
 
 instance PrettyAnsi StateError where
     prettyAnsi = \case
