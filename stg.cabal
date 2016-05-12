@@ -68,6 +68,7 @@ library
 executable stg-exe
   hs-source-dirs:      app
   main-is:             Main.hs
+  other-modules:       Stg.RunForPager
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , stg
