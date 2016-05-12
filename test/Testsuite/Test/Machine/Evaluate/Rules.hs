@@ -283,8 +283,8 @@ primops = HRef.haskellReferenceTest HRef.HaskellReferenceTestSpec
             -- the baby with the bathwater here.
         Program (Binds
             [(Var "main", LambdaForm [] Update []
-                (Case (AppP op (AtomLit (Literal arg1)) (AtomLit (Literal arg2))) (Alts
-                    [PrimitiveAlt (Literal (haskell op arg1 arg2)) (AppC (Constr "Success") [])]
+                (Case (AppP op (AtomLit (Literal arg1)) (AtomLit (Literal arg2))) (Alts (PrimitiveAlts
+                    [PrimitiveAlt (Literal (haskell op arg1 arg2)) (AppC (Constr "Success") [])] )
                     (DefaultBound (Var "wrong") (AppC (Constr "TestFail") [AtomVar (Var "wrong")])) )))])}
   where
     boolToPrim op x y = if op x y then 1 else 0

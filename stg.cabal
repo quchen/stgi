@@ -47,6 +47,7 @@ library
                      , ansi-wl-pprint
                      , containers
                      , megaparsec
+                     , semigroups
                      , template-haskell
                      , text
                      , th-lift
@@ -115,6 +116,7 @@ test-suite stg-test
                      , ansi-wl-pprint
                      , containers
                      , megaparsec
+                     , semigroups
                      , tasty
                      , tasty-hunit
                      , tasty-quickcheck, QuickCheck

@@ -53,13 +53,13 @@ binaryOp :: Text -> PrimOp -> Alts -> Program
 binaryOp name op primAlts =
     Program (Binds
         [(Var name, LambdaForm [] NoUpdate [Var "x", Var "y"]
-            (Case (AppF (Var "x") []) (Alts
+            (Case (AppF (Var "x") []) (Alts (AlgebraicAlts
                 [AlgebraicAlt (Constr "Int#") [Var "x'"]
-                    (Case (AppF (Var "y") []) (Alts
+                    (Case (AppF (Var "y") []) (Alts (AlgebraicAlts
                         [AlgebraicAlt (Constr "Int#") [Var "y'"]
                             (Case (AppP op (AtomVar (Var "x'")) (AtomVar (Var "y'")))
-                                primAlts) ]
-                        (DefaultBound (Var "err") (AppC (Constr ("Error_" <> name <> "_1")) [AtomVar (Var "err")])) ))]
+                                primAlts) ])
+                        (DefaultBound (Var "err") (AppC (Constr ("Error_" <> name <> "_1")) [AtomVar (Var "err")])) ))])
                 (DefaultBound (Var "err") (AppC (Constr ("Error_" <> name <> "_2")) [AtomVar (Var "err")])) )))])
 
 

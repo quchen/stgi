@@ -30,26 +30,27 @@ import           Stg.Util
 lookupAlgebraicAlt
     :: Alts
     -> Constr
-    -> Either DefaultAlt Alt
-lookupAlgebraicAlt (Alts alts def) constr  = lookupAlt matchingAlt alts def
+    -> Either DefaultAlt AlgebraicAlt
+lookupAlgebraicAlt (Alts (AlgebraicAlts alts) def) constr
+  = case L.find matchingAlt alts of
+    Just alt   -> Right alt
+    _otherwise -> Left def
   where
     matchingAlt (AlgebraicAlt c _ _) = c == constr
-    matchingAlt PrimitiveAlt{}       = False
+lookupAlgebraicAlt (Alts _ def) _ = Left def
 
 -- | 'lookupPrimitiveAlt' for primitive literals.
 lookupPrimitiveAlt
     :: Alts
     -> Literal
-    -> Either DefaultAlt Alt
-lookupPrimitiveAlt (Alts alts def) lit = lookupAlt matchingAlt alts def
-  where
-    matchingAlt (PrimitiveAlt lit' _) = lit' == lit
-    matchingAlt AlgebraicAlt{}        = False
-
-lookupAlt :: (alt -> Bool) -> [alt] -> def -> Either def alt
-lookupAlt matchingAlt alts def = case L.find matchingAlt alts of
+    -> Either DefaultAlt PrimitiveAlt
+lookupPrimitiveAlt (Alts (PrimitiveAlts alts) def) lit
+  = case L.find matchingAlt alts of
     Just alt   -> Right alt
     _otherwise -> Left def
+  where
+    matchingAlt (PrimitiveAlt lit' _) = lit' == lit
+lookupPrimitiveAlt (Alts _ def) _ = Left def
 
 liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure
 liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
@@ -526,7 +527,7 @@ noRuleApplies s@StgState
 -- Algebraic constructor return, but primitive alternative on return frame
 noRuleApplies s@StgState
     { stgCode  = ReturnCon{}
-    , stgStack = ReturnFrame (Alts (AlgebraicAlt{}:_) _) _ :< _ }
+    , stgStack = ReturnFrame (Alts AlgebraicAlts{} _) _ :< _ }
 
   = s { stgInfo = Info (StateError AlgReturnToPrimAlts) [] }
 
@@ -535,7 +536,7 @@ noRuleApplies s@StgState
 -- Primitive return, but algebraic alternative on return frame
 noRuleApplies s@StgState
     { stgCode  = ReturnInt _
-    , stgStack = ReturnFrame (Alts (PrimitiveAlt{}:_) _) _ :< _ }
+    , stgStack = ReturnFrame (Alts PrimitiveAlts{} _) _ :< _ }
 
   = s { stgInfo = Info (StateError PrimReturnToAlgAlts) [] }
 

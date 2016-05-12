@@ -8,6 +8,7 @@ module Test.Orphans.Language () where
 
 
 
+import qualified Data.List.NonEmpty     as NonEmpty
 import qualified Data.Map               as M
 import           Data.Monoid            hiding (Alt)
 import           Data.Ratio
@@ -104,21 +105,15 @@ instance Arbitrary Expr where
     shrink = genericShrink
 
 instance Arbitrary Alts where
-    arbitrary = Alts <$> homogeneousAlts <*> arbitrary
-      where
-        homogeneousAlts = oneof
-            [ listOf (scaled (2%3) algebraicAlt)
-            , listOf (scaled (2%3) primitiveAlt) ]
-        algebraicAlt = arbitrary3 AlgebraicAlt
-        primitiveAlt = arbitrary2 PrimitiveAlt
-    shrink = genericShrink
+    arbitrary = arbitrary2 Alts
 
-instance Arbitrary Alt where
+instance Arbitrary NonDefaultAlts where
     arbitrary = oneof
-        [ arbitrary3 AlgebraicAlt
-        , arbitrary2 PrimitiveAlt ]
-    shrink = genericShrink
-
+        [ pure NoNonDefaultAlts
+        , fmap (AlgebraicAlts . NonEmpty.fromList)
+            (listOf1 (scaled (2%3) (arbitrary3 AlgebraicAlt)))
+        , fmap (PrimitiveAlts . NonEmpty.fromList)
+            (listOf1 (scaled (2%3) (arbitrary2 PrimitiveAlt))) ]
 
 instance Arbitrary DefaultAlt where
     arbitrary = oneof [arbitrary1 DefaultNotBound, arbitrary2 DefaultBound]

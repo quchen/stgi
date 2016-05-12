@@ -8,6 +8,7 @@ module Stg.Language.Prettyprint.Ansi (
 
 
 
+import           Data.Foldable
 import qualified Data.Map                     as M
 import qualified Data.Text                    as T
 import           Prelude                      hiding ((<$>))
@@ -119,12 +120,19 @@ instance PrettyAnsi Expr where
         Lit lit -> prettyAnsi lit
 
 instance PrettyAnsi Alts where
-    prettyAnsi (Alts alts def) =
-        (align . vsep . punctuate (semicolon colour ";")) (map prettyAnsi alts ++ [prettyAnsi def])
+    prettyAnsi (Alts NoNonDefaultAlts def) = prettyAnsi def
+    prettyAnsi (Alts (AlgebraicAlts alts) def) =
+        (align . vsep . punctuate (semicolon colour ";"))
+            (map prettyAnsi (toList alts) ++ [prettyAnsi def])
+    prettyAnsi (Alts (PrimitiveAlts alts) def) =
+        (align . vsep . punctuate (semicolon colour ";"))
+            (map prettyAnsi (toList alts) ++ [prettyAnsi def])
 
-instance PrettyAnsi Alt where
+instance PrettyAnsi AlgebraicAlt where
     prettyAnsi (AlgebraicAlt con args expr) =
         prettyAnsi con <+> prettyAnsiList args <+> "->" <+> prettyAnsi expr
+
+instance PrettyAnsi PrimitiveAlt where
     prettyAnsi (PrimitiveAlt lit expr) =
         prettyAnsi lit <+> "->" <+> prettyAnsi expr
 

@@ -14,25 +14,29 @@
 -- For plenty of comparisons of STG language source and generated parse trees,
 -- have a look at the "Stg.Parser.QuasiQuoter" module.
 module Stg.Language (
-    Program       (..),
-    Binds         (..),
-    LambdaForm    (..),
+    Program        (..),
+    Binds          (..),
+    LambdaForm     (..),
     prettyLambda,
-    UpdateFlag    (..),
-    Rec           (..),
-    Expr          (..),
-    Alts          (..),
-    Alt           (..),
-    DefaultAlt    (..),
-    Literal       (..),
-    PrimOp        (..),
-    Var           (..),
-    Atom          (..),
-    Constr        (..),
+    UpdateFlag     (..),
+    Rec            (..),
+    Expr           (..),
+    Alts           (..),
+    NonDefaultAlts (..),
+    AlgebraicAlt   (..),
+    PrimitiveAlt   (..),
+    DefaultAlt     (..),
+    Literal        (..),
+    PrimOp         (..),
+    Var            (..),
+    Atom           (..),
+    Constr         (..),
 ) where
 
 
 
+import           Data.List.NonEmpty           (NonEmpty (..))
+import qualified Data.List.NonEmpty           as NonEmpty
 import           Data.Map                     (Map)
 import qualified Data.Map                     as M
 import           Data.Monoid                  hiding (Alt)
@@ -106,11 +110,27 @@ data Expr =
 --
 -- The list of alts has to be homogeneous. This is not ensured by the type
 -- system, and should be handled by the parser instead.
-data Alts = Alts [Alt] DefaultAlt
+data Alts = Alts NonDefaultAlts DefaultAlt
     deriving (Eq, Ord, Show, Generic)
 
-data Alt = AlgebraicAlt Constr [Var] Expr -- ^ as in @True | False@
-         | PrimitiveAlt Literal      Expr -- ^ like 1, 2, 3
+data NonDefaultAlts =
+      NoNonDefaultAlts
+        -- ^ Used in 'case' statements that consist only of a default
+        -- alternative. These can be useful to force or unpack values.
+
+    | AlgebraicAlts (NonEmpty AlgebraicAlt)
+        -- ^ Algebraic alternative, like @Cons (x,xs)@.
+
+    | PrimitiveAlts (NonEmpty PrimitiveAlt)
+        -- ^ Primitive alternative, like @1#@.
+    deriving (Eq, Ord, Show, Generic)
+
+-- | As in @True | False@
+data AlgebraicAlt = AlgebraicAlt Constr [Var] Expr
+    deriving (Eq, Ord, Show, Generic)
+
+-- | As in @1, 2, 3@
+data PrimitiveAlt = PrimitiveAlt Literal Expr
     deriving (Eq, Ord, Show, Generic)
 
 -- | If no viable alternative is found in a pattern match, use a 'DefaultAlt'
@@ -163,8 +183,15 @@ instance IsString Constr where fromString = coerce . T.pack
 --------------------------------------------------------------------------------
 -- Lift instances
 deriveLiftMany [ ''Program, ''Literal, ''LambdaForm , ''UpdateFlag, ''Rec
-               , ''Expr, ''Alts , ''Alt , ''DefaultAlt , ''PrimOp
-               , ''Atom ]
+               , ''Expr, ''Alts, ''AlgebraicAlt, ''PrimitiveAlt, ''DefaultAlt
+               , ''PrimOp, ''Atom ]
+
+instance Lift NonDefaultAlts where
+    lift NoNonDefaultAlts = [| NoNonDefaultAlts |]
+    lift (AlgebraicAlts alts) =
+        [| AlgebraicAlts (NonEmpty.fromList $(lift (toList alts))) |]
+    lift (PrimitiveAlts alts) =
+        [| PrimitiveAlts (NonEmpty.fromList $(lift (toList alts))) |]
 
 instance Lift Binds where
     lift (Binds binds) = [| Binds (M.fromList $(lift (M.assocs binds))) |]
@@ -244,12 +271,17 @@ instance Pretty Expr where
         Lit lit -> pretty lit
 
 instance Pretty Alts where
-    pretty (Alts alts def) =
-        (align . vsep . punctuate ";") (map pretty alts ++ [pretty def])
+    pretty (Alts NoNonDefaultAlts def) = pretty def
+    pretty (Alts (AlgebraicAlts alts) def) =
+        (align . vsep . punctuate ";") (map pretty (toList alts) ++ [pretty def])
+    pretty (Alts (PrimitiveAlts alts) def) =
+        (align . vsep . punctuate ";") (map pretty (toList alts) ++ [pretty def])
 
-instance Pretty Alt where
+instance Pretty AlgebraicAlt where
     pretty (AlgebraicAlt con args expr) =
         pretty con <+> prettyList args <+> "->" <+> pretty expr
+
+instance Pretty PrimitiveAlt where
     pretty (PrimitiveAlt lit expr) =
         pretty lit <+> "->" <+> pretty expr
 

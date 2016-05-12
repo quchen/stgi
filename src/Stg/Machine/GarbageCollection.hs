@@ -162,9 +162,16 @@ instance Addresses Binds where
 instance Addresses Alts where
     addrs (Alts alts def) = addrs alts <> addrs def
 
-instance Addresses Alt where
+instance Addresses NonDefaultAlts where
+    addrs NoNonDefaultAlts     = mempty
+    addrs (AlgebraicAlts alts) = addrs alts
+    addrs (PrimitiveAlts alts) = addrs alts
+
+instance Addresses AlgebraicAlt where
     addrs (AlgebraicAlt _con _vars expr) = addrs expr
-    addrs (PrimitiveAlt _prim      expr) = addrs expr
+
+instance Addresses PrimitiveAlt where
+    addrs (PrimitiveAlt _prim expr) = addrs expr
 
 instance Addresses DefaultAlt where
     addrs = \case

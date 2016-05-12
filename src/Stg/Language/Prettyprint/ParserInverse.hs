@@ -29,7 +29,8 @@ instance PrettyParserInverse UpdateFlag
 instance PrettyParserInverse Rec
 instance PrettyParserInverse Expr
 instance PrettyParserInverse Alts
-instance PrettyParserInverse Alt
+instance PrettyParserInverse AlgebraicAlt
+instance PrettyParserInverse PrimitiveAlt
 instance PrettyParserInverse DefaultAlt
 instance PrettyParserInverse Literal
 instance PrettyParserInverse PrimOp

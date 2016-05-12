@@ -39,6 +39,7 @@ module Stg.Parser.Parser (
 import           Control.Applicative
 import           Control.Monad
 import           Data.Bifunctor
+import qualified Data.List.NonEmpty    as NonEmpty
 import qualified Data.Map              as M
 import           Data.Text             (Text)
 import qualified Data.Text             as T
@@ -263,8 +264,8 @@ alts :: Parser Alts
 alts = Alts <$> nonDefaultAlts <*> defaultAlt
    <?> "case alternatives"
 
--- | Parse multiple non-default alternatives. The list of alternatives can
--- be either all algebraic or all primitive.
+-- | Parse non-default alternatives. The list of alternatives can be either
+-- empty, all algebraic, or all primitive.
 --
 -- @
 -- Nil () -> ...
@@ -275,23 +276,18 @@ alts = Alts <$> nonDefaultAlts <*> defaultAlt
 -- 1# -> ...
 -- 2# -> ...
 -- @
-nonDefaultAlts :: Parser [Alt]
-nonDefaultAlts = p <|> pure [] <?> help
-  where
-    p = do
-        firstAlt <- algebraicAlt <|> primitiveAlt
-        rest <- case firstAlt of
-            AlgebraicAlt{} -> many algebraicAlt
-            PrimitiveAlt{} -> many primitiveAlt
-        pure (firstAlt:rest)
-    help = "non-default case alternatives"
+nonDefaultAlts :: Parser NonDefaultAlts
+nonDefaultAlts = fmap (AlgebraicAlts . NonEmpty.fromList) (P.some algebraicAlt)
+             <|> fmap (PrimitiveAlts . NonEmpty.fromList) (P.some primitiveAlt)
+             <|> pure NoNonDefaultAlts
+             <?> "non-default case alternatives"
 
 -- | Parse a single algebraic alternative.
 --
 -- @
 -- Cons (x,xs) -> ...
 -- @
-algebraicAlt :: Parser Alt
+algebraicAlt :: Parser AlgebraicAlt
 algebraicAlt = P.try (AlgebraicAlt <$> conTok <*> vars) <* arrowTok <*> expr <* semicolonTok
     <?> "algebraic case alternative"
 
@@ -300,7 +296,7 @@ algebraicAlt = P.try (AlgebraicAlt <$> conTok <*> vars) <* arrowTok <*> expr <* 
 -- @
 -- 1# -> ...
 -- @
-primitiveAlt :: Parser Alt
+primitiveAlt :: Parser PrimitiveAlt
 primitiveAlt = P.try (PrimitiveAlt <$> literal) <* arrowTok <*> expr <* semicolonTok
     <?> "primitive case alternative"
 
