@@ -24,25 +24,25 @@ import Test.Tasty
 
 tests :: TestTree
 tests = testGroup "List"
-    [ stgConcat2
-    , stgReverse
-    , stgLength
-    , stgCycle
-    , stgIterate
-    , stgRepeat
-    , stgReplicate
-    , stgSort
-    , stgFilter
-    , stgMap
-    , stgZipWith
+    [ testConcat2
+    , testReverse
+    , testLength
+    , testCycle
+    , testIterate
+    , testRepeat
+    , testReplicate
+    , testSort
+    , testFilter
+    , testMap
+    , testZipWith
     , testGroup "Folds"
-        [ stgFoldr
-        , stgFoldl
-        , stgFoldl' ]
+        [ testFoldr
+        , testFoldl
+        , testFoldl' ]
     ]
 
-stgFilter :: TestTree
-stgFilter = haskellReferenceTest HaskellReferenceTestSpec
+testFilter :: TestTree
+testFilter = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "filter"
     , maxSteps = 1024
     , failWithInfo = False
@@ -66,8 +66,8 @@ stgFilter = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgSort :: TestTree
-stgSort = haskellReferenceTest HaskellReferenceTestSpec
+testSort :: TestTree
+testSort = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "sort"
     , maxSteps = 1024
     , failWithInfo = False
@@ -87,8 +87,8 @@ stgSort = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgMap :: TestTree
-stgMap = haskellReferenceTest HaskellReferenceTestSpec
+testMap :: TestTree
+testMap = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "map"
     , maxSteps = 1024
     , failWithInfo = False
@@ -112,8 +112,8 @@ stgMap = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgZipWith :: TestTree
-stgZipWith = haskellReferenceTest HaskellReferenceTestSpec
+testZipWith :: TestTree
+testZipWith = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "zipWith (+)"
     , maxSteps = 1024
     , failWithInfo = False
@@ -136,18 +136,18 @@ stgZipWith = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 
-stgFoldr, stgFoldl, stgFoldl' :: TestTree
-stgFoldr  = foldSumTemplate
+testFoldr, testFoldl, testFoldl' :: TestTree
+testFoldr  = foldSumTemplate
     "foldr"
     foldr
     (Stg.foldr <> [stg| fold = () \n () -> foldr  () |])
     (const False)
-stgFoldl  = foldSumTemplate
+testFoldl  = foldSumTemplate
     "foldl"
     foldl
     (Stg.foldl <> [stg| fold = () \n () -> foldl  () |])
     (const False)
-stgFoldl' = foldSumTemplate
+testFoldl' = foldSumTemplate
     "foldl'"
     L.foldl'
     (Stg.foldl' <> [stg| fold = () \n () -> foldl' () |])
@@ -190,8 +190,8 @@ foldSumTemplate foldName foldF foldStg failP
                 default -> TestFail ()
         |] }
 
-stgConcat2 :: TestTree
-stgConcat2 = haskellReferenceTest HaskellReferenceTestSpec
+testConcat2 :: TestTree
+testConcat2 = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "(++)"
     , maxSteps = 1024
     , failWithInfo = False
@@ -212,8 +212,8 @@ stgConcat2 = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgReverse :: TestTree
-stgReverse = haskellReferenceTest HaskellReferenceTestSpec
+testReverse :: TestTree
+testReverse = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "reverse"
     , maxSteps = 1024
     , failWithInfo = True
@@ -233,8 +233,8 @@ stgReverse = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgCycle :: TestTree
-stgCycle = haskellReferenceTest HaskellReferenceTestSpec
+testCycle :: TestTree
+testCycle = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "cycle (+take)"
     , maxSteps = 1024
     , failWithInfo = False
@@ -259,8 +259,8 @@ stgCycle = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgRepeat :: TestTree
-stgRepeat = haskellReferenceTest HaskellReferenceTestSpec
+testRepeat :: TestTree
+testRepeat = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "repeat (+take)"
     , maxSteps = 1024
     , failWithInfo = False
@@ -284,8 +284,8 @@ stgRepeat = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgReplicate :: TestTree
-stgReplicate = haskellReferenceTest HaskellReferenceTestSpec
+testReplicate :: TestTree
+testReplicate = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "replicate"
     , maxSteps = 1024
     , failWithInfo = True
@@ -309,8 +309,8 @@ stgReplicate = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgIterate :: TestTree
-stgIterate = haskellReferenceTest HaskellReferenceTestSpec
+testIterate :: TestTree
+testIterate = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "iterate (+take)"
     , maxSteps = 1024
     , failWithInfo = False
@@ -339,8 +339,8 @@ stgIterate = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 
-stgLength :: TestTree
-stgLength = haskellReferenceTest HaskellReferenceTestSpec
+testLength :: TestTree
+testLength = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "length"
     , maxSteps = 1024
     , failWithInfo = False

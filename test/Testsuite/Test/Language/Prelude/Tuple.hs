@@ -20,15 +20,15 @@ import Test.Tasty
 
 tests :: TestTree
 tests = testGroup "Tuple"
-    [ stgFst
-    , stgSnd
-    , stgCurry
-    , stgUncurry
-    , stgSwap
+    [ testFst
+    , testSnd
+    , testCurry
+    , testUncurry
+    , testSwap
     ]
 
-stgFst :: TestTree
-stgFst = haskellReferenceTest HaskellReferenceTestSpec
+testFst :: TestTree
+testFst = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "fst"
     , maxSteps = 1024
     , failWithInfo = False
@@ -48,8 +48,8 @@ stgFst = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgSnd :: TestTree
-stgSnd = haskellReferenceTest HaskellReferenceTestSpec
+testSnd :: TestTree
+testSnd = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "snd"
     , maxSteps = 1024
     , failWithInfo = False
@@ -69,8 +69,8 @@ stgSnd = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgCurry :: TestTree
-stgCurry = haskellReferenceTest HaskellReferenceTestSpec
+testCurry :: TestTree
+testCurry = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "curry"
     , maxSteps = 1024
     , failWithInfo = False
@@ -96,8 +96,8 @@ stgCurry = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgUncurry :: TestTree
-stgUncurry = haskellReferenceTest HaskellReferenceTestSpec
+testUncurry :: TestTree
+testUncurry = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "uncurry"
     , maxSteps = 1024
     , failWithInfo = False
@@ -118,8 +118,8 @@ stgUncurry = haskellReferenceTest HaskellReferenceTestSpec
                 wrong   -> TestFail (wrong)
         |] }
 
-stgSwap :: TestTree
-stgSwap = haskellReferenceTest HaskellReferenceTestSpec
+testSwap :: TestTree
+testSwap = haskellReferenceTest HaskellReferenceTestSpec
     { testName = "swap"
     , maxSteps = 1024
     , failWithInfo = False
