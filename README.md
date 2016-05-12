@@ -3,6 +3,8 @@ STG interpreter
 
 [![Build Status](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
 
+![](screenshot.png)
+
 About the machine
 -----------------
 
@@ -53,11 +55,11 @@ Differences from the 1992 paper
 ### Grammar
 
 - Values are represented by function application to an empty argument list,
-  @x ()@, as opposed to having no argument list at all in the paper.
-- parentheses @()@ instead of curly braces @{}@
+  `x ()`, as opposed to having no argument list at all in the paper.
+- parentheses `()` instead of curly braces `{}`
 - Comment syntax like in Haskell
-- Constructors can end with a @#@ to allow labelling primitive boxes
-  e.g. with @Int#@.
+- Constructors can end with a `#` to allow labelling primitive boxes
+  e.g. with `Int#`.
 
 ### Evaluation
 
