@@ -200,7 +200,7 @@ reverse = nil <> [stg|
                 case xs () of
                     Nil () -> ys ();
                     Cons (x,xs) ->
-                        let yxs = (x,ys) \u () -> Cons (x,ys)
+                        let yxs = (x,ys) \n () -> Cons (x,ys)
                         in reverse' (xs, yxs);
                     badList -> Error_reverse (badList)
         in reverse' (xs, nil)
@@ -217,7 +217,7 @@ reverse = nil <> [stg|
 -- @
 repeat = [stg|
     repeat = () \n (x) ->
-        letrec xs = (x, xs) \u () -> Cons (x,xs)
+        letrec xs = (x, xs) \n () -> Cons (x,xs)
         in xs ()
     |]
 
@@ -266,7 +266,7 @@ sort = mconcat [leq, gt, filter, concat2] <> [stgProgram|
                         moreThanPivot = (pivot) \n (y) -> gt_Int (y,pivot);
                         afterPivot    = (xs', moreThanPivot) \u () -> filter (moreThanPivot,  xs')
                     in sort (afterPivot)
-            in  let fromPivotOn = (pivot, afterPivotSorted) \u () -> Cons (pivot, afterPivotSorted)
+            in  let fromPivotOn = (pivot, afterPivotSorted) \n () -> Cons (pivot, afterPivotSorted)
                 in concat2 (beforePivotSorted, fromPivotOn);
         badList -> Error_sort (badList)
     |]
@@ -402,7 +402,7 @@ zip = [stgProgram|
         Cons (x,xs') -> case ys () of
             Nil () -> Nil ();
             Cons (y,ys') ->
-                let tup  = (x,y)     \u () -> Tuple (x,y);
+                let tup  = (x,y)     \n () -> Tuple (x,y);
                     rest = (xs',ys') \u () -> zip (xs',ys')
                 in Cons (tup, rest);
             badList -> Error_zip (badList);

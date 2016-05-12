@@ -49,8 +49,8 @@ shouldParseToSuccess testName input output = testCase (T.unpack testName) test
 simpleParses :: TestTree
 simpleParses = testGroup "Well-written programs"
     [ shouldParseToSuccess "Simple binding to boxed literal"
-        "one = () \\u () -> Int# (1#)"
-        (Binds [("one", LambdaForm [] Update []
+        "one = () \\n () -> Int# (1#)"
+        (Binds [("one", LambdaForm [] NoUpdate []
                           (AppC "Int#" [AtomLit 1]) )])
 
     , shouldParseToSuccess "Constructor application"

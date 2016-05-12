@@ -121,8 +121,8 @@ fibonacci = machineStateTest defSpec
                 fibos = (fibo) \n () -> take (numFibos, fibo);
                 fibo = () \u () ->
                     letrec
-                        fib0 = (fib1) \u () -> Cons (zero, fib1);
-                        fib1 = (fib2) \u () -> Cons (one, fib2);
+                        fib0 = (fib1) \n () -> Cons (zero, fib1);
+                        fib1 = (fib2) \n () -> Cons (one, fib2);
                         fib2 = (fib0, fib1) \u () -> zipWith (add, fib0, fib1)
                     in fib0 ()
             in case equals_List_Int (fibos, expectedFibos) of

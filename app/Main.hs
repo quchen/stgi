@@ -66,7 +66,7 @@ prog = mconcat
         letrec
             fibo = () \u () ->
                 letrec
-                    fib0 = (fib1) \u () -> Cons (zero, fib1);
+                    fib0 = (fib1) \n () -> Cons (zero, fib1);
                     fib1 = (fib2)  \u () ->
                         let one = () \n () -> Int# (1#)
                         in Cons (one, fib2);

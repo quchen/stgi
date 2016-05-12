@@ -319,7 +319,7 @@ algebraicReturnUpdate = machineStateTest defSpec
     , source = [stg|
         main = () \u () -> case updateMe () of
             default -> Success ();
-        updateMe = () \u () -> Unit ()
+        updateMe = () \u () -> case Unit () of default -> Unit ()
         |]
     , someStateSatisfies = \state -> case stgInfo state of
         Info (StateTransition ReturnCon_Update) _ -> True

@@ -74,11 +74,14 @@ instance Arbitrary LambdaForm where
         bound <- case updateFlag of
             Update -> pure []
             NoUpdate -> arbitrary
-        body <- oneof -- Lambdas cannot have primitive type, so we exclude AppP and Lit
-            [ arbitrary3 Let
+        body <- oneof
+            ([ arbitrary3 Let
             , arbitrary2 Case
-            , arbitrary2 AppF
-            , arbitrary2 AppC ]
+            -- Lambdas cannot have primitive type, so we exclude AppP and Lit
+            , arbitrary2 AppF ]
+            <>
+            -- Standard constructors are never updatable, so we exclude those
+            [arbitrary2 AppC | updateFlag == NoUpdate] )
         pure (LambdaForm free updateFlag bound body)
     shrink = genericShrink
 

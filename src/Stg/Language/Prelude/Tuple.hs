@@ -60,7 +60,7 @@ snd = [stg|
 -- @
 curry = [stg|
     curry = () \n (f, x, y) ->
-        let tuple = (x,y) \u () -> Tuple (x,y)
+        let tuple = (x,y) \n () -> Tuple (x,y)
         in f (tuple) |]
 
 -- | Convert a curried function to an uncurried one.

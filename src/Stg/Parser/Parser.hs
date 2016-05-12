@@ -208,6 +208,8 @@ lambdaForm = lf >>= validateLambda
          <*> expr
          <?> "lambda form"
     validateLambda = \case
+        LambdaForm _ Update [] AppC{} ->
+            fail "Standard constructors are never updatable"
         LambdaForm _ Update (_:_) _ ->
             fail "Lambda forms with non-empty argument lists are never updatable"
         LambdaForm _ _ _ Lit{} ->
