@@ -22,6 +22,22 @@ seq, id, const, compose, fix :: Program
 
 
 -- | Finally I can define 'Prelude.seq' directly! :-)
+--
+-- Note that this function is less powerful than GHC's 'Prelude.seq', since  STG
+-- does not have a rule to force functions, only expressions that reduce to an
+-- algebraic or primitive value. This leads to the fact that STG's @seq@ is less
+-- powerful than Haskell's, since in Haskell
+--
+-- @
+-- seq (const ()) () = ()
+-- @
+--
+-- whereas in the STG
+--
+-- @
+-- constUnit = () \n (x) -> Unit ();
+-- seq (constUnit, Unit) = ERROR
+-- @
 seq = [stg| seq = () \n (x,y) -> case x () of default -> y () |]
 
 -- | Identity function.

@@ -572,6 +572,8 @@ noRuleApplies s@StgState
 
 
 -- Non-algebraic scrutinee
+--
+-- For more information on this, see 'Stg.Language.Prelude.seq'.
 noRuleApplies s@StgState -- TODO: Make sure this catches the right states
     { stgCode  = Enter _
     , stgStack = ReturnFrame{} :< _}
