@@ -61,6 +61,10 @@ module Stg.Language.Prelude (
     geq_Int,
     neq_Int,
 
+    -- ** Other
+    min,
+    max,
+
     -- * Functions
     seq,
     id,

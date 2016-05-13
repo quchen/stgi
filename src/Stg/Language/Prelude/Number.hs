@@ -20,6 +20,10 @@ module Stg.Language.Prelude.Number (
     gt_Int,
     geq_Int,
     neq_Int,
+
+    -- * Other
+    min,
+    max,
 ) where
 
 
@@ -108,3 +112,25 @@ div = binaryOp "div" Div primIdInt
 
 -- |
 mod = binaryOp "mod" Mod primIdInt
+
+min :: Program
+min = [stg|
+    min = () \n (x,y) -> case x () of
+        Int# (x') -> case y () of
+            Int# (y') -> case <=# x' y' of
+                1# -> x ();
+                default -> y ();
+            badInt -> Error_min (badInt);
+        badInt -> Error_min (badInt)
+    |]
+
+max :: Program
+max = [stg|
+    max = () \n (x,y) -> case x () of
+        Int# (x') -> case y () of
+            Int# (y') -> case >=# x' y' of
+                1# -> x ();
+                default -> y ();
+            badInt -> Error_min (badInt);
+        badInt -> Error_min (badInt)
+    |]
