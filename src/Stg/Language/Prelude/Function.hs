@@ -22,7 +22,7 @@ seq, id, const, compose, fix :: Program
 
 
 -- | Finally I can define 'Prelude.seq' directly! :-)
-seq = [stgProgram| seq = () \n (x,y) -> case x () of default -> y () |]
+seq = [stg| seq = () \n (x,y) -> case x () of default -> y () |]
 
 -- | Identity function.
 --
@@ -54,7 +54,7 @@ compose = [stg|
 -- @
 -- fix : (a -> a) -> a
 -- @
-fix = [stgProgram|
+fix = [stg|
     fix = () \n (f) ->
         letrec x = (f, x) \u () -> f (x)
         in x ()

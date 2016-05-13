@@ -145,7 +145,7 @@ cycle = concat2 <> [stg|
 -- @
 -- take : Int -> [a] -> [a]
 -- @
-take = [stgProgram|
+take = [stg|
     take = () \n (n) ->
         letrec
             takePrim = (takePrim) \n (nPrim, xs) ->
@@ -251,7 +251,7 @@ replicate = [stg|
 -- @
 -- sort : [Int] -> [Int]
 -- @
-sort = mconcat [leq, gt, filter, concat2] <> [stgProgram|
+sort = mconcat [leq, gt, filter, concat2] <> [stg|
     sort = () \n (xs) -> case xs () of
         Nil () -> Nil ();
         Cons (pivot,xs') ->
@@ -351,7 +351,7 @@ listOfNumbers name ints = nil <>
 -- @
 -- map : [Int] -> [Int] -> Bool
 -- @
-equals_List_Int = Num.eq <> [stgProgram|
+equals_List_Int = Num.eq <> [stg|
     equals_List_Int = () \n (xs, ys) ->
         case xs () of
             Nil () -> case ys () of
@@ -373,7 +373,7 @@ equals_List_Int = Num.eq <> [stgProgram|
 -- @
 -- length : [a] -> [a] -> Bool
 -- @
-length = [stgProgram|
+length = [stg|
     length = () \u () ->
         letrec
             length' = (length') \n (n, xs) -> case xs () of
@@ -396,7 +396,7 @@ length = [stgProgram|
 -- @
 -- zip : [a] -> [b] -> [(a,b)]
 -- @
-zip = [stgProgram|
+zip = [stg|
     zip = () \n (xs,ys) -> case xs () of
         Nil () -> Nil ();
         Cons (x,xs') -> case ys () of
@@ -421,7 +421,7 @@ zip = [stgProgram|
 -- @
 -- zipWith : (a -> b -> c) -> [a] -> [b] -> [c]
 -- @
-zipWith = [stgProgram|
+zipWith = [stg|
     zipWith = () \n (f,xs,ys) -> case xs () of
         Nil () -> Nil ();
         Cons (x,xs') -> case ys () of

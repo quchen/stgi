@@ -53,7 +53,7 @@ defSpec = MachineStateTestSpec
 add3 :: TestTree
 add3 = machineStateTest defSpec
     { testName = "add3(x,y,z) = x+y+z"
-    , source = [stgProgram|
+    , source = [stg|
         add3 = () \n (x,y,z) -> case x () of
             Int# (i) -> case y () of
                 Int# (j) -> case +# i j of
@@ -82,7 +82,7 @@ takeRepeat = machineStateTest defSpec
             <> Stg.repeat
             <> Stg.foldr
             <> Stg.seq
-            <> [stgProgram|
+            <> [stg|
 
         consBang = () \n (x,xs) -> case xs () of v -> Cons (x, v);
         nil = () \n () -> Nil ();
@@ -114,7 +114,7 @@ fibonacci = machineStateTest defSpec
             <> Stg.add
             <> Stg.take
             <> Stg.zipWith
-            <> [stgProgram|
+            <> [stg|
 
         main = () \u () ->
             letrec
@@ -154,7 +154,7 @@ meanTestTemplate =
                 , Stg.int "one" 1
                 , Stg.listOfNumbers "inputList" inputList
                 , Stg.int "expectedOutput" (mean inputList) ]
-            <> [stgProgram|
+            <> [stg|
             main = () \u () -> case mean (inputList) of
                 actual -> case eq_Int (actual, expectedOutput) of
                     True () -> Success ();
@@ -167,7 +167,7 @@ meanNaive = HRef.haskellReferenceTest meanTestTemplate
     { HRef.testName = "Naïve: foldl and lazy tuple"
     , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
         <> Stg.foldl
-        <> [stgProgram|
+        <> [stg|
         mean = () \n (xs) ->
             letrec
                 totals = (go, zeroTuple) \n () -> foldl (go, zeroTuple);
@@ -188,7 +188,7 @@ meanNaiveWithFoldl' = HRef.haskellReferenceTest meanTestTemplate
     { HRef.testName = "Naïve with insufficient optimization: foldl'"
     , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
         <> Stg.foldl'
-        <> [stgProgram|
+        <> [stg|
         mean = () \n (xs) ->
             letrec
                 totals = (go, zeroTuple) \n () -> foldl' (go, zeroTuple);
@@ -211,7 +211,7 @@ meanGood = HRef.haskellReferenceTest meanTestTemplate
     , HRef.failPredicate = \stgState -> length (stgStack stgState) >= 9
     , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
         <> Stg.foldl'
-        <> [stgProgram|
+        <> [stg|
         mean = () \n (xs) ->
             letrec
                 totals = (go, zeroTuple) \n () -> foldl' (go, zeroTuple);

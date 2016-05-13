@@ -171,7 +171,7 @@ defaultOnlyCase_boundAlgebraic = machineStateTest defSpec
 defaultOnlyCase_unboundPrimitive :: TestTree
 defaultOnlyCase_unboundPrimitive = machineStateTest defSpec
     { testName = "Unbound, primitive scrutinee (rule 13)"
-    , source = [stgProgram|
+    , source = [stg|
         main = () \u () -> case 1# of
             default -> Success ()
         |] }
@@ -329,7 +329,7 @@ algebraicReturnUpdate = machineStateTest defSpec
 missingArgsUpdate :: TestTree
 missingArgsUpdate = machineStateTest defSpec
     { testName = "Update because of missing argument frame (rule 17a)"
-    , source = [stgProgram|
+    , source = [stg|
         main = () \u () ->
             case flipTuple (1#,2#) of
                 Tuple (a,b) -> case a () of

@@ -59,7 +59,7 @@ prog = mconcat
         [ Stg.add
         , Stg.int "zero" 0
         , Stg.foldl'
-        , Stg.zipWith ] <> [stgProgram|
+        , Stg.zipWith ] <> [stg|
 
     flipConst = () \n (x, y) -> y ();
     main = () \u () ->

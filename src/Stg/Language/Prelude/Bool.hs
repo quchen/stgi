@@ -26,7 +26,7 @@ and2, or2, not, bool :: Program
 -- @
 -- && : Bool -> Bool -> Bool
 -- @
-and2 = [stgProgram|
+and2 = [stg|
     and2 = () \n (x,y) -> case x () of
         True ()  -> y ();
         False () -> False ();
@@ -38,7 +38,7 @@ and2 = [stgProgram|
 -- @
 -- || : Bool -> Bool -> Bool
 -- @
-or2 = [stgProgram|
+or2 = [stg|
     or2 = () \n (x,y) -> case x () of
         True ()  -> True ();
         False () -> y ();
@@ -50,7 +50,7 @@ or2 = [stgProgram|
 -- @
 -- not : Bool -> Bool
 -- @
-not = [stgProgram|
+not = [stg|
     not = () \n (x) -> case x () of
         True ()  -> False ();
         False () -> True ();
@@ -63,7 +63,7 @@ not = [stgProgram|
 -- @
 -- bool : a -> a -> Bool -> a
 -- @
-bool = [stgProgram|
+bool = [stg|
     bool = () \n (t,f,p) -> case p () of
         True () -> t ();
         False () -> f ();

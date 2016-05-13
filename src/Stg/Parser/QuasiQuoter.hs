@@ -115,7 +115,7 @@ stgQQ parser elementName = defaultQuoter { quoteExp  = expQuoter }
 
 -- | Quasiquoter for 'Stg.Language.Program's.
 --
--- >>> [stgProgram| id = () \n (x) -> x () |]
+-- >>> [stg| id = () \n (x) -> x () |]
 -- Program (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))])
 stgProgram :: QuasiQuoter
 stgProgram = stgQQ program "program"
