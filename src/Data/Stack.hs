@@ -3,7 +3,7 @@
 
 -- | A simple stack type. Very similar to an ordinary list, but with a more
 -- specialized API.
-module Stack (
+module Data.Stack (
     Stack(..),
     forEachPop,
     (<>>),

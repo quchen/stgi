@@ -15,8 +15,8 @@ import qualified Data.List      as L
 import qualified Data.Map       as M
 import           Data.Monoid    hiding (Alt)
 
-import           Stack             (Stack (..), (<>>))
-import qualified Stack             as S
+import           Data.Stack        (Stack (..), (<>>))
+import qualified Data.Stack        as S
 import           Stg.Language
 import           Stg.Machine.Env
 import qualified Stg.Machine.Heap  as H

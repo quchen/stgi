@@ -21,7 +21,7 @@ Flag doctest
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Stack
+  exposed-modules:     Data.Stack
                      , Stg.Language
                      , Stg.Language.Prelude
                      , Stg.Language.Prelude.Bool

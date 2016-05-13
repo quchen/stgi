@@ -8,7 +8,7 @@ import GHC.Exts              (fromList)
 import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 
-import Stack
+import Data.Stack
 
 import Test.Orphans ()
 

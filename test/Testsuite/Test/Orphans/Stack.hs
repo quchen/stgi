@@ -5,10 +5,10 @@ module Test.Orphans.Stack () where
 
 
 import GHC.Exts
+
+import Data.Stack (Stack)
+
 import Test.Tasty.QuickCheck as QC
-
-import Stack (Stack)
-
 import Test.Util
 
 

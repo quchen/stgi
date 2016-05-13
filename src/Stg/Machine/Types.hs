@@ -41,7 +41,7 @@ import           GHC.Generics
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 import           Text.Printf
 
-import Stack
+import Data.Stack
 import Stg.Language
 import Stg.Language.Prettyprint.Ansi
 import Stg.Util
