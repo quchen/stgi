@@ -38,9 +38,8 @@ testFst = haskellReferenceTest HaskellReferenceTestSpec
            Stg.tupleOfNumbers "tuple" tuple
         <> Stg.int "expectedResult" (fst tuple)
         <> Stg.fst
-        <> Stg.eq
+        <> Stg.eq_Int
         <> [stg|
-
         main = () \u () ->
             let actualFst = () \n () -> fst (tuple)
             in case eq_Int (expectedResult, actualFst) of
@@ -59,7 +58,7 @@ testSnd = haskellReferenceTest HaskellReferenceTestSpec
            Stg.tupleOfNumbers "tuple" tuple
         <> Stg.int "expectedResult" (snd tuple)
         <> Stg.snd
-        <> Stg.eq
+        <> Stg.eq_Int
         <> [stg|
 
         main = () \u () ->
@@ -82,7 +81,7 @@ testCurry = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.int "expectedResult" (x+y)
         <> Stg.curry
         <> Stg.add
-        <> Stg.eq
+        <> Stg.eq_Int
         <> [stg|
 
         addTuple = () \n (tuple) -> case tuple () of
@@ -108,7 +107,7 @@ testUncurry = haskellReferenceTest HaskellReferenceTestSpec
         <> Stg.int "expectedResult" (uncurry (+) tuple)
         <> Stg.uncurry
         <> Stg.add
-        <> Stg.eq
+        <> Stg.eq_Int
         <> [stg|
 
         main = () \u () ->

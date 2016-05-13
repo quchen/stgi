@@ -35,6 +35,8 @@ module Stg.Language.Prelude (
     or2,
     not,
     bool,
+    eq_Bool,
+    boolValue,
 
     -- ** Convenience
     listOfNumbers,
@@ -52,12 +54,12 @@ module Stg.Language.Prelude (
     div,
     mod,
     -- ** Comparisons
-    eq,
-    lt,
-    leq,
-    gt,
-    geq,
-    neq,
+    eq_Int,
+    lt_Int,
+    leq_Int,
+    gt_Int,
+    geq_Int,
+    neq_Int,
 
     -- * Functions
     seq,

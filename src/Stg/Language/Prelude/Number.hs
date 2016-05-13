@@ -14,12 +14,12 @@ module Stg.Language.Prelude.Number (
     mod,
 
     -- * Comparisons
-    eq,
-    lt,
-    leq,
-    gt,
-    geq,
-    neq,
+    eq_Int,
+    lt_Int,
+    leq_Int,
+    gt_Int,
+    geq_Int,
+    neq_Int,
 ) where
 
 
@@ -67,32 +67,32 @@ binaryOp name op primAlts =
 primToBool :: Alts
 primToBool = [stgAlts| 1# -> True (); default -> False () |]
 
-add, sub, mul, div, mod :: Program
+eq_Int, lt_Int, leq_Int, gt_Int, geq_Int, neq_Int :: Program
 
 -- |
-eq  = binaryOp "eq_Int"  Eq  primToBool
+eq_Int  = binaryOp "eq_Int"  Eq  primToBool
 
 -- |
-lt  = binaryOp "lt_Int"  Lt  primToBool
+lt_Int  = binaryOp "lt_Int"  Lt  primToBool
 
 -- |
-leq = binaryOp "leq_Int" Leq primToBool
+leq_Int = binaryOp "leq_Int" Leq primToBool
 
 -- |
-gt  = binaryOp "gt_Int"  Gt  primToBool
+gt_Int  = binaryOp "gt_Int"  Gt  primToBool
 
 -- |
-geq = binaryOp "geq_Int" Geq primToBool
+geq_Int = binaryOp "geq_Int" Geq primToBool
 
 -- |
-neq = binaryOp "neq_Int" Neq primToBool
+neq_Int = binaryOp "neq_Int" Neq primToBool
 
 
 
 primIdInt :: Alts
 primIdInt = [stgAlts| v -> Int# (v) |]
 
-eq, lt, leq, gt, geq, neq :: Program
+add, sub, mul, div, mod :: Program
 
 -- |
 add = binaryOp "add" Add primIdInt

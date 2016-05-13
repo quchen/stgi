@@ -52,7 +52,7 @@ testFilter = haskellReferenceTest HaskellReferenceTestSpec
            Stg.listOfNumbers "inputList" xs
         <> Stg.listOfNumbers "expectedResult" (filter (> threshold) xs)
         <> Stg.int "threshold" threshold
-        <> Stg.gt
+        <> Stg.gt_Int
         <> Stg.equals_List_Int
         <> Stg.filter
         <> [stg|
@@ -178,7 +178,7 @@ foldSumTemplate foldName foldF foldStg failP
     , source = \(z, xs) ->
            foldStg
         <> Stg.add
-        <> Stg.eq
+        <> Stg.eq_Int
         <> Stg.int "z" z
         <> Stg.listOfNumbers "input" xs
         <> Stg.int "expected" (foldF (+) z xs)
@@ -347,7 +347,7 @@ testLength = haskellReferenceTest HaskellReferenceTestSpec
     , successPredicate = "main" ===> [stg| () \n () -> Success () |]
     , failPredicate = const False
     , source = \xs ->
-           Stg.eq
+           Stg.eq_Int
         <> Stg.int "expectedResult" (fromIntegral (length xs))
         <> Stg.listOfNumbers "input" xs
         <> Stg.length

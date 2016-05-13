@@ -251,7 +251,7 @@ replicate = [stg|
 -- @
 -- sort : [Int] -> [Int]
 -- @
-sort = mconcat [leq, gt, filter, concat2] <> [stg|
+sort = mconcat [leq_Int, gt_Int, filter, concat2] <> [stg|
     sort = () \n (xs) -> case xs () of
         Nil () -> Nil ();
         Cons (pivot,xs') ->
@@ -351,7 +351,7 @@ listOfNumbers name ints = nil <>
 -- @
 -- map : [Int] -> [Int] -> Bool
 -- @
-equals_List_Int = Num.eq <> [stg|
+equals_List_Int = Num.eq_Int <> [stg|
     equals_List_Int = () \n (xs, ys) ->
         case xs () of
             Nil () -> case ys () of

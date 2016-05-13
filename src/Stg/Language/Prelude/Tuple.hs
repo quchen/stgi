@@ -105,7 +105,7 @@ tupleOfNumbers name (x,y) =
             (AppC (Constr "Tuple") [AtomVar (Var "x"),AtomVar (Var "y")])))])
 
 
-equals_Tuple_Int = eq <> [stg|
+equals_Tuple_Int = eq_Int <> [stg|
     eq_Tuple_Int = () \n (tup1, tup2) ->
         case tup1 () of
             Tuple (a,b) -> case tup2 () of

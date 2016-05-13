@@ -147,7 +147,7 @@ meanTestTemplate =
         , HRef.successPredicate = "main" ===> [stg| () \n () -> Success () |]
         , HRef.failPredicate = const False
         , HRef.source = \(NonEmpty inputList) -> mconcat
-                [ Stg.eq
+                [ Stg.eq_Int
                 , Stg.add
                 , Stg.div
                 , Stg.int "zero" 0

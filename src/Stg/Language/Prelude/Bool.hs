@@ -1,4 +1,5 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE QuasiQuotes     #-}
 
 -- | Boolean functions, like in "Data.Bool".
 module Stg.Language.Prelude.Bool (
@@ -6,20 +7,37 @@ module Stg.Language.Prelude.Bool (
     or2,
     not,
     bool,
+    eq_Bool,
+    boolValue,
 ) where
 
 
 
-import Prelude ()
+import Prelude (Bool)
 
-import Stg.Language (Program)
+import Data.Text (Text)
+
+import Stg.Language
 import Stg.Parser
+import Stg.Util
 
 
 
-and2, or2, not, bool :: Program
+eq_Bool, and2, or2, not, bool :: Program
 
-
+-- | Boolean equality.
+eq_Bool = [stg|
+    eq_Bool = () \n (x,y) -> case x () of
+        True () -> case y () of
+            True () -> True ();
+            False () -> False ();
+            badBool -> Error_eq_Bool (badBool);
+        False () -> case y () of
+            True () -> False ();
+            False () -> True ();
+            badBool -> Error_eq_Bool (badBool);
+        badBool -> Error_eq_Bool (badBool)
+    |]
 
 -- | Binary and. Haskell's @(&&)@.
 --
@@ -61,11 +79,23 @@ not = [stg|
 -- | Boolean deconstructor.
 --
 -- @
+-- bool f _ False = f
+-- bool _ t True  = t
+-- @
+--
+-- @
 -- bool : a -> a -> Bool -> a
 -- @
 bool = [stg|
-    bool = () \n (t,f,p) -> case p () of
+    bool = () \n (f,t,p) -> case p () of
         True () -> t ();
         False () -> f ();
         badBool -> Error_bool (badBool)
     |]
+
+-- | Inject a boolean value into an STG program.
+boolValue
+    :: Text -- ^ Name
+    -> Bool -- ^ Value
+    -> Program
+boolValue name b = Program (Binds [(Var name,LambdaForm [] NoUpdate [] (AppC (Constr (show' b)) []))])
