@@ -1,9 +1,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 
+-- | Boolean functions, like in "Data.Bool".
 module Stg.Language.Prelude.Bool (
     and2,
     or2,
     not,
+    bool,
 ) where
 
 
@@ -15,7 +17,7 @@ import Stg.Parser
 
 
 
-and2, or2, not :: Program
+and2, or2, not, bool :: Program
 
 
 
@@ -53,4 +55,17 @@ not = [stgProgram|
         True ()  -> False ();
         False () -> True ();
         badBool  -> Error_not (badBool)
+    |]
+
+
+-- | Boolean deconstructor.
+--
+-- @
+-- bool : a -> a -> Bool -> a
+-- @
+bool = [stgProgram|
+    bool = () \n (t,f,p) -> case p () of
+        True () -> t ();
+        False () -> f ();
+        badBool -> Error_bool (badBool)
     |]

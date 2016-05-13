@@ -66,6 +66,7 @@ tupled' = encloseSep lparen rparen (comma <> space)
 bulletList :: [Doc] -> Doc
 bulletList = align . vsep . map (("  - " <>) . align)
 
+-- | Add an \'s' for non-singleton lists.
 pluralS :: [a] -> Doc
 pluralS [_] = ""
 pluralS _ = "s"

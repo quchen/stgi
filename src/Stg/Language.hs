@@ -113,6 +113,7 @@ data Expr =
 data Alts = Alts NonDefaultAlts DefaultAlt
     deriving (Eq, Ord, Show, Generic)
 
+-- | The part of a 'Case' alternative that's not the default.
 data NonDefaultAlts =
       NoNonDefaultAlts
         -- ^ Used in 'case' statements that consist only of a default

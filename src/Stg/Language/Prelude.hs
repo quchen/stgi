@@ -34,6 +34,7 @@ module Stg.Language.Prelude (
     and2,
     or2,
     not,
+    bool,
 
     -- ** Convenience
     listOfNumbers,
