@@ -144,20 +144,20 @@ stgExpr = stgQQ expr "expression"
 -- | Quasiquoter for 'Stg.Language.Alts'.
 --
 -- >>> [stgAlts| Just (x) -> True (); default -> False () |]
--- Alts [AlgebraicAlt (Constr "Just") [Var "x"] (AppC (Constr "True") [])] (DefaultNotBound (AppC (Constr "False") []))
+-- Alts (AlgebraicAlts (AlgebraicAlt (Constr "Just") [Var "x"] (AppC (Constr "True") []) :| [])) (DefaultNotBound (AppC (Constr "False") []))
 --
 -- >>> [stgAlts| 0# -> True (); default -> False () |]
--- Alts [PrimitiveAlt (Literal 0) (AppC (Constr "True") [])] (DefaultNotBound (AppC (Constr "False") []))
+-- Alts (PrimitiveAlts (PrimitiveAlt (Literal 0) (AppC (Constr "True") []) :| [])) (DefaultNotBound (AppC (Constr "False") []))
 stgAlts :: QuasiQuoter
 stgAlts = stgQQ alts "alternatives"
 
 -- | Quasiquoter for 'Stg.Language.Alt'.
 --
 -- >>>[stgNonDefaultAlts| Just (x) -> True (); Nothing () -> False (); |]
--- [AlgebraicAlt (Constr "Just") [Var "x"] (AppC (Constr "True") []),AlgebraicAlt (Constr "Nothing") [] (AppC (Constr "False") [])]
+-- AlgebraicAlts (AlgebraicAlt (Constr "Just") [Var "x"] (AppC (Constr "True") []) :| [AlgebraicAlt (Constr "Nothing") [] (AppC (Constr "False") [])])
 --
 -- >>>[stgNonDefaultAlts| 0# -> False (); 1# -> True (); |]
--- [PrimitiveAlt (Literal 0) (AppC (Constr "False") []),PrimitiveAlt (Literal 1) (AppC (Constr "True") [])]
+-- PrimitiveAlts (PrimitiveAlt (Literal 0) (AppC (Constr "False") []) :| [PrimitiveAlt (Literal 1) (AppC (Constr "True") [])])
 stgNonDefaultAlts :: QuasiQuoter
 stgNonDefaultAlts = stgQQ nonDefaultAlts "algebraic alternatives"
 
