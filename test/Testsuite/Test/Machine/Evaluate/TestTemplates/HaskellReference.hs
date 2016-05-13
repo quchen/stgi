@@ -5,8 +5,9 @@
 -- sibling's behaviours.
 module Test.Machine.Evaluate.TestTemplates.HaskellReference (
     HaskellReferenceTestSpec(..),
+    defSpec,
     haskellReferenceTest,
-    (===>)
+    (===>),
 ) where
 
 
@@ -51,6 +52,15 @@ data HaskellReferenceTestSpec a = HaskellReferenceTestSpec
     , failWithInfo :: Bool
         -- ^ Print program code and final state on test failure?
     }
+
+defSpec :: HaskellReferenceTestSpec a
+defSpec = HaskellReferenceTestSpec
+    { testName = "Default Haskell reference test spec template"
+    , maxSteps = 1024
+    , failWithInfo = False
+    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , failPredicate = const False
+    , source = \_ -> [stg| main = () \n () -> DummySource () |] }
 
 haskellReferenceTest :: (Show a, Arbitrary a)
     => HaskellReferenceTestSpec a

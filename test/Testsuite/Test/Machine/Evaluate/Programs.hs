@@ -17,7 +17,6 @@ import Data.Monoid
 import Test.Tasty
 
 import qualified Stg.Language.Prelude as Stg
-import           Stg.Machine
 import           Stg.Machine.Types
 import           Stg.Parser
 
@@ -38,17 +37,6 @@ tests = testGroup "Programs"
         , meanNaiveWithFoldl'
         , meanGood ]
     ]
-
-defSpec :: MachineStateTestSpec
-defSpec = MachineStateTestSpec
-    { testName             = "Default program test template"
-    , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
-    , forbiddenState       = const False
-    , someStateSatisfies   = const True
-    , source               = [stg| main = () \n () -> Success () |]
-    , maxSteps             = 1024
-    , performGc            = PerformGc (const True)
-    , failWithInfo         = False }
 
 add3 :: TestTree
 add3 = machineStateTest defSpec

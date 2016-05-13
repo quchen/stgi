@@ -28,12 +28,8 @@ tests = testGroup "Tuple"
     ]
 
 testFst :: TestTree
-testFst = haskellReferenceTest HaskellReferenceTestSpec
+testFst = haskellReferenceTest defSpec
     { testName = "fst"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \tuple ->
            Stg.tupleOfNumbers "tuple" tuple
         <> Stg.int "expectedResult" (fst tuple)
@@ -48,12 +44,8 @@ testFst = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testSnd :: TestTree
-testSnd = haskellReferenceTest HaskellReferenceTestSpec
+testSnd = haskellReferenceTest defSpec
     { testName = "snd"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \tuple ->
            Stg.tupleOfNumbers "tuple" tuple
         <> Stg.int "expectedResult" (snd tuple)
@@ -69,12 +61,8 @@ testSnd = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testCurry :: TestTree
-testCurry = haskellReferenceTest HaskellReferenceTestSpec
+testCurry = haskellReferenceTest defSpec
     { testName = "curry"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(x,y) ->
            Stg.int "x" x
         <> Stg.int "y" y
@@ -96,12 +84,8 @@ testCurry = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testUncurry :: TestTree
-testUncurry = haskellReferenceTest HaskellReferenceTestSpec
+testUncurry = haskellReferenceTest defSpec
     { testName = "uncurry"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \tuple ->
            Stg.tupleOfNumbers "tuple" tuple
         <> Stg.int "expectedResult" (uncurry (+) tuple)
@@ -118,12 +102,8 @@ testUncurry = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testSwap :: TestTree
-testSwap = haskellReferenceTest HaskellReferenceTestSpec
+testSwap = haskellReferenceTest defSpec
     { testName = "swap"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \tuple ->
            Stg.tupleOfNumbers "tuple" tuple
         <> Stg.tupleOfNumbers "expectedResult" (T.swap tuple)

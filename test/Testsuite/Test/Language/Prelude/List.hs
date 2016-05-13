@@ -42,12 +42,8 @@ tests = testGroup "List"
     ]
 
 testFilter :: TestTree
-testFilter = haskellReferenceTest HaskellReferenceTestSpec
+testFilter = haskellReferenceTest defSpec
     { testName = "filter"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(xs, threshold) ->
            Stg.listOfNumbers "inputList" xs
         <> Stg.listOfNumbers "expectedResult" (filter (> threshold) xs)
@@ -67,12 +63,8 @@ testFilter = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testSort :: TestTree
-testSort = haskellReferenceTest HaskellReferenceTestSpec
+testSort = haskellReferenceTest defSpec
     { testName = "sort"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \xs ->
            Stg.listOfNumbers "inputList" xs
         <> Stg.listOfNumbers "expectedResult" (L.sort xs)
@@ -88,12 +80,8 @@ testSort = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testMap :: TestTree
-testMap = haskellReferenceTest HaskellReferenceTestSpec
+testMap = haskellReferenceTest defSpec
     { testName = "map"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(xs, offset) ->
            Stg.add
         <> Stg.map
@@ -113,12 +101,8 @@ testMap = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testZipWith :: TestTree
-testZipWith = haskellReferenceTest HaskellReferenceTestSpec
+testZipWith = haskellReferenceTest defSpec
     { testName = "zipWith (+)"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(list1, list2) ->
            Stg.equals_List_Int
         <> Stg.listOfNumbers "list1" list1
@@ -169,7 +153,7 @@ foldSumTemplate
 
     -> TestTree
 foldSumTemplate foldName foldF foldStg failP
-  = haskellReferenceTest HaskellReferenceTestSpec
+  = haskellReferenceTest defSpec
     { testName = foldName
     , maxSteps = 1024
     , failWithInfo = False
@@ -191,12 +175,8 @@ foldSumTemplate foldName foldF foldStg failP
         |] }
 
 testConcat2 :: TestTree
-testConcat2 = haskellReferenceTest HaskellReferenceTestSpec
+testConcat2 = haskellReferenceTest defSpec
     { testName = "(++)"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(list1, list2) ->
            Stg.equals_List_Int
         <> Stg.listOfNumbers "list1" list1
@@ -213,7 +193,7 @@ testConcat2 = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testReverse :: TestTree
-testReverse = haskellReferenceTest HaskellReferenceTestSpec
+testReverse = haskellReferenceTest defSpec
     { testName = "reverse"
     , maxSteps = 1024
     , failWithInfo = True
@@ -234,12 +214,8 @@ testReverse = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testCycle :: TestTree
-testCycle = haskellReferenceTest HaskellReferenceTestSpec
+testCycle = haskellReferenceTest defSpec
     { testName = "cycle (+take)"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(NonEmpty list, NonNegative n) ->
            Stg.equals_List_Int
         <> Stg.int "n" n
@@ -260,12 +236,8 @@ testCycle = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testRepeat :: TestTree
-testRepeat = haskellReferenceTest HaskellReferenceTestSpec
+testRepeat = haskellReferenceTest defSpec
     { testName = "repeat (+take)"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(item, NonNegative n) ->
            Stg.equals_List_Int
         <> Stg.int "n" n
@@ -285,7 +257,7 @@ testRepeat = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testReplicate :: TestTree
-testReplicate = haskellReferenceTest HaskellReferenceTestSpec
+testReplicate = haskellReferenceTest defSpec
     { testName = "replicate"
     , maxSteps = 1024
     , failWithInfo = True
@@ -310,12 +282,8 @@ testReplicate = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testIterate :: TestTree
-testIterate = haskellReferenceTest HaskellReferenceTestSpec
+testIterate = haskellReferenceTest defSpec
     { testName = "iterate (+take)"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(seed, offset, NonNegative n) ->
            Stg.equals_List_Int
         <> Stg.int "n" n
@@ -340,12 +308,8 @@ testIterate = haskellReferenceTest HaskellReferenceTestSpec
 
 
 testLength :: TestTree
-testLength = haskellReferenceTest HaskellReferenceTestSpec
+testLength = haskellReferenceTest defSpec
     { testName = "length"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \xs ->
            Stg.eq_Int
         <> Stg.int "expectedResult" (fromIntegral (length xs))

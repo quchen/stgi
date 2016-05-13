@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 -- | Functions and types required to implement tests that check whether
 -- a certain closure is reduced to the expected form by the STG.
 module Test.Machine.Evaluate.TestTemplates.MachineState (
     MachineStateTestSpec(..),
+    defSpec,
     machineStateTest,
     (===>),
 ) where
@@ -20,6 +22,7 @@ import Stg.Language
 import Stg.Language.Prettyprint
 import Stg.Machine
 import Stg.Machine.Types
+import Stg.Parser
 
 import Test.Machine.Evaluate.TestTemplates.Util
 import Test.Tasty
@@ -56,6 +59,17 @@ data MachineStateTestSpec = MachineStateTestSpec
     , failWithInfo :: Bool
         -- ^ Print program code and final state on test failure?
     }
+
+defSpec :: MachineStateTestSpec
+defSpec = MachineStateTestSpec
+    { testName             = "Default machine state test template"
+    , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
+    , forbiddenState       = const False
+    , someStateSatisfies   = const True
+    , source               = [stg| main = () \n () -> DummySource () |]
+    , maxSteps             = 1024
+    , performGc            = PerformGc (const True)
+    , failWithInfo         = False }
 
 -- | Evaluate the @main@ closure of a STG program, and check whether the
 -- machine state satisfies a predicate when it is evaluated.

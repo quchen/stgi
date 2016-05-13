@@ -22,12 +22,8 @@ tests = testGroup "Number"
     , testMax ]
 
 testMin :: TestTree
-testMin = haskellReferenceTest HaskellReferenceTestSpec
-    { testName = "filter"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
+testMin = haskellReferenceTest defSpec
+    { testName = "min"
     , source = \(x, y) ->
            Stg.int "x" x
         <> Stg.int "y" y
@@ -45,12 +41,8 @@ testMin = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testMax :: TestTree
-testMax = haskellReferenceTest HaskellReferenceTestSpec
-    { testName = "filter"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
+testMax = haskellReferenceTest defSpec
+    { testName = "max"
     , source = \(x, y) ->
            Stg.int "x" x
         <> Stg.int "y" y

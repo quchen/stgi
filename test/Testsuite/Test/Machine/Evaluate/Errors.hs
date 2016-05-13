@@ -8,7 +8,6 @@ module Test.Machine.Evaluate.Errors (tests) where
 
 import Test.Tasty
 
-import Stg.Machine
 import Stg.Machine.Types
 import Stg.Parser
 
@@ -25,17 +24,6 @@ tests = testGroup "Error conditions"
         [ divisionByZero
         , moduloZero ]
     ]
-
-defSpec :: MachineStateTestSpec
-defSpec = MachineStateTestSpec
-    { testName             = "Default error condition test template"
-    , successPredicate     = const False
-    , forbiddenState       = const False
-    , someStateSatisfies   = const True
-    , source               = [stg| main = () \n () -> main () |]
-    , maxSteps             = 1024
-    , performGc            = PerformGc (const True)
-    , failWithInfo         = False }
 
 loopEnterBlackHole :: TestTree
 loopEnterBlackHole = machineStateTest defSpec

@@ -20,9 +20,12 @@ import Stg.Machine.Types
 import Stg.Parser
 
 import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
-import           Test.Machine.Evaluate.TestTemplates.MachineState
-import           Test.Orphans                                         ()
-import           Test.QuickCheck.Modifiers
+import           Test.Machine.Evaluate.TestTemplates.MachineState     hiding
+    (defSpec)
+import qualified Test.Machine.Evaluate.TestTemplates.MachineState     as MachineTest
+
+import Test.Orphans              ()
+import Test.QuickCheck.Modifiers
 
 
 
@@ -66,15 +69,9 @@ tests = testGroup "Rules"
     ]
 
 defSpec :: MachineStateTestSpec
-defSpec = MachineStateTestSpec
-    { testName             = "Default small closure reduction test template"
-    , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
-    , forbiddenState       = const False
-    , someStateSatisfies   = const True
-    , source               = [stg| main = () \n () -> Success () |]
-    , maxSteps             = 32
-    , performGc            = PerformGc (const False)
-    , failWithInfo = False }
+defSpec = MachineTest.defSpec
+    { maxSteps  = 32
+    , performGc = PerformGc (const False) }
 
 nonUpdatableFunctionApplication :: TestTree
 nonUpdatableFunctionApplication = machineStateTest defSpec

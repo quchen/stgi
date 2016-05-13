@@ -25,12 +25,8 @@ tests = testGroup "Bool"
     , testBool ]
 
 testAnd2 :: TestTree
-testAnd2 = haskellReferenceTest HaskellReferenceTestSpec
+testAnd2 = haskellReferenceTest defSpec
     { testName = "and2 (&&)"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(b1, b2) ->
            Stg.boolValue "b1" b1
         <> Stg.boolValue "b2" b2
@@ -46,12 +42,8 @@ testAnd2 = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testOr2 :: TestTree
-testOr2 = haskellReferenceTest HaskellReferenceTestSpec
+testOr2 = haskellReferenceTest defSpec
     { testName = "or2 (||)"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \(b1, b2) ->
            Stg.boolValue "b1" b1
         <> Stg.boolValue "b2" b2
@@ -67,12 +59,8 @@ testOr2 = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testNot :: TestTree
-testNot = haskellReferenceTest HaskellReferenceTestSpec
+testNot = haskellReferenceTest defSpec
     { testName = "not"
-    , maxSteps = 1024
-    , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
-    , failPredicate = const False
     , source = \b ->
            Stg.boolValue "b" b
         <> Stg.boolValue "expectedResult" (not b)
@@ -87,7 +75,7 @@ testNot = haskellReferenceTest HaskellReferenceTestSpec
         |] }
 
 testBool :: TestTree
-testBool = haskellReferenceTest HaskellReferenceTestSpec
+testBool = haskellReferenceTest defSpec
     { testName = "bool"
     , maxSteps = 1024
     , failWithInfo = True
