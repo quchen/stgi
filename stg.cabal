@@ -118,6 +118,7 @@ test-suite stg-test
                      , megaparsec
                      , semigroups
                      , tasty
+                     , tasty-html
                      , tasty-hunit
                      , tasty-quickcheck, QuickCheck
                      , tasty-rerun

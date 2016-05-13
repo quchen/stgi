@@ -15,16 +15,17 @@ import Test.Tasty.Ingredients.Rerun
 import Test.Tasty.Options
 import Test.Tasty.QuickCheck
 import Test.Tasty.Runners
+import Test.Tasty.Runners.Html
 
 
 
 main :: IO ()
 main = do
     options <- testOptions
-    defaultMainWithIngredients [ingredients] (options tests)
+    defaultMainWithIngredients ingredients (options tests)
 
-ingredients :: Ingredient
-ingredients = rerunningTests [listingTests, consoleTestReporter]
+ingredients :: [Ingredient]
+ingredients = [rerunningTests (htmlRunner : defaultIngredients)]
 
 testOptions :: IO (TestTree -> TestTree)
 testOptions = do

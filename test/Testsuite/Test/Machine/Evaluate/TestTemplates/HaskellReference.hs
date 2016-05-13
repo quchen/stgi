@@ -1,5 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Defines tests of STG programs that are meant to match their Haskell
 -- sibling's behaviours.
@@ -27,6 +30,7 @@ import Stg.Parser
 
 import Test.Machine.Evaluate.TestTemplates.Util
 import Test.Orphans                             ()
+import Test.Tasty.Runners.Html
 
 
 
@@ -62,12 +66,21 @@ defSpec = HaskellReferenceTestSpec
     , failPredicate = const False
     , source = \_ -> [stg| main = () \n () -> DummySource () |] }
 
-haskellReferenceTest :: (Show a, Arbitrary a)
+haskellReferenceTest
+    :: forall a. (Show a, Arbitrary a)
     => HaskellReferenceTestSpec a
     -> TestTree
-haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test
+haskellReferenceTest testSpec = askOption (\htmlOpt ->
+    let pprDict = case htmlOpt of
+            Just HtmlPath{} -> PrettyprinterDict prettyprint pretty
+            Nothing -> PrettyprinterDict prettyprintAnsi prettyAnsi
+    in testProperty (T.unpack (testName testSpec)) (test pprDict) )
   where
-    test input =
+    test :: (Show a, Arbitrary a)
+         => PrettyprinterDict
+         -> a
+         -> Property
+    test pprDict input =
         let program = initialState "main" (source testSpec input)
             states = evalsUntil
                 (RunForMaxSteps (maxSteps testSpec))
@@ -76,40 +89,56 @@ haskellReferenceTest testSpec = testProperty (T.unpack (testName testSpec)) test
                 program
             finalState = last states
         in case L.find (failPredicate testSpec) states of
-            Just badState -> fail_failPredicateTrue testSpec input badState
+            Just badState -> fail_failPredicateTrue pprDict testSpec input badState
             Nothing -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> property True
-                _otherwise -> fail_successPredicateNotTrue testSpec input finalState
+                _otherwise -> fail_successPredicateNotTrue pprDict testSpec input finalState
 
 failWithInfoInfoText :: Doc
 failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
 
-fail_successPredicateNotTrue :: HaskellReferenceTestSpec a -> a -> StgState -> Property
-fail_successPredicateNotTrue testSpec input finalState = counterexample failText False
+fail_successPredicateNotTrue
+    :: PrettyprinterDict
+    -> HaskellReferenceTestSpec a
+    -> a
+    -> StgState
+    -> Property
+fail_successPredicateNotTrue
+    (PrettyprinterDict pprText pprDoc)
+    testSpec
+    input
+    finalState
+  = counterexample failText False
   where
-    failText = (T.unpack . prettyprintAnsi . vsep)
+    failText = (T.unpack . pprText . vsep)
         [ "STG version of"
             <+> (text . T.unpack . testName) testSpec
             <+> "does not match Haskell's reference implementation."
         , "Failure because:"
-            <+> prettyAnsi (stgInfo finalState)
+            <+> pprDoc (stgInfo finalState)
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec input)])
-                , hang 4 (vsep ["Final state:", prettyAnsi finalState]) ]
+                [ hang 4 (vsep ["Program:", pprDoc (source testSpec input)])
+                , hang 4 (vsep ["Final state:", pprDoc finalState]) ]
             else failWithInfoInfoText ]
 
 fail_failPredicateTrue
-    :: HaskellReferenceTestSpec a
+    :: PrettyprinterDict
+    -> HaskellReferenceTestSpec a
     -> a
     -> StgState
     -> Property
-fail_failPredicateTrue testSpec input badState = counterexample failText False
+fail_failPredicateTrue
+    (PrettyprinterDict pprText pprDoc)
+    testSpec
+    input
+    badState
+  = counterexample failText False
   where
-    failText = (T.unpack . prettyprintAnsi . vsep)
+    failText = (T.unpack . pprText . vsep)
         [ "Failure predicate held for an intemediate state"
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec input)])
-                , hang 4 (vsep ["Bad state:" , prettyAnsi badState]) ]
+                [ hang 4 (vsep ["Program:", pprDoc (source testSpec input)])
+                , hang 4 (vsep ["Bad state:" , pprDoc badState]) ]
             else failWithInfoInfoText ]

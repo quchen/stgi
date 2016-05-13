@@ -30,6 +30,7 @@ tests = testGroup "Tuple"
 testFst :: TestTree
 testFst = haskellReferenceTest defSpec
     { testName = "fst"
+    , failWithInfo = True
     , source = \tuple ->
            Stg.tupleOfNumbers "tuple" tuple
         <> Stg.int "expectedResult" (fst tuple)

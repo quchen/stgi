@@ -27,6 +27,7 @@ import Stg.Parser
 import Test.Machine.Evaluate.TestTemplates.Util
 import Test.Tasty
 import Test.Tasty.HUnit
+import Test.Tasty.Runners.Html
 
 
 
@@ -74,7 +75,11 @@ defSpec = MachineStateTestSpec
 -- | Evaluate the @main@ closure of a STG program, and check whether the
 -- machine state satisfies a predicate when it is evaluated.
 machineStateTest :: MachineStateTestSpec -> TestTree
-machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
+machineStateTest testSpec = askOption (\htmlOpt ->
+    let pprDict = case htmlOpt of
+            Just HtmlPath{} -> PrettyprinterDict prettyprint pretty
+            Nothing -> PrettyprinterDict prettyprintAnsi prettyAnsi
+    in testCase (T.unpack (testName testSpec)) (test pprDict) )
   where
     program = initialState "main" (source testSpec)
     states = evalsUntil (RunForMaxSteps (maxSteps testSpec))
@@ -82,35 +87,51 @@ machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
                         (performGc testSpec)
                         program
     finalState = last states
-    test = case L.find (forbiddenState testSpec) states of
-        Just badState -> fail_failPredicateTrue testSpec badState
+
+    test :: PrettyprinterDict -> Assertion
+    test pprDict = case L.find (forbiddenState testSpec) states of
+        Just badState -> fail_failPredicateTrue pprDict testSpec badState
         Nothing -> case L.any (someStateSatisfies testSpec) states of
             True -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> pure ()
-                _otherwise -> fail_successPredicateNotTrue testSpec finalState
+                _otherwise -> fail_successPredicateNotTrue pprDict testSpec finalState
             False -> (assertFailure . T.unpack)
                 "No intermediate state satisfied the required predicate."
 
 failWithInfoInfoText :: Doc
 failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
 
-fail_successPredicateNotTrue :: MachineStateTestSpec -> StgState -> Assertion
-fail_successPredicateNotTrue testSpec finalState
-  = (assertFailure . T.unpack . prettyprintAnsi . vsep)
+fail_successPredicateNotTrue
+    :: PrettyprinterDict
+    -> MachineStateTestSpec
+    -> StgState
+    -> Assertion
+fail_successPredicateNotTrue
+    (PrettyprinterDict pprText pprDoc)
+    testSpec
+    finalState
+  = (assertFailure . T.unpack . pprText . vsep)
         [ "STG failed to satisfy predicate: "
-            <> prettyAnsi (stgInfo finalState)
+            <> pprDoc (stgInfo finalState)
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec)])
-                , hang 4 (vsep ["Final state:", prettyAnsi finalState]) ]
+                [ hang 4 (vsep ["Program:", pprDoc (source testSpec)])
+                , hang 4 (vsep ["Final state:", pprDoc finalState]) ]
             else failWithInfoInfoText ]
 
-fail_failPredicateTrue :: MachineStateTestSpec -> StgState -> Assertion
-fail_failPredicateTrue testSpec badState
-  = (assertFailure . T.unpack . prettyprintAnsi . vsep)
+fail_failPredicateTrue
+    :: PrettyprinterDict
+    -> MachineStateTestSpec
+    -> StgState
+    -> Assertion
+fail_failPredicateTrue
+    (PrettyprinterDict pprText pprDoc)
+    testSpec
+    badState
+  = (assertFailure . T.unpack . pprText . vsep)
         [ "Failure predicate held for an intemediate state"
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", prettyAnsi (source testSpec)])
-                , hang 4 (vsep ["Bad state:", prettyAnsi badState]) ]
+                [ hang 4 (vsep ["Program:", pprDoc (source testSpec)])
+                , hang 4 (vsep ["Bad state:", pprDoc badState]) ]
             else failWithInfoInfoText ]

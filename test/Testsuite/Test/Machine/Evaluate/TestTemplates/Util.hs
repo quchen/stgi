@@ -1,17 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module Test.Machine.Evaluate.TestTemplates.Util (
     (===>),
+    PrettyprinterDict(..),
 ) where
 
 
 import           Data.Monoid
-import           Data.Text   (Text)
-import qualified Data.Text   as T
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import           Text.PrettyPrint.ANSI.Leijen (Doc)
 
 import Stg.Language
+import Stg.Language.Prettyprint
 import Stg.Machine.Env
-import Stg.Machine.Heap  as H
+import Stg.Machine.Heap         as H
 import Stg.Machine.Types
 import Stg.Util
 
@@ -42,3 +46,6 @@ varLookup state var =
             Just (Blackhole _bhTick) -> VarLookupBlackhole
             Nothing                  -> VarLookupError "not found on heap"
         Success (PrimInt i) -> VarLookupPrim i
+
+data PrettyprinterDict = PrettyprinterDict (forall a. PrettyAnsi a => a -> Text)
+                                           (forall a. PrettyAnsi a => a -> Doc)
