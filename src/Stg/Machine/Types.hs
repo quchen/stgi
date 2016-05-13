@@ -90,11 +90,16 @@ colour = StgStateColours
     , address = dullcyan . underline
     }
 
+-- Local re-definition to avoid cyclic import with the Heap module
+heapSize :: Heap -> Int
+heapSize (Heap h) = length h
+
 instance Pretty StgState where
     pretty state = align (vsep
         [ "Code:" <+> pretty (stgCode state)
         , nest 4 (vsep [ "Stack", prettyStack (stgStack state) ])
-        , nest 4 (vsep [ "Heap", pretty (stgHeap state)])
+        , nest 4 (vsep [ "Heap (" <> pretty (heapSize (stgHeap state)) <+> "entries)"
+                       , pretty (stgHeap state) ])
         , nest 4 (vsep [ "Globals", pretty (stgGlobals state)])
         , nest 4 ("Step:" <+> pretty (stgTicks state)) ])
 
@@ -102,7 +107,8 @@ instance PrettyAnsi StgState where
     prettyAnsi state = align (vsep
         [ headline colour "Code:" <+> prettyAnsi (stgCode state)
         , nest 4 (vsep [headline colour "Stack", prettyStackAnsi (stgStack state) ])
-        , nest 4 (vsep [headline colour "Heap", prettyAnsi (stgHeap state)])
+        , nest 4 (vsep [headline colour "Heap" <> " (" <> pretty (heapSize (stgHeap state)) <+> "entries)"
+                       , prettyAnsi (stgHeap state) ])
         , nest 4 (vsep [headline colour "Globals", prettyAnsi (stgGlobals state)])
         , nest 4 (headline colour "Step:" <+> pretty (stgTicks state)) ])
 
@@ -119,7 +125,9 @@ prettyStackAnsi :: PrettyAnsi a => Stack a -> Doc
 prettyStackAnsi Empty = "(empty)"
 prettyStackAnsi stack = (align . vsep) prettyFrames
   where
-    prettyFrame frame i = "[" <> int i <> "]" <+> align (prettyAnsi frame)
+    prettyFrame frame i = hsep
+        [ headline colour (int i <> ".")
+        , align (prettyAnsi frame) ]
     prettyFrames = zipWith prettyFrame (toList stack) (reverse [1..length stack])
 
 -- ^ A stack frame of the unified stack that includes arguments, returns, and
