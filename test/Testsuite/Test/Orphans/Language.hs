@@ -111,9 +111,9 @@ instance Arbitrary NonDefaultAlts where
     arbitrary = oneof
         [ pure NoNonDefaultAlts
         , fmap (AlgebraicAlts . NonEmpty.fromList)
-            (listOf1 (scaled (2%3) (arbitrary3 AlgebraicAlt)))
+            (scaled (2%3) (listOf1 (arbitrary3 AlgebraicAlt)))
         , fmap (PrimitiveAlts . NonEmpty.fromList)
-            (listOf1 (scaled (2%3) (arbitrary2 PrimitiveAlt))) ]
+            (scaled (2%3) (listOf1 (arbitrary2 PrimitiveAlt))) ]
 
 instance Arbitrary DefaultAlt where
     arbitrary = oneof [arbitrary1 DefaultNotBound, arbitrary2 DefaultBound]
