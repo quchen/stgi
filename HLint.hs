@@ -3,6 +3,7 @@ import "hint" HLint.Builtin.All
 
 -- Naming can be useful
 ignore "Avoid lambda"
+ignore "Redundant lambda"
 ignore "Eta reduce"
 ignore "Use camelCase"
 ignore "Use fromMaybe"
