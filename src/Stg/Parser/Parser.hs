@@ -40,7 +40,7 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.Bifunctor
 import qualified Data.List.NonEmpty    as NonEmpty
-import qualified Data.Map              as M
+import qualified Data.Map.Strict       as M
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import           Text.Megaparsec       ((<?>))

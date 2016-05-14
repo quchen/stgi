@@ -81,7 +81,7 @@ instance Show Binds where
 --
 -- >>> [stg| (x) \n (y, z) -> expr (x,z) |]
 -- LambdaForm [Var "x"] NoUpdate [Var "y",Var "z"] (AppF (Var "expr") [AtomVar (Var "x"),AtomVar (Var "z")])
-data LambdaForm = LambdaForm [Var] UpdateFlag [Var] Expr
+data LambdaForm = LambdaForm ![Var] !UpdateFlag ![Var] !Expr
     deriving (Eq, Ord, Show, Generic)
 
 -- | The update flag distinguishes updateable from non-updateable lambda forms.
@@ -98,19 +98,19 @@ data Rec = NonRecursive | Recursive
 
 -- | An expression in the STG language.
 data Expr =
-      Let Rec Binds Expr    -- ^ Let expression @let(rec) ... in ...@
-    | Case Expr Alts        -- ^ Case expression @case ... of ... x -> y@
-    | AppF Var [Atom]       -- ^ Function application @f (x,y,z)@
-    | AppC Constr [Atom]    -- ^ Constructor application @Maybe (a)@
-    | AppP PrimOp Atom Atom -- ^ Primitive function application @+# 1# 2#@
-    | Lit Literal           -- ^ Literal expression @1#@
+      Let !Rec !Binds !Expr    -- ^ Let expression @let(rec) ... in ...@
+    | Case !Expr !Alts         -- ^ Case expression @case ... of ... x -> y@
+    | AppF !Var ![Atom]        -- ^ Function application @f (x,y,z)@
+    | AppC !Constr ![Atom]     -- ^ Constructor application @Maybe (a)@
+    | AppP !PrimOp !Atom !Atom -- ^ Primitive function application @+# 1# 2#@
+    | Lit !Literal             -- ^ Literal expression @1#@
     deriving (Eq, Ord, Show, Generic)
 
 -- | List of possible alternatives in a 'Case' expression.
 --
 -- The list of alts has to be homogeneous. This is not ensured by the type
 -- system, and should be handled by the parser instead.
-data Alts = Alts NonDefaultAlts DefaultAlt
+data Alts = Alts !NonDefaultAlts !DefaultAlt
     deriving (Eq, Ord, Show, Generic)
 
 -- | The part of a 'Case' alternative that's not the default.
@@ -119,26 +119,26 @@ data NonDefaultAlts =
         -- ^ Used in 'case' statements that consist only of a default
         -- alternative. These can be useful to force or unpack values.
 
-    | AlgebraicAlts (NonEmpty AlgebraicAlt)
+    | AlgebraicAlts !(NonEmpty AlgebraicAlt)
         -- ^ Algebraic alternative, like @Cons (x,xs)@.
 
-    | PrimitiveAlts (NonEmpty PrimitiveAlt)
+    | PrimitiveAlts !(NonEmpty PrimitiveAlt)
         -- ^ Primitive alternative, like @1#@.
     deriving (Eq, Ord, Show, Generic)
 
 -- | As in @True | False@
-data AlgebraicAlt = AlgebraicAlt Constr [Var] Expr
+data AlgebraicAlt = AlgebraicAlt !Constr ![Var] !Expr
     deriving (Eq, Ord, Show, Generic)
 
 -- | As in @1, 2, 3@
-data PrimitiveAlt = PrimitiveAlt Literal Expr
+data PrimitiveAlt = PrimitiveAlt !Literal !Expr
     deriving (Eq, Ord, Show, Generic)
 
 -- | If no viable alternative is found in a pattern match, use a 'DefaultAlt'
 -- as fallback.
 data DefaultAlt =
-       DefaultNotBound Expr
-     | DefaultBound Var Expr
+       DefaultNotBound !Expr
+     | DefaultBound !Var !Expr
     deriving (Eq, Ord, Show, Generic)
 
 -- | Literals are the basis of primitive operations.
@@ -169,8 +169,8 @@ instance IsString Var where fromString = coerce . T.pack
 
 -- | Smallest unit of data.
 data Atom =
-      AtomVar Var
-    | AtomLit Literal
+      AtomVar !Var
+    | AtomLit !Literal
     deriving (Eq, Ord, Show, Generic)
 
 -- | Constructors of algebraic data types.
