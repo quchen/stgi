@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | A parser for the STG language, modeled after the grammar given in the
 -- description in the 1992 paper
@@ -41,6 +42,7 @@ import           Control.Monad
 import           Data.Bifunctor
 import qualified Data.List.NonEmpty    as NonEmpty
 import qualified Data.Map.Strict       as M
+import           Data.Monoid
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import           Text.Megaparsec       ((<?>))
@@ -126,11 +128,15 @@ assignTok = symbol "="
 -- | Parse a variable name. Variables start with a lower-case letter, followed
 -- by a string consisting of alphanumeric characters or @'@, @_@.
 varTok :: Parser Var
-varTok = lexeme p <?> "variable"
+varTok = lexeme (p >>= validateVar) <?> "variable"
   where
     p = liftA2 (\x xs -> Var (T.pack (x:xs)))
                P.lowerChar
                (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
+    validateVar var
+        | var `notElem` ["let", "in", "case", "of"] = pure var
+        | otherwise = let Var v = var
+                      in fail (T.unpack v <> " is a reserved keyword")
 
 -- | Parse a constructor name. Constructors follow the same naming conventions
 -- as variables, but start with an upper-case character instead, and may
