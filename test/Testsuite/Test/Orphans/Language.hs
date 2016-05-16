@@ -45,12 +45,6 @@ shrinkBut1stLetter text = case T.uncons text of
         let shrunkenRest = map T.pack . shrink . T.unpack
         in map (T.singleton x <>) (shrunkenRest xs)
 
--- | Shrink all but the first element. Useful for e.g. bindings, because there
--- has to be at least one of them, so we don't want to shrink them all away.
-shrinkBut1st :: Arbitrary a => [a] -> [[a]]
-shrinkBut1st [] = []
-shrinkBut1st (x:xs) = map (x:) (shrink xs)
-
 reservedKeywords :: [Var]
 reservedKeywords = ["let", "in", "case", "of", "default"]
 
@@ -67,6 +61,11 @@ instance Arbitrary Binds where
         xs <- listOf1 (scaled (2%3) arbitrary)
         pure (Binds (M.fromList xs))
     shrink (Binds b) = (map (Binds . M.fromList) . shrinkBut1st . M.toList) b
+      where
+        -- Bindings have to be non-empty, we ensure at least one element is in
+        -- the shrunken result.
+        shrinkBut1st [] = []
+        shrinkBut1st (x:xs) = concatMap (shrink . (x:)) (shrink xs)
 
 instance Arbitrary LambdaForm where
     arbitrary = do
