@@ -1,8 +1,6 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE OverloadedLists            #-}
-{-# LANGUAGE OverloadedStrings          #-}
 
 -- | Remove unused heap objects.
 module Stg.Machine.GarbageCollection (
@@ -22,7 +20,6 @@ import           Data.Monoid   hiding (Alt)
 import           Data.Set      (Set)
 import qualified Data.Set      as S
 
-import           Stg.Language
 import qualified Stg.Machine.Heap  as H
 import           Stg.Machine.Types
 
@@ -46,8 +43,8 @@ newtype Alive a = Alive a
 newtype Dead a = Dead a
     deriving (Eq, Ord, Show, Monoid)
 
--- | Split the heap of an 'StgState' into dead (can be discarded) and alive
--- (are still used) components.
+-- | Split the heap of an 'StgState' in two components: dead (can be discarded)
+-- and alive (are still used) closures.
 splitHeap :: StgState -> (Dead Heap, Alive Heap)
 splitHeap StgState
     { stgCode    = code
@@ -102,7 +99,11 @@ gcStep GcState
 
 
 
--- | Collect all mentioned addresses in a syntax element.
+-- | Collect all mentioned addresses in a machine element.
+--
+-- Note that none of the types in "Stg.Language" contain addresses, since an
+-- address is not something present in the STG _language_, only in the execution
+-- contest the language is put in in the "Stg.Machine" modules.
 class Addresses a where
     addrs :: a -> Set MemAddr
 
@@ -110,19 +111,19 @@ instance (Foldable f, Addresses a) => Addresses (f a) where
     addrs = foldMap addrs
 
 instance Addresses Code where
-    addrs (Eval expr locals)    = addrs expr <> addrs locals
-    addrs (Enter addr)          = [addr]
+    addrs (Eval _expr locals)   = addrs locals
+    addrs (Enter addr)          = addrs addr
     addrs (ReturnCon _con args) = addrs args
-    addrs (ReturnInt _int)      = []
+    addrs (ReturnInt _int)      = mempty
 
 instance Addresses StackFrame where
     addrs = \case
-        ArgumentFrame vals      -> addrs vals
-        ReturnFrame alts locals -> addrs alts <> addrs locals
-        UpdateFrame addr        -> addrs addr
+        ArgumentFrame vals       -> addrs vals
+        ReturnFrame _alts locals -> addrs locals
+        UpdateFrame addr         -> addrs addr
 
 instance Addresses MemAddr where
-    addrs addr = [addr]
+    addrs addr = S.singleton addr
 
 instance Addresses Globals where
     addrs (Globals globals)
@@ -132,51 +133,14 @@ instance Addresses Locals where
     addrs (Locals locals) = addrs (Globals locals)
 
 instance Addresses Closure where
-    addrs (Closure lf free) = addrs lf <> addrs free
+    addrs (Closure _lambdaForm free) = addrs free
 
 instance Addresses HeapObject where
     addrs = \case
-        HClosure (Closure lf free) -> addrs lf <> addrs free
+        HClosure closure  -> addrs closure
         Blackhole _bhTick -> mempty
-
-instance Addresses LambdaForm where
-    addrs (LambdaForm _free _upd _bound expr) = addrs expr
 
 instance Addresses Value where
     addrs = \case
         Addr s     -> S.singleton s
         PrimInt _i -> mempty
-
-instance Addresses Expr where
-    addrs = \case
-        Let _rec binds expr -> addrs binds <> addrs expr
-        Case scrutinee alts -> addrs scrutinee <> addrs alts
-        AppF _fun args      -> addrs args
-        AppC _con args      -> addrs args
-        AppP _f _x _y       -> mempty
-        Lit _i              -> mempty
-
-instance Addresses Binds where
-    addrs (Binds bs) = foldMap addrs bs
-
-instance Addresses Alts where
-    addrs (Alts alts def) = addrs alts <> addrs def
-
-instance Addresses NonDefaultAlts where
-    addrs NoNonDefaultAlts     = mempty
-    addrs (AlgebraicAlts alts) = addrs alts
-    addrs (PrimitiveAlts alts) = addrs alts
-
-instance Addresses AlgebraicAlt where
-    addrs (AlgebraicAlt _con _vars expr) = addrs expr
-
-instance Addresses PrimitiveAlt where
-    addrs (PrimitiveAlt _prim expr) = addrs expr
-
-instance Addresses DefaultAlt where
-    addrs = \case
-        DefaultNotBound expr -> addrs expr
-        DefaultBound _  expr -> addrs expr
-
-instance Addresses Atom where
-    addrs = mempty
