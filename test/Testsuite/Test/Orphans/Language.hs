@@ -52,7 +52,7 @@ shrinkBut1st [] = []
 shrinkBut1st (x:xs) = map (x:) (shrink xs)
 
 reservedKeywords :: [Var]
-reservedKeywords = ["let", "in", "case", "of"]
+reservedKeywords = ["let", "in", "case", "of", "default"]
 
 
 --------------------------------------------------------------------------------

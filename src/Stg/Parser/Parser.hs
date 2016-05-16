@@ -134,7 +134,7 @@ varTok = lexeme (p >>= validateVar) <?> "variable"
                P.lowerChar
                (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
     validateVar var
-        | var `notElem` ["let", "in", "case", "of"] = pure var
+        | var `notElem` ["let", "in", "case", "of", "default"] = pure var
         | otherwise = let Var v = var
                       in fail (T.unpack v <> " is a reserved keyword")
 
