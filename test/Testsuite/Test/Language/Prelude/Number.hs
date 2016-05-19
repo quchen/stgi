@@ -9,8 +9,8 @@ import Data.Monoid
 import Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Language.Prelude as Stg
-import           Stg.Parser
+import qualified Stg.Language.Prelude   as Stg
+import           Stg.Parser.QuasiQuoter
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -38,12 +38,12 @@ tests = testGroup "Number"
     , testMax ]
 
 testEq, testLt, testLeq, testGt, testGeq, testNeq :: TestTree
-testEq  = testComparison "==" (==) (Stg.eq_Int  <> [stg| stgFunc = () \n () -> eq_Int  () |])
-testLt  = testComparison "<"  (<)  (Stg.lt_Int  <> [stg| stgFunc = () \n () -> lt_Int  () |])
-testLeq = testComparison "<=" (<=) (Stg.leq_Int <> [stg| stgFunc = () \n () -> leq_Int () |])
-testGt  = testComparison ">"  (>)  (Stg.gt_Int  <> [stg| stgFunc = () \n () -> gt_Int  () |])
-testGeq = testComparison ">=" (>=) (Stg.geq_Int <> [stg| stgFunc = () \n () -> geq_Int () |])
-testNeq = testComparison "/=" (/=) (Stg.neq_Int <> [stg| stgFunc = () \n () -> neq_Int () |])
+testEq  = testComparison "==" (==) (Stg.eq_Int  <> [stg| stgFunc = \ -> eq_Int  |])
+testLt  = testComparison "<"  (<)  (Stg.lt_Int  <> [stg| stgFunc = \ -> lt_Int  |])
+testLeq = testComparison "<=" (<=) (Stg.leq_Int <> [stg| stgFunc = \ -> leq_Int |])
+testGt  = testComparison ">"  (>)  (Stg.gt_Int  <> [stg| stgFunc = \ -> gt_Int  |])
+testGeq = testComparison ">=" (>=) (Stg.geq_Int <> [stg| stgFunc = \ -> geq_Int |])
+testNeq = testComparison "/=" (/=) (Stg.neq_Int <> [stg| stgFunc = \ -> neq_Int |])
 
 -- | Test an Integer comparison operator
 testComparison
@@ -61,20 +61,20 @@ testComparison name  haskellRef stgFuncDef = haskellReferenceTest defSpec
         <> stgFuncDef
         <> [stg|
 
-        main = () \u () ->
-            case stgFunc (x,y) of
-                result -> case eq_Bool (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error_testMin (badBool)
+        main = \ =>
+            case stgFunc x y of
+                result -> case eq_Bool result expectedResult of
+                    True -> Success;
+                    False -> TestFail result;
+                    badBool -> Error_testMin badBool
         |] }
 
 testAdd, testSub, testMul, testDiv, testMod :: TestTree
-testAdd = testArithmetic "+"   (+) (Stg.add  <> [stg| stgFunc = () \n () -> add () |])
-testSub = testArithmetic "-"   (-) (Stg.sub  <> [stg| stgFunc = () \n () -> sub () |])
-testMul = testArithmetic "*"   (*) (Stg.mul  <> [stg| stgFunc = () \n () -> mul () |])
-testDiv = testArithmetic "div" div (Stg.div  <> [stg| stgFunc = () \n () -> div () |])
-testMod = testArithmetic "mod" mod (Stg.mod  <> [stg| stgFunc = () \n () -> mod () |])
+testAdd = testArithmetic "+"   (+) (Stg.add  <> [stg| stgFunc = \ -> add |])
+testSub = testArithmetic "-"   (-) (Stg.sub  <> [stg| stgFunc = \ -> sub |])
+testMul = testArithmetic "*"   (*) (Stg.mul  <> [stg| stgFunc = \ -> mul |])
+testDiv = testArithmetic "div" div (Stg.div  <> [stg| stgFunc = \ -> div |])
+testMod = testArithmetic "mod" mod (Stg.mod  <> [stg| stgFunc = \ -> mod |])
 
 -- | Test an arithmetic operator
 testArithmetic
@@ -92,12 +92,12 @@ testArithmetic name  haskellRef stgFuncDef = haskellReferenceTest defSpec
         <> stgFuncDef
         <> [stg|
 
-        main = () \u () ->
-            case stgFunc (x,y) of
-                result -> case eq_Int (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error_testMin (badBool)
+        main = \ =>
+            case stgFunc x y of
+                result -> case eq_Int result expectedResult of
+                    True -> Success;
+                    False -> TestFail result;
+                    badBool -> Error_testMin badBool
         |] }
 
 testMin :: TestTree
@@ -111,12 +111,12 @@ testMin = haskellReferenceTest defSpec
         <> Stg.eq_Int
         <> [stg|
 
-        main = () \u () ->
-            case min (x,y) of
-                result -> case eq_Int (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error_testMin (badBool)
+        main = \ =>
+            case min x y of
+                result -> case eq_Int result expectedResult of
+                    True -> Success;
+                    False -> TestFail result;
+                    badBool -> Error_testMin badBool
         |] }
 
 testMax :: TestTree
@@ -130,10 +130,10 @@ testMax = haskellReferenceTest defSpec
         <> Stg.eq_Int
         <> [stg|
 
-        main = () \u () ->
-            case max (x,y) of
-                result -> case eq_Int (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error_testMin (badBool)
+        main = \ =>
+            case max x y of
+                result -> case eq_Int result expectedResult of
+                    True -> Success;
+                    False -> TestFail result;
+                    badBool -> Error_testMin badBool
         |] }

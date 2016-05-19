@@ -8,6 +8,7 @@ module Test.Orphans.Language () where
 
 
 
+import           Control.Applicative
 import qualified Data.List.NonEmpty     as NonEmpty
 import qualified Data.Map               as M
 import           Data.Monoid            hiding (Alt)
@@ -25,18 +26,6 @@ import Test.Util
 
 --------------------------------------------------------------------------------
 -- Helper functions
-
-lowerChar :: Gen Text
-lowerChar = resize 3 (T.singleton <$> elements ['a'..'z'])
-
-upperChar :: Gen Text
-upperChar = resize 3 (T.singleton <$> elements ['A'..'Z'])
-
-extendedLetters :: Gen Text
-extendedLetters = resize 3 (T.pack <$> listOf extendedLetter)
-  where
-    extendedLetter :: Gen Char
-    extendedLetter = elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "\'_")
 
 shrinkBut1stLetter :: Text -> [Text]
 shrinkBut1stLetter text = case T.uncons text of
@@ -65,7 +54,7 @@ instance Arbitrary Binds where
         -- Bindings have to be non-empty, we ensure at least one element is in
         -- the shrunken result.
         shrinkBut1st [] = []
-        shrinkBut1st (x:xs) = concatMap (shrink . (x:)) (shrink xs)
+        shrinkBut1st (x:xs) = liftA2 (:) (shrink x) (shrink xs)
 
 instance Arbitrary LambdaForm where
     arbitrary = do
@@ -83,7 +72,13 @@ instance Arbitrary LambdaForm where
             -- Standard constructors are never updatable, so we exclude those
             [arbitrary2 AppC | updateFlag == NoUpdate] )
         pure (LambdaForm free updateFlag bound body)
-    shrink = genericShrink
+    shrink = filter isValid . genericShrink
+      where
+        isValid (LambdaForm _ Update (_:_) AppF{}) = False
+        isValid (LambdaForm _ Update (_:_) AppC{}) = False
+        isValid (LambdaForm _ _      _     AppP{}) = False
+        isValid (LambdaForm _ _      _     Lit{} ) = False
+        isValid _ = True
 
 instance Arbitrary UpdateFlag where
     arbitrary = allEnums
@@ -128,8 +123,8 @@ instance Arbitrary PrimOp where
 
 instance Arbitrary Var where
     arbitrary = do
-        x <- lowerChar
-        xs <- extendedLetters
+        x <- T.singleton <$> elements ['a'..'z']
+        xs <- T.pack <$> listOf (elements (['a'..'z'] <> ['A'..'Z'] <> ['0'..'9'] <> "\'_"))
         let var = Var (x <> xs)
         if var `elem` reservedKeywords
             then arbitrary
@@ -142,9 +137,10 @@ instance Arbitrary Atom where
 
 instance Arbitrary Constr where
     arbitrary = do
-        x <- upperChar
-        xs <- extendedLetters
-        (pure . Constr) (x <> xs)
+        x <- T.singleton <$> elements ['A'..'Z']
+        xs <- T.pack <$> listOf (elements (['a'..'z'] <> ['A'..'Z'] <> ['0'..'9'] <> "\'_"))
+        hash <- frequency [(9, pure ""), (1, pure "#")]
+        (pure . Constr) (x <> xs <> hash)
     shrink (Constr constr) = map Constr (shrinkBut1stLetter constr)
 
 

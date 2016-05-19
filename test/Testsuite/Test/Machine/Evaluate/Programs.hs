@@ -16,9 +16,9 @@ import Data.Foldable
 import Data.Monoid
 import Test.Tasty
 
-import qualified Stg.Language.Prelude as Stg
+import qualified Stg.Language.Prelude   as Stg
 import           Stg.Machine.Types
-import           Stg.Parser
+import           Stg.Parser.QuasiQuoter
 
 import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
 import           Test.Machine.Evaluate.TestTemplates.MachineState
@@ -40,26 +40,26 @@ tests = testGroup "Programs"
 
 add3 :: TestTree
 add3 = machineStateTest defSpec
-    { testName = "add3(x,y,z) = x+y+z"
+    { testName = "add3 x y z = x+y+z"
     , source = [stg|
-        add3 = () \n (x,y,z) -> case x () of
-            Int# (i) -> case y () of
-                Int# (j) -> case +# i j of
-                    ij -> case z () of
-                        Int# (k) -> case +# ij k of
-                            ijk -> Int# (ijk);
-                        default -> Error ();
-                default -> Error ();
-            default -> Error ();
+        add3 = \x y z -> case x of
+            Int# i -> case y of
+                Int# j -> case +# i j of
+                    ij -> case z of
+                        Int# k -> case +# ij k of
+                            ijk -> Int# ijk;
+                        badInt -> Error_add3_1 badInt;
+                badInt -> Error_add3_2 badInt;
+            badInt -> Error_add3_3 badInt;
 
-        one   = () \n () -> Int# (1#);
-        two   = () \n () -> Int# (2#);
-        three = () \n () -> Int# (3#);
-        main = () \u () -> case add3 (one, two, three) of
-            Int# (i) -> case i () of
-                6# -> Success ();
-                wrongResult -> TestFail (wrongResult);
-            default -> Error ()
+        one   = \ -> Int# 1#;
+        two   = \ -> Int# 2#;
+        three = \ -> Int# 3#;
+        main = \ => case add3 one two three of
+            Int# i -> case i of
+                6# -> Success;
+                wrongResult -> TestFail wrongResult;
+            badInt -> Error badInt
         |] }
 
 takeRepeat :: TestTree
@@ -72,23 +72,24 @@ takeRepeat = machineStateTest defSpec
             <> Stg.seq
             <> [stg|
 
-        consBang = () \n (x,xs) -> case xs () of v -> Cons (x, v);
-        nil = () \n () -> Nil ();
-        forceSpine = () \n (xs) -> foldr (consBang, nil, xs);
+        consBang = \x xs -> case xs of v -> Cons x v;
+        nil = \ -> Nil;
+        forceSpine = \xs -> foldr consBang nil xs;
 
-        twoUnits = () \u () ->
-            letrec  repeated = (unit) \u () -> repeat (unit);
-                    unit = () \n () -> Unit ();
-                    take2 = (repeated) \u () -> take (two, repeated)
-            in      forceSpine (take2);
+        twoUnits = \ =>
+            letrec
+                repeated = \(unit) => repeat unit;
+                unit = \ -> Unit;
+                take2 = \(repeated) => take two repeated
+            in forceSpine take2;
 
-        main = () \u () -> case twoUnits () of
-            Cons (x,xs) -> case xs () of
-                Cons (y,ys) -> case ys () of
-                    Nil () -> Success ();
-                    default -> TestFailure ();
-                default -> TestFailure ();
-            default -> TestFailure ()
+        main = \ => case twoUnits of
+            Cons x xs -> case xs of
+                Cons y ys -> case ys of
+                    Nil -> Success;
+                    default -> TestFailure;
+                default -> TestFailure;
+            default -> TestFailure
         |] }
 
 fibonacci :: TestTree
@@ -104,18 +105,18 @@ fibonacci = machineStateTest defSpec
             <> Stg.zipWith
             <> [stg|
 
-        main = () \u () ->
+        main = \ =>
             letrec
-                fibos = (fibo) \n () -> take (numFibos, fibo);
-                fibo = () \u () ->
+                fibos = \(fibo) -> take numFibos fibo;
+                fibo = \ =>
                     letrec
-                        fib0 = (fib1) \n () -> Cons (zero, fib1);
-                        fib1 = (fib2) \n () -> Cons (one, fib2);
-                        fib2 = (fib0, fib1) \u () -> zipWith (add, fib0, fib1)
-                    in fib0 ()
-            in case equals_List_Int (fibos, expectedFibos) of
-                True () -> Success ();
-                err -> TestFail (err)
+                        fib0 = \(fib1) -> Cons zero fib1;
+                        fib1 = \(fib2) -> Cons one fib2;
+                        fib2 = \(fib0 fib1) => zipWith add fib0 fib1
+                    in fib0
+            in case equals_List_Int fibos expectedFibos of
+                True -> Success;
+                err -> TestFail err
         |] }
   where
     fibo = 0 : 1 : zipWith (+) fibo (tail fibo)
@@ -132,7 +133,7 @@ meanTestTemplate =
         { HRef.testName = "Mena test template"
         , HRef.maxSteps = 1024
         , HRef.failWithInfo = False
-        , HRef.successPredicate = "main" ===> [stg| () \n () -> Success () |]
+        , HRef.successPredicate = "main" ===> [stg| \ -> Success |]
         , HRef.failPredicate = const False
         , HRef.source = \(NonEmpty inputList) -> mconcat
                 [ Stg.eq_Int
@@ -143,32 +144,33 @@ meanTestTemplate =
                 , Stg.listOfNumbers "inputList" inputList
                 , Stg.int "expectedOutput" (mean inputList) ]
             <> [stg|
-            main = () \u () -> case mean (inputList) of
-                actual -> case eq_Int (actual, expectedOutput) of
-                    True () -> Success ();
-                    False () -> TestFailure (actual);
-                    badBool -> Error_badBool (badBool)
+            main = \ => case mean inputList of
+                actual -> case eq_Int actual expectedOutput of
+                    True -> Success;
+                    False -> TestFailure actual;
+                    badBool -> Error_badBool badBool
         |] }
 
 meanNaive :: TestTree
 meanNaive = HRef.haskellReferenceTest meanTestTemplate
     { HRef.testName = "Naïve: foldl and lazy tuple"
+    , HRef.failWithInfo = True
     , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
         <> Stg.foldl
         <> [stg|
-        mean = () \n (xs) ->
+        mean = \xs ->
             letrec
-                totals = (go, zeroTuple) \n () -> foldl (go, zeroTuple);
-                zeroTuple = () \n () -> Tuple (zero, zero);
-                go = () \n (acc, x) -> case acc () of
-                    Tuple (t,n) ->
-                        let tx = (t,x) \u () -> add (t,x);
-                            n1 = (n) \u () -> add (n,one)
-                        in Tuple (tx, n1);
-                    badTuple -> Error_mean1 (badTuple)
-            in case totals (xs) of
-                Tuple (t,n) -> div (t,n);
-                badTuple -> Error_mean2 (badTuple)
+                totals = \(go zeroTuple) -> foldl go zeroTuple;
+                zeroTuple = \ -> Tuple zero zero;
+                go = \acc x -> case acc of
+                    Tuple t n ->
+                        let tx = \(t x) => add t x;
+                            n1 = \(n) => add n one
+                        in Tuple tx n1;
+                    badTuple -> Error_mean1 badTuple
+            in case totals xs of
+                Tuple t n -> div t n;
+                badTuple -> Error_mean2 badTuple
         |] }
 
 meanNaiveWithFoldl' :: TestTree
@@ -177,42 +179,42 @@ meanNaiveWithFoldl' = HRef.haskellReferenceTest meanTestTemplate
     , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
         <> Stg.foldl'
         <> [stg|
-        mean = () \n (xs) ->
+        mean = \xs ->
             letrec
-                totals = (go, zeroTuple) \n () -> foldl' (go, zeroTuple);
-                zeroTuple = () \n () -> Tuple (zero, zero);
-                go = () \n (acc, x) -> case acc () of
-                    Tuple (t,n) ->
-                        let tx = (t,x) \u () -> add (t,x);
-                            n1 = (n) \u () -> add (n,one)
-                        in Tuple (tx, n1);
-                    badTuple -> Error_mean1 (badTuple)
-            in case totals (xs) of
-                Tuple (t,n) -> div (t,n);
-                badTuple -> Error_mean2 (badTuple)
+                totals = \(go zeroTuple) -> foldl' go zeroTuple;
+                zeroTuple = \ -> Tuple zero zero;
+                go = \acc x -> case acc of
+                    Tuple t n ->
+                        let tx = \(t x) => add t x;
+                            n1 = \(n) => add n one
+                        in Tuple tx n1;
+                    badTuple -> Error_mean1 badTuple
+            in case totals xs of
+                Tuple t n -> div t n;
+                badTuple -> Error_mean2 badTuple
         |] }
 
 meanGood :: TestTree
 meanGood = HRef.haskellReferenceTest meanTestTemplate
     { HRef.testName = "Proper: foldl' and strict tuple"
-    , HRef.failWithInfo = True
+    , HRef.failWithInfo = False
     , HRef.failPredicate = \stgState -> length (stgStack stgState) >= 9
     , HRef.source = \inputList -> HRef.source meanTestTemplate inputList
         <> Stg.foldl'
         <> [stg|
-        mean = () \n (xs) ->
+        mean = \xs ->
             letrec
-                totals = (go, zeroTuple) \n () -> foldl' (go, zeroTuple);
-                zeroTuple = () \n () -> Tuple (zero, zero);
-                go = () \n (acc, x) -> case acc () of
-                    Tuple (t,n) ->
-                        let tx = (t,x) \u () -> add (t,x);
-                            n1 = (n) \u () -> add (n,one)
-                        in case tx () of
-                            default -> case n1 () of
-                                default -> Tuple (tx, n1);
-                    badTuple -> Error_mean1 (badTuple)
-            in case totals (xs) of
-                Tuple (t,n) -> div (t,n);
-                badTuple -> Error_mean2 (badTuple)
+                totals = \(go zeroTuple) -> foldl' go zeroTuple;
+                zeroTuple = \ -> Tuple zero zero;
+                go = \acc x -> case acc of
+                    Tuple t n ->
+                        let tx = \(t x) => add t x;
+                            n1 = \(n) => add n one
+                        in case tx of
+                            default -> case n1 of
+                                default -> Tuple tx n1;
+                    badTuple -> Error_mean1 badTuple
+            in case totals xs of
+                Tuple t n -> div t n;
+                badTuple -> Error_mean2 badTuple
         |] }

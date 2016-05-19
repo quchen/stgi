@@ -3,17 +3,20 @@
 
 module Test.Parser.Parser (tests) where
 
+
+
+import           Data.Bifunctor
 import           Data.Monoid
-import           Data.Text        (Text)
-import qualified Data.Text        as T
-import           Test.Tasty
-import           Test.Tasty.HUnit
+import           Data.Text      (Text)
+import qualified Data.Text      as T
 
 import Stg.Language
 import Stg.Language.Prettyprint
-import Stg.Parser
+import Stg.Parser.Parser
 
-import Test.Orphans ()
+import Test.Orphans     ()
+import Test.Tasty
+import Test.Tasty.HUnit
 
 
 
@@ -31,7 +34,7 @@ shouldParseToSuccess
     -> TestTree
 shouldParseToSuccess testName input output = testCase (T.unpack testName) test
   where
-    actual = parse input
+    actual = first prettyprint (parse program input)
     expected = Right (Program output)
     failMessage = case actual of
        Left err -> T.unlines
@@ -41,7 +44,7 @@ shouldParseToSuccess testName input output = testCase (T.unpack testName) test
           , "Error encountered:"
           , (T.unlines . map (" > " <>) . T.lines) err
           , "=============" ]
-       Right r -> prettyprintParserInverse r
+       Right r -> prettyprint r
     test = assertEqual (T.unpack failMessage) expected actual
 
 
@@ -49,25 +52,25 @@ shouldParseToSuccess testName input output = testCase (T.unpack testName) test
 simpleParses :: TestTree
 simpleParses = testGroup "Well-written programs"
     [ shouldParseToSuccess "Simple binding to boxed literal"
-        "one = () \\n () -> Int# (1#)"
+        "one = \\ -> Int# 1#"
         (Binds [("one", LambdaForm [] NoUpdate []
                           (AppC "Int#" [AtomLit 1]) )])
 
     , shouldParseToSuccess "Constructor application"
-        "con = () \\n () -> Maybe (b, 1#)"
+        "con = \\ -> Maybe b 1#"
         (Binds [("con", LambdaForm [] NoUpdate []
                           (AppC "Maybe"
                                  [AtomVar "b" , AtomLit 1] ))])
 
     , shouldParseToSuccess "Bound pattern"
-        "id = () \\n (x) -> case x () of y -> y ()"
+        "id = \\ x -> case x of y -> y"
         (Binds [("id", LambdaForm [] NoUpdate ["x"]
                           (Case (AppF "x" [])
                                 (Alts NoNonDefaultAlts
                                       (DefaultBound "y" (AppF "y" []))) ))])
 
     , shouldParseToSuccess "Primitive function application"
-        "add1 = () \\n (n) -> case +# n 1# of n' -> Int# (n')"
+        "add1 = \\n -> case +# n 1# of n' -> Int# n'"
         (Binds [("add1", LambdaForm [] NoUpdate ["n"]
                             (Case (AppP Add (AtomVar "n") (AtomLit 1))
                                 (Alts NoNonDefaultAlts
@@ -75,9 +78,9 @@ simpleParses = testGroup "Well-written programs"
 
 
     , shouldParseToSuccess "Let"
-        "a = () \\n () ->\n\
-        \    let y = (a) \\n (x) -> Foo (x)\n\
-        \    in Con (y)"
+        "a = \\ ->                                                           \n\
+        \    let y = \\(a) x -> Foo x                                        \n\
+        \    in Con y"
        (Binds [("a", LambdaForm [] NoUpdate []
                          (Let NonRecursive (Binds
                              [("y", LambdaForm ["a"] NoUpdate ["x"]
@@ -85,8 +88,8 @@ simpleParses = testGroup "Well-written programs"
                              (AppC "Con" [AtomVar "y"])))])
 
     , shouldParseToSuccess "fix"
-        "fix = () \\n (f) -> \n\
-        \    letrec x = (f, x) \\u () -> f (x) in x ()"
+        "fix = \\f ->                                                        \n\
+        \    letrec x = \\(f x) => f x in x"
         (Binds
             [("fix", LambdaForm [] NoUpdate ["f"]
                          (Let Recursive
@@ -95,16 +98,16 @@ simpleParses = testGroup "Well-written programs"
                              (AppF "x" [])))])
 
     , shouldParseToSuccess "factorial"
-        "fac = () \\n (n) ->                                                  \n\
-        \   case n () of                                                      \n\
-        \       0#      -> Int# (1#);                                         \n\
-        \       default -> case -# n 1# of                                    \n\
-        \           nMinusOne ->                                              \n\
-        \                let fac' = (nMinusOne) \\u () -> fac (nMinusOne)     \n\
-        \                in case fac' () of                                   \n\
-        \                    Int# (facNMinusOne) -> case *# n facNMinusOne of \n\
-        \                        result -> Int# (result);                     \n\
-        \                    err -> Error_fac (err)                           "
+        "fac = \\n ->                                                        \n\
+        \   case n of                                                        \n\
+        \       0#      -> Int# 1#;                                          \n\
+        \       default -> case -# n 1# of                                   \n\
+        \           nMinusOne ->                                             \n\
+        \                let fac' = \\(nMinusOne) => fac nMinusOne           \n\
+        \                in case fac' of                                     \n\
+        \                    Int# facNMinusOne -> case *# n facNMinusOne of  \n\
+        \                        result -> Int# result;                      \n\
+        \                    err -> Error_fac err                            "
         (Binds
             [(Var "fac",LambdaForm [] NoUpdate [Var "n"]
                 (Case (AppF (Var "n") []) (Alts (PrimitiveAlts
@@ -128,13 +131,13 @@ simpleParses = testGroup "Well-written programs"
 
    , shouldParseToSuccess "map with comment"
         "-- Taken from the 1992 STG paper, page 21.                          \n\
-        \map = () \\n (f, xs) ->                                             \n\
-        \    case xs () of                                                   \n\
-        \        Nil () -> Nil ();                                           \n\
-        \        Cons (y,ys) -> let fy = (f,y) \\u () -> f (y);              \n\
-        \                           mfy = (f,ys) \\u () -> map (f,ys)        \n\
-        \                       in Cons (fy,mfy);                            \n\
-        \        default -> badListError ()                                  "
+        \map = \\f xs ->                                                     \n\
+        \    case xs of                                                      \n\
+        \        Nil -> Nil;                                                 \n\
+        \        Cons y ys -> let fy = \\(f y) => f y;                       \n\
+        \                           mfy = \\(f ys) => map f ys               \n\
+        \                       in Cons fy mfy;                              \n\
+        \        default -> badListError                                     "
        (Binds
            [ ("map", LambdaForm [] NoUpdate ["f","xs"]
                  (Case (AppF "xs" []) (Alts (AlgebraicAlts
@@ -151,15 +154,15 @@ simpleParses = testGroup "Well-written programs"
 
     , shouldParseToSuccess "map, differently implemented"
          "-- Taken from the 1992 STG paper, page 22.                         \n\
-         \map = () \\n (f) ->                                                \n\
-         \    letrec mf = (f,mf) \\n (xs) ->                                 \n\
-         \        case xs () of                                              \n\
-         \            Nil () -> Nil ();                                      \n\
-         \            Cons (y,ys) -> let fy = (f,y) \\u () -> f (y);         \n\
-         \                               mfy = (mf, ys) \\u () -> mf (ys)    \n\
-         \                           in Cons (fy, mfy);                      \n\
-         \            default -> badListError ()                             \n\
-         \    in mf ()                                                       "
+         \map = \\f ->                                                       \n\
+         \    letrec mf = \\(f mf) xs ->                                     \n\
+         \        case xs of                                                 \n\
+         \            Nil -> Nil;                                            \n\
+         \            Cons y ys -> let fy = \\(f y) => f y;                  \n\
+         \                             mfy = \\(mf ys) => mf ys              \n\
+         \                           in Cons fy mfy;                         \n\
+         \            default -> badListError                                \n\
+         \    in mf                                                          "
         (Binds
             [ ("map", LambdaForm [] NoUpdate ["f"]
                   (Let Recursive
@@ -186,14 +189,14 @@ shouldFailToParse
     -> TestTree
 shouldFailToParse testName input = testCase (T.unpack testName) test
   where
-    test = case parse input of
+    test = case parse program input of
         Right ast -> (assertFailure . T.unpack . T.unlines)
             [ "Parser should have failed, but succeeded to parse to"
-            , (T.unlines . map (" > " <>) . T.lines . prettyprintAnsi) ast ]
+            , (T.unlines . map (" > " <>) . T.lines . prettyprint) ast ]
         Left _err -> pure ()
 
 badParses :: TestTree
 badParses = testGroup "Parsers that should fail"
     [ shouldFailToParse "Updatable lambda forms don't take arguments"
-        "x = () \\u (y) -> z ()"
+        "x = \\y => z"
     ]

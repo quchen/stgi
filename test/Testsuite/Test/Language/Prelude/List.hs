@@ -11,9 +11,9 @@ import           Data.Monoid
 import           Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Language.Prelude as Stg
+import qualified Stg.Language.Prelude   as Stg
 import           Stg.Machine.Types
-import           Stg.Parser
+import           Stg.Parser.QuasiQuoter
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -53,13 +53,13 @@ testFilter = haskellReferenceTest defSpec
         <> Stg.filter
         <> [stg|
 
-        main = () \u () ->
+        main = \ =>
             letrec
-                positive = () \n (x) -> gt_Int (x, threshold);
-                filtered = (positive) \n () -> filter (positive, inputList)
-            in case equals_List_Int (expectedResult, filtered) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+                positive = \x -> gt_Int x threshold;
+                filtered = \(positive) -> filter positive inputList
+            in case equals_List_Int expectedResult filtered of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testSort :: TestTree
@@ -72,11 +72,11 @@ testSort = haskellReferenceTest defSpec
         <> Stg.sort
         <> [stg|
 
-        main = () \u () ->
-            let sorted = () \u () -> sort (inputList)
-            in case equals_List_Int (expectedResult, sorted) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let sorted = \ => sort inputList
+            in case equals_List_Int expectedResult sorted of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testMap :: TestTree
@@ -91,13 +91,13 @@ testMap = haskellReferenceTest defSpec
         <> Stg.equals_List_Int
         <> [stg|
 
-        main = () \u () ->
+        main = \ =>
             letrec
-                plusOffset = () \n (n) -> add (n, offset);
-                actual = (plusOffset) \u () -> map (plusOffset, inputList)
-            in case equals_List_Int (actual, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+                plusOffset = \n -> add n offset;
+                actual = \(plusOffset) => map plusOffset inputList
+            in case equals_List_Int actual expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testZipWith :: TestTree
@@ -112,11 +112,11 @@ testZipWith = haskellReferenceTest defSpec
         <> Stg.zipWith
         <> [stg|
 
-        main = () \u () ->
-            let zipped = () \n () -> zipWith (add, list1, list2)
-            in case equals_List_Int (zipped, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let zipped = \ -> zipWith add list1 list2
+            in case equals_List_Int zipped expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 
@@ -124,17 +124,17 @@ testFoldr, testFoldl, testFoldl' :: TestTree
 testFoldr  = foldSumTemplate
     "foldr"
     foldr
-    (Stg.foldr <> [stg| fold = () \n () -> foldr  () |])
+    (Stg.foldr <> [stg| fold = \ -> foldr |])
     (const False)
 testFoldl  = foldSumTemplate
     "foldl"
     foldl
-    (Stg.foldl <> [stg| fold = () \n () -> foldl  () |])
+    (Stg.foldl <> [stg| fold = \ -> foldl |])
     (const False)
 testFoldl' = foldSumTemplate
     "foldl'"
     L.foldl'
-    (Stg.foldl' <> [stg| fold = () \n () -> foldl' () |])
+    (Stg.foldl' <> [stg| fold = \ -> foldl' |])
     (\stgState -> length (stgStack stgState) >= 8) -- Stack should stay small!
 
 foldSumTemplate
@@ -157,7 +157,7 @@ foldSumTemplate foldName foldF foldStg failP
     { testName = foldName
     , maxSteps = 1024
     , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = failP
     , source = \(z, xs) ->
            foldStg
@@ -167,11 +167,11 @@ foldSumTemplate foldName foldF foldStg failP
         <> Stg.listOfNumbers "input" xs
         <> Stg.int "expected" (foldF (+) z xs)
         <> [stg|
-        main = () \u () ->
-            let actual = () \u () -> fold (add, z, input)
-            in case eq_Int (actual, expected) of
-                True () -> Success ();
-                default -> TestFail ()
+        main = \ =>
+            let actual = \ => fold add z input
+            in case eq_Int actual expected of
+                True  -> Success;
+                defau -> TestFail
         |] }
 
 testConcat2 :: TestTree
@@ -185,11 +185,11 @@ testConcat2 = haskellReferenceTest defSpec
         <> Stg.concat2
         <> [stg|
 
-        main = () \u () ->
-            let concatenated = () \n () -> concat2 (list1, list2)
-            in case equals_List_Int (concatenated, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let concatenated = \ -> concat2 list1 list2
+            in case equals_List_Int concatenated expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testReverse :: TestTree
@@ -197,7 +197,7 @@ testReverse = haskellReferenceTest defSpec
     { testName = "reverse"
     , maxSteps = 1024
     , failWithInfo = True
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = const False
     , source = \xs ->
            Stg.equals_List_Int
@@ -206,11 +206,11 @@ testReverse = haskellReferenceTest defSpec
         <> Stg.reverse
         <> [stg|
 
-        main = () \u () ->
-            let reversed = () \n () -> reverse (input)
-            in case equals_List_Int (reversed, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let reversed = \ -> reverse input
+            in case equals_List_Int reversed expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testCycle :: TestTree
@@ -226,13 +226,13 @@ testCycle = haskellReferenceTest defSpec
         <> Stg.cycle
         <> [stg|
 
-        main = () \u () ->
+        main = \ =>
             letrec
-                cycled = () \n () -> cycle (list);
-                takeCycled = (cycled) \n () -> take (n, cycled)
-            in case equals_List_Int (takeCycled, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+                cycled = \ -> cycle list;
+                takeCycled = \(cycled) -> take n cycled
+            in case equals_List_Int takeCycled expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testRepeat :: TestTree
@@ -247,13 +247,13 @@ testRepeat = haskellReferenceTest defSpec
         <> Stg.repeat
         <> [stg|
 
-        main = () \u () ->
+        main = \ =>
             letrec
-                repeated = () \n () -> repeat (item);
-                takeRepeated = (repeated) \n () -> take (n, repeated)
-            in case equals_List_Int (takeRepeated, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+                repeated = \ -> repeat item;
+                takeRepeated = \(repeated) -> take n repeated
+            in case equals_List_Int takeRepeated expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testReplicate :: TestTree
@@ -261,7 +261,7 @@ testReplicate = haskellReferenceTest defSpec
     { testName = "replicate"
     , maxSteps = 1024
     , failWithInfo = True
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = \stgState -> case stgCode stgState of
         Eval AppP {} _ -> True
         _ -> False
@@ -274,11 +274,11 @@ testReplicate = haskellReferenceTest defSpec
         <> Stg.replicate
         <> [stg|
 
-        main = () \u () ->
-            let replicated = () \n () -> replicate (n, item)
-            in case equals_List_Int (replicated, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let replicated = \ -> replicate n item
+            in case equals_List_Int replicated expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testIterate :: TestTree
@@ -296,14 +296,14 @@ testIterate = haskellReferenceTest defSpec
         <> Stg.iterate
         <> [stg|
 
-        main = () \u () ->
+        main = \ =>
             letrec
-                addOffset = () \n () -> add (offset);
-                iterated = (addOffset) \n () -> iterate (addOffset, seed);
-                takeIterated = (iterated) \n () -> take (n, iterated)
-            in case equals_List_Int (takeIterated, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+                addOffset = \ -> add offset;
+                iterated = \(addOffset) -> iterate addOffset seed;
+                takeIterated = \(iterated) -> take n iterated
+            in case equals_List_Int takeIterated expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 
@@ -317,9 +317,9 @@ testLength = haskellReferenceTest defSpec
         <> Stg.length
         <> [stg|
 
-        main = () \u () ->
-            let len = () \n () -> length (input)
-            in case eq_Int (len, expectedResult) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let len = \ -> length input
+            in case eq_Int len expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }

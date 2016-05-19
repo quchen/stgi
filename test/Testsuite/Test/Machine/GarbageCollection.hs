@@ -17,7 +17,7 @@ import           Test.Tasty.HUnit
 import Stg.Language.Prettyprint
 import Stg.Machine.GarbageCollection
 import Stg.Machine.Types
-import Stg.Parser
+import Stg.Parser.QuasiQuoter
 
 import Test.Orphans ()
 
@@ -28,8 +28,8 @@ tests = testGroup "Garbage collection"
     [ splitHeapTest
     ]
 
-prettyIndented :: PrettyAnsi a => a -> Text
-prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprintAnsi
+prettyIndented :: Pretty a => a -> Text
+prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprint
 
 splitHeapTest :: TestTree
 splitHeapTest = testGroup "Split heap in dead/alive"
@@ -40,12 +40,12 @@ splitHeapTest = testGroup "Split heap in dead/alive"
   where
     (~>) = (,)
     dirtyHeap = Heap
-        [ MemAddr 0 ~> HClosure (Closure [stg| (used1) \n () -> Used (used1) |]
+        [ MemAddr 0 ~> HClosure (Closure [stg| \(used1) -> Used used1 |]
                                 [Addr (MemAddr 1)] )
-        , MemAddr 1 ~> HClosure (Closure [stg| (used2, prim) \n () -> Used (used2, prim) |]
+        , MemAddr 1 ~> HClosure (Closure [stg| \(used2 prim) -> Used used2 prim |]
                                 [Addr (MemAddr 2), PrimInt 1] )
-        , MemAddr 2 ~> HClosure (Closure [stg| () \n () -> Used ()   |] [])
-        , MemAddr 3 ~> HClosure (Closure [stg| () \n () -> Unused () |] []) ]
+        , MemAddr 2 ~> HClosure (Closure [stg| \ -> Used   |] [])
+        , MemAddr 3 ~> HClosure (Closure [stg| \ -> Unused |] []) ]
     globals = Globals
         [ "main"  ~> Addr (MemAddr 0) ]
 

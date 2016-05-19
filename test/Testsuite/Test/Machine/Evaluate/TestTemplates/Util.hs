@@ -47,5 +47,5 @@ varLookup state var =
             Nothing                  -> VarLookupError "not found on heap"
         Success (PrimInt i) -> VarLookupPrim i
 
-data PrettyprinterDict = PrettyprinterDict (forall a. PrettyAnsi a => a -> Text)
-                                           (forall a. PrettyAnsi a => a -> Doc)
+data PrettyprinterDict = PrettyprinterDict (forall a. Pretty a => a -> Text)
+                                           (forall a. Pretty a => a -> Doc)
