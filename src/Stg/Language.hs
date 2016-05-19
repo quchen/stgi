@@ -49,7 +49,33 @@ import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
 -- $setup
 -- >>> :set -XQuasiQuotes
--- >>> import Stg.Parser
+-- >>> import Stg.Parser.QuasiQuoter
+
+
+
+-- | Package of style definitions used for prettyprinting the STG AST.
+data StgAstStyle = StgAstStyle
+    { keyword :: Doc -> Doc
+        -- ^ Keyword style
+    , prim :: Doc -> Doc
+        -- ^ Primitive style, for literals and functions
+    , variable :: Doc -> Doc
+        -- ^ Variable style
+    , constructor :: Doc -> Doc
+        -- ^ Constructor style
+    , semicolon :: Doc -> Doc
+        -- ^ Semicolons separating lists of bindings and alternatives
+    }
+
+-- | Colour definitions used by the STG AST.
+style :: StgAstStyle
+style = StgAstStyle
+    { keyword     = id
+    , prim        = dullgreen
+    , variable    = dullyellow
+    , constructor = dullmagenta
+    , semicolon   = dullwhite
+    }
 
 
 
@@ -79,7 +105,7 @@ instance Show Binds where
 -- body. The lambda body must not be of primitive type, as this would imply
 -- the value is both boxed and unboxed.
 --
--- >>> [stg| (x) \n (y, z) -> expr (x,z) |]
+-- >>> [stg| \(x) y z -> expr x z |]
 -- LambdaForm [Var "x"] NoUpdate [Var "y",Var "z"] (AppF (Var "expr") [AtomVar (Var "x"),AtomVar (Var "z")])
 data LambdaForm = LambdaForm ![Var] !UpdateFlag ![Var] !Expr
     deriving (Eq, Ord, Show, Generic)
@@ -100,8 +126,8 @@ data Rec = NonRecursive | Recursive
 data Expr =
       Let !Rec !Binds !Expr    -- ^ Let expression @let(rec) ... in ...@
     | Case !Expr !Alts         -- ^ Case expression @case ... of ... x -> y@
-    | AppF !Var ![Atom]        -- ^ Function application @f (x,y,z)@
-    | AppC !Constr ![Atom]     -- ^ Constructor application @Maybe (a)@
+    | AppF !Var ![Atom]        -- ^ Function application @f x y z@
+    | AppC !Constr ![Atom]     -- ^ Constructor application @Just a@
     | AppP !PrimOp !Atom !Atom -- ^ Primitive function application @+# 1# 2#@
     | Lit !Literal             -- ^ Literal expression @1#@
     deriving (Eq, Ord, Show, Generic)
@@ -120,7 +146,7 @@ data NonDefaultAlts =
         -- alternative. These can be useful to force or unpack values.
 
     | AlgebraicAlts !(NonEmpty AlgebraicAlt)
-        -- ^ Algebraic alternative, like @Cons (x,xs)@.
+        -- ^ Algebraic alternative, like @Cons x xs@.
 
     | PrimitiveAlts !(NonEmpty PrimitiveAlt)
         -- ^ Primitive alternative, like @1#@.
@@ -130,7 +156,7 @@ data NonDefaultAlts =
 data AlgebraicAlt = AlgebraicAlt !Constr ![Var] !Expr
     deriving (Eq, Ord, Show, Generic)
 
--- | As in @1, 2, 3@
+-- | As in @1#@, @2#@, @3#@
 data PrimitiveAlt = PrimitiveAlt !Literal !Expr
     deriving (Eq, Ord, Show, Generic)
 
@@ -158,7 +184,17 @@ instance Num Literal where
 
 -- | Primitive operations.
 data PrimOp =
-    Add | Sub | Mul | Div | Mod | Eq | Lt | Leq | Gt | Geq | Neq
+      Add -- ^ @+@
+    | Sub -- ^ @-@
+    | Mul -- ^ @*@
+    | Div -- ^ @/@
+    | Mod -- ^ @%@
+    | Eq  -- ^ @==@
+    | Lt  -- ^ @<@
+    | Leq -- ^ @<=@
+    | Gt  -- ^ @>@
+    | Geq -- ^ @>=@
+    | Neq -- ^ @/=@
     deriving (Eq, Ord, Show, Generic, Bounded, Enum)
 
 -- | Variable.
@@ -167,7 +203,8 @@ newtype Var = Var Text
 
 instance IsString Var where fromString = coerce . T.pack
 
--- | Smallest unit of data.
+-- | Smallest unit of data. Atoms unify variables and literals, and are what
+-- functions take as arguments.
 data Atom =
       AtomVar !Var
     | AtomLit !Literal
@@ -183,7 +220,7 @@ instance IsString Constr where fromString = coerce . T.pack
 
 --------------------------------------------------------------------------------
 -- Lift instances
-deriveLiftMany [ ''Program, ''Literal, ''LambdaForm , ''UpdateFlag, ''Rec
+deriveLiftMany [ ''Program, ''Literal, ''LambdaForm, ''UpdateFlag, ''Rec
                , ''Expr, ''Alts, ''AlgebraicAlt, ''PrimitiveAlt, ''DefaultAlt
                , ''PrimOp, ''Atom ]
 
@@ -208,49 +245,42 @@ instance Lift Var where
 --------------------------------------------------------------------------------
 -- Pretty instances
 
+semicolonTerminated :: [Doc] -> Doc
+semicolonTerminated = align . vsep . punctuate (semicolon style ";")
+
 instance Pretty Program where
     pretty (Program binds) = pretty binds
 
 instance Pretty Binds where
     pretty (Binds bs) =
-        (align . vsep . punctuate ";" . map prettyBinding . M.assocs) bs
+        (semicolonTerminated . map prettyBinding . M.assocs) bs
       where
         prettyBinding (var, lambda) =
             pretty var <+> "=" <+> pretty lambda
 
--- | Prettyprint a 'LambdaForm', given prettyprinters for subcomponents.
+-- | Prettyprint a 'LambdaForm', given prettyprinters for the free variable
+-- list.
 --
 -- Introduced so 'Stg.Machine.Types.Closure' can hijack it to display
 -- the free value list differently.
 prettyLambda
-    :: (Doc -> Doc)        -- ^ Lambda head formatter, e.g. to colour @() \n ()@
-    -> ([Var] -> Doc)      -- ^ Free variable list printer
-    -> (UpdateFlag -> Doc) -- ^ Update flag printer
-    -> ([Var] -> Doc)      -- ^ Bound variable list printer
-    -> (Expr -> Doc)       -- ^ Body printer
+    :: ([Var] -> Doc) -- ^ Free variable list printer
     -> LambdaForm
     -> Doc
-prettyLambda
-    prettyLambdaHead
-    prettyFreeList
-    prettyUpd
-    prettyBoundList
-    prettyExpr
-    (LambdaForm free upd bound expr)
-  = hsep [ prettyLambdaHead (hsep
-             [ prettyFreeList free
-             , prettyUpd upd
-             , prettyBoundList bound ])
-         , "->"
-         , prettyExpr expr ]
+prettyLambda pprFree (LambdaForm free upd bound expr) =
+    (prettyExp . prettyUpd . prettyBound . prettyFree) "\\"
+  where
+    prettyFree | null free = id
+               | otherwise = (<> lparen <> pprFree free <> rparen)
+    prettyUpd = (<+> case upd of Update   -> "=>"
+                                 NoUpdate -> "->" )
+    prettyBound | null bound = id
+                | null free = (<> prettyList bound)
+                | otherwise = (<+> prettyList bound)
+    prettyExp = (<+> pretty expr)
 
 instance Pretty LambdaForm where
-    pretty = prettyLambda id prettyList pretty prettyList pretty
-
-instance Pretty UpdateFlag where
-    pretty = \case
-        Update   -> "\\u"
-        NoUpdate -> "\\n"
+    pretty = prettyLambda prettyList
 
 instance Pretty Rec where
     pretty = \case
@@ -260,27 +290,38 @@ instance Pretty Rec where
 instance Pretty Expr where
     pretty = \case
         Let rec binds expr -> (align . vsep)
-            [ "let" <> pretty rec <+> (case rec of
+            [ keyword style ("let" <> pretty rec) <+> (case rec of
                 Recursive -> hardline <> indent 4 (pretty binds)
                 NonRecursive -> pretty binds)
-            , "in" <+> pretty expr ]
-        Case expr alts -> vsep [ "case" <+> pretty expr <+> "of"
+            , keyword style "in" <+> pretty expr ]
+
+        Case expr alts -> vsep [ hsep [ keyword style "case"
+                                      , pretty expr
+                                      , keyword style "of" ]
                                , indent 4 (align (pretty alts)) ]
+
+        AppF var []   -> pretty var
         AppF var args -> pretty var <+> prettyList args
+
+        AppC con []   -> pretty con
         AppC con args -> pretty con <+> prettyList args
+
         AppP op arg1 arg2 -> pretty op <+> pretty arg1 <+> pretty arg2
+
         Lit lit -> pretty lit
 
 instance Pretty Alts where
     pretty (Alts NoNonDefaultAlts def) = pretty def
     pretty (Alts (AlgebraicAlts alts) def) =
-        (align . vsep . punctuate ";") (map pretty (toList alts) ++ [pretty def])
+        semicolonTerminated (map pretty (toList alts) <> [pretty def])
     pretty (Alts (PrimitiveAlts alts) def) =
-        (align . vsep . punctuate ";") (map pretty (toList alts) ++ [pretty def])
+        semicolonTerminated (map pretty (toList alts) <> [pretty def])
 
 instance Pretty AlgebraicAlt where
-    pretty (AlgebraicAlt con args expr) =
-        pretty con <+> prettyList args <+> "->" <+> pretty expr
+    pretty (AlgebraicAlt con [] expr)
+        = pretty con <+> "->" <+> pretty expr
+    pretty (AlgebraicAlt con args expr)
+        = pretty con <+> prettyList args <+> "->" <+> pretty expr
 
 instance Pretty PrimitiveAlt where
     pretty (PrimitiveAlt lit expr) =
@@ -292,10 +333,10 @@ instance Pretty DefaultAlt where
         DefaultBound var expr -> pretty var <+> "->" <+> pretty expr
 
 instance Pretty Literal where
-    pretty (Literal i) = integer i <> "#"
+    pretty (Literal i) = prim style (integer i <> "#")
 
 instance Pretty PrimOp where
-    pretty = \case
+    pretty op = prim style (case op of
         Add -> "+#"
         Sub -> "-#"
         Mul -> "*#"
@@ -306,17 +347,17 @@ instance Pretty PrimOp where
         Leq -> "<=#"
         Gt  -> ">#"
         Geq -> ">=#"
-        Neq -> "/=#"
+        Neq -> "/=#" )
 
 instance Pretty Var where
-    pretty (Var name) = string (T.unpack name)
-    prettyList = parens . align . hcat . punctuate "," . map pretty
+    pretty (Var name) = variable style (string (T.unpack name))
+    prettyList = hsep . map pretty
 
 instance Pretty Atom where
     pretty = \case
         AtomVar var -> pretty var
         AtomLit lit -> pretty lit
-    prettyList = parens . align . hcat . punctuate "," . map pretty
+    prettyList = hsep . map pretty
 
 instance Pretty Constr where
-    pretty (Constr name) = string (T.unpack name)
+    pretty (Constr name) = constructor style (string (T.unpack name))
