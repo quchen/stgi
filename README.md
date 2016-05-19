@@ -61,8 +61,8 @@ Differences from the 1992 paper
   e.g. with `Int#`.
 - A lambda's head is written `\(free) bound -> body`, where `free` and
   `bound` are space-separated variable lists, instead of the paper's
-  `(free) \\n (bound) -> body`, which uses comma-separated lists. The
-  update flag `\\u` is signified using a double arrow `=>` instead of the
+  `(free) \n (bound) -> body`, which uses comma-separated lists. The
+  update flag `\u` is signified using a double arrow `=>` instead of the
   normal arrow `->`.
 
 ### Evaluation
@@ -204,7 +204,7 @@ A couple of things to keep in mind:
 
 - Function application cannot be nested, since function arguments are primitives
   or variables. Haskell's `f (g x)` would be written
-  `let gx = \ -> g(x) in f gx` in the STG, assuming all variables are in global
+  `let gx = \ -> g x in f gx` in the STG, assuming all variables are in global
   scope.
 
 - Free variable values have to be explicitly given to the closure. Function
