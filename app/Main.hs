@@ -15,7 +15,7 @@ import System.IO             (stdout)
 import           Stg.Language
 import qualified Stg.Language.Prelude     as Stg
 import           Stg.Language.Prettyprint
-import           Stg.Parser
+import           Stg.Parser.QuasiQuoter
 import           Stg.RunForPager
 
 
@@ -51,26 +51,26 @@ main = do
         Just x -> pure x
         Nothing -> hSupportsANSI stdout
     if ansi
-        then runForPager prettyprintAnsi prog
-        else runForPager prettyprint     prog
+        then runForPager prettyprint      prog
+        else runForPager prettyprintPlain prog
 
 prog :: Program
 prog = mconcat
         [ Stg.add
         , Stg.int "zero" 0
         , Stg.foldl'
-        , Stg.zipWith ] <> [stg|
+        , Stg.zipWith ] <> [program|
 
-    flipConst = () \n (x, y) -> y ();
-    main = () \u () ->
+    flipConst = \x y -> y;
+    main = \ =>
         letrec
-            fibo = () \u () ->
+            fibo = \ =>
                 letrec
-                    fib0 = (fib1) \n () -> Cons (zero, fib1);
-                    fib1 = (fib2)  \u () ->
-                        let one = () \n () -> Int# (1#)
-                        in Cons (one, fib2);
-                    fib2 = (fib0, fib1) \u () -> zipWith (add, fib0, fib1)
-                in fib0 ()
-        in foldl' (flipConst, zero, fibo)
+                    fib0 = \(fib1) -> Cons zero fib1;
+                    fib1 = \(fib2) =>
+                        let one = \ -> Int# 1#
+                        in Cons one fib2;
+                    fib2 = \(fib0 fib1) => zipWith add fib0 fib1
+                in fib0
+        in foldl' flipConst zero fibo
     |]
