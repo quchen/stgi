@@ -7,7 +7,6 @@ module Stg.Util (
 
     -- * Prettyprinter extensions
     commaSep,
-    tupled',
     bulletList,
     pluralS,
 ) where
@@ -57,10 +56,6 @@ instance Monoid a => Applicative (Validate a) where
 -- | @[a,b,c]  ==>  a, b, c@
 commaSep :: [Doc] -> Doc
 commaSep = encloseSep mempty mempty (comma <> space)
-
--- | Like 'tupled', but comma-space separated.
-tupled' :: [Doc] -> Doc
-tupled' = encloseSep lparen rparen (comma <> space)
 
 -- | Prefix all contained documents with a bullet symbol.
 bulletList :: [Doc] -> Doc
