@@ -54,12 +54,16 @@ Differences from the 1992 paper
 
 ### Grammar
 
-- Values are represented by function application to an empty argument list,
-  `x ()`, as opposed to having no argument list at all in the paper.
-- parentheses `()` instead of curly braces `{}`
+- Function application uses no parentheses or commas like in Haskell `f x y z`,
+  not with curly parentheses and commas like in the paper `f {x,y,z}`.
 - Comment syntax like in Haskell
 - Constructors can end with a `#` to allow labelling primitive boxes
   e.g. with `Int#`.
+- A lambda's head is written `\(free) bound -> body`, where `free` and
+  `bound` are space-separated variable lists, instead of the paper's
+  `(free) \\n (bound) -> body`, which uses comma-separated lists. The
+  update flag `\\u` is signified using a double arrow `=>` instead of the
+  normal arrow `->`.
 
 ### Evaluation
 
@@ -101,16 +105,13 @@ language.
 An STG program consists of a set of bindings, which each have the form
 
 ```haskell
-name = (free vars) \π (bound vars) -> body
+name = \(<free vars>) <bound vars> -> body
 ```
 
 The right-hand side is called a *lambda form*, and is closely related to the
 usual lambda from Haskell.
 
   - Bound variables are the lambda paramaters just like in Haskell.
-  - The *update flag* `π` can be either `u` for *update* or `n` for *no
-    update*. This flag is key for the graph reduction mechamism of the STG,
-    and will be discussed later. It is safe to always use `n` as update flag.
   - Free variables are the variables used in the `body` that are not bound or
     global. This means that variables from the parent scope are not
     automatically in scope, but you can get them into scope by adding them to
@@ -131,11 +132,11 @@ of a couple of alternatives.
     scrutinee) to WHNF and continue evaluating the matching alternative. Note
     that the WHNF part makes case strict, and indeed it is the *only* construct
     that does evaluation.
-  - **Function application:** `function (<args>)`: Like Haskell's function
+  - **Function application:** `function <args>`: Like Haskell's function
     application. The `<args>` are primitive values or variables.
   - **Primitive application:** `primop# <arg1> <arg2>`: Primitive operation on
     unboxed integers.
-  - **Constructor application:** `Constructor (<args>)`: An algebraic data
+  - **Constructor application:** `Constructor <args>`: An algebraic data
     constructor applied to a number of arguments, just like function
     application.
   - **Primitive literal:** An integer postfixed with `#`, like `123#`.
@@ -143,33 +144,31 @@ of a couple of alternatives.
 For example, Haskell's `maybe` function could be implemented in STG like this:
 
 ```haskell
-maybe = () \n (just, nothing, x) -> case x () of
-    Just (j) -> just (j);
-    Nothing () -> nothing
+maybe = \just nothing x -> case x of
+    Just j  -> just j;
+    Nothing -> nothing
 ```
-
-Note that values are written like functions with empty argument lists.
 
 ### Updates
 
-The update flag of a lambda form tells the machine to update the lambda form's
-value in memory once it has been calculated, so the computation does not have to
-be repeated should the value be required again. This is the mechanism that is
-key to the lazy evaluation model the STG implements. For example, evaluating
-`main` in
+A lambda form can optionally use a double arrow `=>`, instead of a normal arrow `->`.
+This tells the machine to update the lambda form's value in memory once it has
+been calculated, so the computation does not have to be repeated should the
+value be required again. This is the mechanism that is key to the lazy
+evaluation model the STG implements. For example, evaluating `main` in
 
 ```haskell
 add = <add two boxed ints>
-one = () \n () -> Int# (1#);
-two = () \n () -> Int# (2#);
-main = () \u () -> add2 (one, two)
+one = \ -> Int# 1#;
+two = \ -> Int# 2#;
+main = \ => add2 one two
 ```
 
 would, once the computation returns, overwrite `main` (modulo technical
 details) with
 
 ```haskell
-main = () \u () -> Int# (3#)
+main = \ -> Int# 3#
 ```
 
 A couple of things to keep in mind:
@@ -183,44 +182,41 @@ A couple of things to keep in mind:
 
 ### Pitfalls
 
-- Semicolons are an annoyance that allows the grammar to be *much* simpler, so
-  we're trading code complexity for usability here - a worthy tradeoff for a
-  project that aims to have relatively simple code as part of its goal.
+- Semicolons are an annoyance that allows the grammar to be simpler. This
+  tradeoff was chosen to keep the project's code easier to read, as it does
+  not require indentation handling in the grammar.
 
 - Lambda forms stand for deferred computations, and as such cannot have
   primitive type, which are always in normal form. To handle primitive types,
   you'll have to box them like in
 
   ```haskell
-  three = () \n () -> Int# (3#)
+  three = \ -> Int# 3#
   ```
 
   Writing
 
   ```haskell
-  three' = () \n () -> 3#
+  three' = \ -> 3#
   ```
 
   is invalid, and the machine would halt in an error state.
 
-- Values and nullary constructors take empty argument lists - `()` - as
-  arguments.
-
 - Function application cannot be nested, since function arguments are primitives
   or variables. Haskell's `f (g x)` would be written
-  `let gx = () \n () -> g (x) in f (gx)` in the STG, assuming all variables are
-  in global scope.
+  `let gx = \ -> g(x) in f gx` in the STG, assuming all variables are in global
+  scope.
 
 - Free variable values have to be explicitly given to the closure. Function
   composition could be implemented like
 
   ```haskell
-  compose = () \n (f,g,x) -> let gx = (g,x) \n () -> g (x)
-                             in f (gx)
+  compose = \f g x -> let gx = \(g x) -> g x
+                      in f gx
   ```
 
   Forgetting to hand `g` and `x` to the `gx` lambda form would mean that in the
-  `g (x)` call neither of them was in scope, and the machine would halt with
+  `g x` call neither of them was in scope, and the machine would halt with
   a "variable not in scope" error.
 
 

@@ -1,22 +1,31 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE OverloadedLists            #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 -- | A parser for the STG language, modeled after the grammar given in the
 -- description in the 1992 paper
 -- <http://research.microsoft.com/apps/pubs/default.aspx?id=67083 (link)>
--- with a couple of minor differences:
+-- with a couple of differences to enhance usability:
 --
---   * Values are represented by function application to an empty argument list,
---     @x ()@, as opposed to having no argument list at all in the paper.
---   * parentheses @()@ instead of curly braces @{}@
---   * Comment syntax like in Haskell
---   * Constructors can end with a @#@ to allow labelling primitive boxes
+--   * Function application uses no parentheses or commas like in Haskell
+--     (@f x y z@), not with curly parentheses and commas like in the paper
+--     (@f {x,y,z}@).
+--   * Comment syntax like in Haskell: @-- inline@, @{- multiline -}@.
+--   * Constructors may end with a @#@ to allow labelling primitive boxes
 --     e.g. with @Int#@.
+--   * A lambda's head is written @\\(free) bound -> body@, where @free@ and
+--     @bound@ are space-separated variable lists, instead of the paper's
+--     @(free) \\n (bound) -> body@, which uses comma-separated lists. The
+--     update flag @\\u@ is signified using a double arrow @=>@ instead of the
+--     normal arrow @->@.
 module Stg.Parser.Parser (
-    -- Parsing functions
-    parse,
 
-    -- Parser values
+    -- * General parsing
+    parse,
+    StgParser,
+
+    -- * Parser rules
     program,
     binds,
     lambdaForm,
@@ -28,204 +37,139 @@ module Stg.Parser.Parser (
     defaultAlt,
     literal,
     primOp,
-    vars,
-    atoms,
     atom,
-    varTok,
-    conTok,
+    var,
+    con,
 ) where
 
 
 
 import           Control.Applicative
 import           Control.Monad
-import           Data.Bifunctor
-import qualified Data.List.NonEmpty    as NonEmpty
-import qualified Data.Map.Strict       as M
-import           Data.Monoid
-import           Data.Text             (Text)
-import qualified Data.Text             as T
-import           Text.Megaparsec       ((<?>))
-import qualified Text.Megaparsec       as P
-import qualified Text.Megaparsec.Char  as C
-import qualified Text.Megaparsec.Lexer as L
-import           Text.Megaparsec.Text
+import           Data.Char                    (isSpace)
+import qualified Data.List.NonEmpty           as NonEmpty
+import qualified Data.Map.Strict              as M
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import           Text.Parser.Token.Highlight
+import           Text.PrettyPrint.ANSI.Leijen (Doc)
+import           Text.Trifecta                as Trifecta
 
 import Stg.Language
 
--- $setup
--- >>> :set -XOverloadedStrings
 
-
-
---------------------------------------------------------------------------------
--- * Convenience
 
 -- | Parse STG source using a user-specified parser. To parse a full program,
 -- use @'parse' 'program'@.
 --
--- >>> parse program "id = () \\n (x) -> x ()"
+-- >>> parse program "id = \\x -> x"
 -- Right (Program (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))]))
-parse :: Parser ast -> Text -> Either Text ast
-parse p input = first (T.pack . show) parseResult
-  where
-    parseResult = P.runParser (spaceConsumer *> p <* P.eof)
-                              "input"
-                              input
+parse :: StgParser ast -> Text -> Either Doc ast
+parse (StgParser p) input = case parseString (whiteSpace *> p <* eof) mempty (T.unpack input) of
+    Success a -> Right a
+    Failure e -> Left e
 
+-- | Skip a certain token. Useful to consume, but not otherwise use, certain
+-- tokens.
+skipToken :: TokenParsing parser => parser a -> parser ()
+skipToken = void . token
 
+-- | A parser for an STG syntax element.
+newtype StgParser ast = StgParser (Trifecta.Parser ast)
+    deriving (CharParsing, Parsing, Alternative, Applicative, Functor, Monad)
 
---------------------------------------------------------------------------------
--- * Lexing
+instance TokenParsing StgParser where
+    someSpace = skipMany (void (satisfy isSpace) <|> comment)
 
--- | Parser that skips spaces and comments.
---
---   * Line comments start with @--@
---   * Block comments are enclosed in @{- ... -}@
-spaceConsumer :: Parser ()
-spaceConsumer = L.space (P.some P.spaceChar *> pure ())
-                        (L.skipLineComment "--")
-                        (L.skipBlockComment "{-" "-}")
+-- | Syntax rules for parsing variable-looking like identifiers.
+varId :: TokenParsing parser => IdentifierStyle parser
+varId = IdentifierStyle
+    { _styleName = "variable"
+    , _styleStart = lower <|> char '_'
+    , _styleLetter = alphaNum <|> oneOf "_'"
+    , _styleReserved = ["let", "letrec", "in", "case", "of", "default", "_"]
+    , _styleHighlight = Identifier
+    , _styleReservedHighlight = ReservedIdentifier }
 
--- | Apply a parser, and skip whitespace following it.
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme spaceConsumer
+-- | Parse a variable identifier. Variables start with a lower-case letter or
+-- @_@, followed by a string consisting of alphanumeric characters or @'@, @_@.
+var :: (Monad parser, TokenParsing parser) => parser Var
+var = ident varId
 
--- | Parse a certain chain of characters.
-symbol :: String -> Parser ()
-symbol s = void (lexeme (C.string s)) <?> s
+-- | Skip a reserved variable identifier.
+reserved :: (Monad parser, TokenParsing parser) => Text -> parser ()
+reserved = reserveText varId
 
--- | Semicolon character, separating bindings and alternatives from
--- each other.
-semicolonTok :: Parser ()
-semicolonTok = symbol ";"
+-- | Syntax rules for parsing constructor-looking like identifiers.
+conId :: TokenParsing parser => IdentifierStyle parser
+conId = IdentifierStyle
+    { _styleName = "constructor"
+    , _styleStart = upper
+    , _styleLetter = alphaNum <|> oneOf "_'#" -- TODO: allow '#' only at the end
+    , _styleReserved = []
+    , _styleHighlight = Constructor
+    , _styleReservedHighlight = ReservedConstructor }
 
--- | Parse the comma token, separating arguments from each other.
-commaTok :: Parser ()
-commaTok = symbol ","
-
--- | Parse a @let@ or @letrec@ token.
-letTok :: Parser (Binds -> Expr -> Expr)
-letTok = P.try (lexeme (C.string "let"    *> C.spaceChar) *> pure (Let NonRecursive))
-     <|> P.try (lexeme (C.string "letrec" *> C.spaceChar) *> pure (Let Recursive))
-
--- | Parse the @in@ token corresponding to a @let(rec)@.
-inTok :: Parser ()
-inTok = symbol "in"
-
--- | Parse the @case@ token.
-caseTok :: Parser (Expr -> Alts -> Expr)
-caseTok = lexeme (C.string "case" *> C.spaceChar) *> pure Case
-
--- | Parse the @of@ corresponding to a @case@.
-ofTok :: Parser ()
-ofTok = symbol "of"
-
--- | Parse the assignment operator @=@.
-assignTok :: Parser ()
-assignTok = symbol "="
-
--- | Parse a variable name. Variables start with a lower-case letter, followed
--- by a string consisting of alphanumeric characters or @'@, @_@.
-varTok :: Parser Var
-varTok = lexeme (p >>= validateVar) <?> "variable"
-  where
-    p = liftA2 (\x xs -> Var (T.pack (x:xs)))
-               P.lowerChar
-               (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
-    validateVar var
-        | var `notElem` ["let", "in", "case", "of", "default"] = pure var
-        | otherwise = let Var v = var
-                      in fail (T.unpack v <> " is a reserved keyword")
-
--- | Parse a constructor name. Constructors follow the same naming conventions
--- as variables, but start with an upper-case character instead, and may
--- end with a @#@ symbol.
-conTok :: Parser Constr
-conTok = lexeme p <?> "constructor"
-  where
-    p = liftA3 (\x xs hash -> Constr (T.pack (x:xs ++ hash)))
-               P.upperChar
-               (P.many (P.alphaNumChar <|> P.oneOf "\'_"))
-               (P.option "" (P.string "#"))
-
--- | Parse the @default@ token, used for alternatives that always match.
-defNotBoundTok :: Parser (Expr -> DefaultAlt)
-defNotBoundTok = symbol "default" *> pure DefaultNotBound
-
--- | Parse the arrow token, used in @case@ expression and lambda forms.
-arrowTok :: Parser ()
-arrowTok = symbol "->"
-
--- | Parse the hash token, used for primitive values and operations.
-hashTok :: Parser ()
-hashTok = symbol "#"
-
--- | Parse an opening parenthesis, used for argument lists.
-openParenthesisTok :: Parser ()
-openParenthesisTok = symbol "("
-
--- | Parse a closing parenthesis, used for argument lists.
-closeParenthesisTok :: Parser ()
-closeParenthesisTok = symbol ")"
-
--- | Given a parser @p@, @parenthesized p@ parses it enclosed in parentheses.
-parenthesized :: Parser a -> Parser a
-parenthesized = P.between openParenthesisTok closeParenthesisTok
-
--- | Parse an update flag, used in lambda forms to influence their evaluation
--- behaviour.
-updateFlagTok :: Parser UpdateFlag
-updateFlagTok = lexeme (P.char '\\' *> flag) <?> help
-  where
-    flag = C.char 'u' *> pure Update <|> C.char 'n' *> pure NoUpdate
-    help = "\\u (update), \\n (no update)"
-
--- | Parse an integer, possibly with a sign.
-signedIntegerTok :: Parser Integer
-signedIntegerTok = L.signed spaceConsumer L.integer
-
-
-
---------------------------------------------------------------------------------
--- * Parsing
+-- | Parse a constructor identifier. Constructors follow the same naming
+-- conventions as variables, but start with an upper-case character instead, and
+-- may end with a @#@ symbol.
+con :: (Monad parser, TokenParsing parser) => parser Constr
+con = ident conId
 
 -- | Parse an STG program.
-program :: Parser Program
-program = spaceConsumer *> fmap Program binds <* P.eof
+program :: (Monad parser, TokenParsing parser) => parser Program
+program = someSpace *> fmap Program binds <* eof
 
 -- | Parse a collection of bindings, used by @let(rec)@ expressions and at the
 -- top level of a program.
-binds :: Parser Binds
-binds = fmap (Binds . M.fromList) (P.sepBy binding semicolonTok)
+binds :: (Monad parser, TokenParsing parser) => parser Binds
+binds = fmap (Binds . M.fromList) (sepBy1 binding semi)
   where
-    binding :: Parser (Var, LambdaForm)
-    binding = (,) <$> varTok <* assignTok <*> lambdaForm
+    binding :: (Monad parser, TokenParsing parser) => parser (Var, LambdaForm)
+    binding = (,) <$> var <* symbol "=" <*> lambdaForm
+
+comment :: TokenParsing parser => parser ()
+comment = skipToken (highlight Comment (lineComment <|> blockComment)) <?> ""
+  where
+    lineComment  = try (symbol "--") *> manyTill anyChar (char '\n')
+    blockComment = try (symbol "{-") *> manyTill anyChar (try (symbol "-}"))
 
 -- | Parse a lambda form, consisting of a list of free variables, and update
 -- flag, a list of bound variables, and the function body.
-lambdaForm :: Parser LambdaForm
+lambdaForm :: (Monad parser, TokenParsing parser) => parser LambdaForm
 lambdaForm = lf >>= validateLambda
   where
-    lf = LambdaForm
-         <$> vars
-         <*> updateFlagTok
-         <*> vars
-         <*  arrowTok
+    lf :: (Monad parser, TokenParsing parser) => parser LambdaForm
+    lf = (\free bound upd body -> LambdaForm free upd bound body)
+         <$  token (char '\\')
+         <*> (parens (some var) <|> pure [])
+         <*> many var
+         <*> updateArrow
          <*> expr
          <?> "lambda form"
+
     validateLambda = \case
         LambdaForm _ Update [] AppC{} ->
-            fail "Standard constructors are never updatable"
+           fail "Standard constructors are never updatable"
         LambdaForm _ Update (_:_) _ ->
-            fail "Lambda forms with non-empty argument lists are never updatable"
+           fail "Lambda forms with non-empty argument lists are never updatable"
         LambdaForm _ _ _ Lit{} ->
-            fail "No lambda form has primitive type like 1#;\
-                 \ primitives must be boxed, e.g. Int# (1#)"
+           fail "No lambda form has primitive type like 1#;\
+                \ primitives must be boxed, e.g. Int# (1#)"
         LambdaForm _ _ _ AppP{} ->
-            fail "No lambda form has primitive type like \"+# a b\";\
-                 \ only \"case\" can evaluate them"
+           fail "No lambda form has primitive type like \"+# a b\";\
+                \ only \"case\" can evaluate them"
         x -> pure x
+
+    -- Parse an update flag arrow. @->@ means no update, @=>@ update.
+    updateArrow :: (Monad parser, TokenParsing parser) => parser UpdateFlag
+    updateArrow = token (symbol "->" *> pure NoUpdate
+                     <|> symbol "=>" *> pure Update
+                     <?> "Update arrow" )
+
+-- | Parse an arrow token, @->@.
+arrow :: TokenParsing parser => parser ()
+arrow = skipToken (symbol "->")
 
 -- | Parse an expression, which can be
 --
@@ -235,108 +179,54 @@ lambdaForm = lf >>= validateLambda
 --   * constructor application, @C (...)@
 --   * primitive application, @p# (...)@
 --   * literal, @1#@
-expr :: Parser Expr
-expr = P.choice [let', case', appF, appC, appP, lit]
+expr :: (Monad parser, TokenParsing parser) => parser Expr
+expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
   where
-    let' = P.try letTok
-       <*> (binds <?> "list of free variables")
-       <*  inTok
-       <*> (expr <?> "let body")
-       <?> "let"
-    case' = P.try caseTok
+    letHead
+        :: (Monad parser, TokenParsing parser)
+        => parser (Binds -> Expr -> Expr)
+    let', case', appF, appC, appP, lit
+        :: (Monad parser, TokenParsing parser)
+        => parser Expr
+
+    letHead = reserved "letrec" *> pure (Let Recursive)
+          <|> reserved "let"    *> pure (Let NonRecursive)
+    let' = letHead
+        <*> (binds <?> "list of free variables")
+        <*  reserved "in"
+        <*> (expr <?> "let(rec) expression")
+        <?> "let"
+    case' = Case
+        <$  reserved "case"
         <*> (expr <?> "case scrutinee")
-        <*  ofTok
+        <*  reserved "of"
         <*> alts
-        <?> "case"
-    appF = AppF
-        <$> varTok
-        <*> atoms
-        <?> "function application"
-    appC = AppC
-        <$> conTok
-        <*> atoms
-        <?> "constructor application"
-    appP = AppP
-        <$> primOp
-        <*> atom
-        <*> atom
-        <?> "primitive function application"
-    lit = Lit
-        <$> literal
-        <?> "literal"
+        <?> "case expression"
+    appF = AppF <$> var <*> many atom <?> "function application"
+    appC = AppC <$> con <*> many atom <?> "constructor application"
+    appP = AppP <$> primOp <*> atom <*> atom <?> "primitive function application"
+    lit = Lit <$> literal <?> "literal expression"
 
 -- | Parse the alternatives given in a @case@ expression.
-alts :: Parser Alts
-alts = Alts <$> nonDefaultAlts <*> defaultAlt
-   <?> "case alternatives"
+alts :: (Monad parser, TokenParsing parser) => parser Alts
+alts = Alts
+       <$> nonDefaultAlts
+       <*> defaultAlt
+       <?> "case alternatives"
 
--- | Parse non-default alternatives. The list of alternatives can be either
--- empty, all algebraic, or all primitive.
---
--- @
--- Nil () -> ...
--- Cons (x,xs) -> ...
--- @
---
--- @
--- 1# -> ...
--- 2# -> ...
--- @
-nonDefaultAlts :: Parser NonDefaultAlts
-nonDefaultAlts = fmap (AlgebraicAlts . NonEmpty.fromList) (P.some algebraicAlt)
-             <|> fmap (PrimitiveAlts . NonEmpty.fromList) (P.some primitiveAlt)
-             <|> pure NoNonDefaultAlts
-             <?> "non-default case alternatives"
+atom :: (Monad parser, TokenParsing parser) => parser Atom
+atom = AtomVar <$> var
+   <|> AtomLit <$> literal
+   <?> "atom"
 
--- | Parse a single algebraic alternative.
---
--- @
--- Cons (x,xs) -> ...
--- @
-algebraicAlt :: Parser AlgebraicAlt
-algebraicAlt = P.try (AlgebraicAlt <$> conTok <*> vars) <* arrowTok <*> expr <* semicolonTok
-    <?> "algebraic case alternative"
-
--- | Parse a single primitive alternative, such as @1#@.
---
--- @
--- 1# -> ...
--- @
-primitiveAlt :: Parser PrimitiveAlt
-primitiveAlt = P.try (PrimitiveAlt <$> literal) <* arrowTok <*> expr <* semicolonTok
-    <?> "primitive case alternative"
-
--- | Parse the default alternative, taken if none of the other alternatives
--- in a @case@ expression match.
---
--- @
--- default -> ...
--- @
---
--- @
--- v -> ...
--- @
-defaultAlt :: Parser DefaultAlt
-defaultAlt = P.try defNotBoundTok <* arrowTok <*> expr
-         <|> DefaultBound <$> varTok <* arrowTok <*> expr
-         <?> "default alternative"
-
--- | Parse a literal.
---
--- @
--- 1#
--- @
-literal :: Parser Literal
-literal = (Literal . fromInteger) <$> signedIntegerTok <* hashTok
-    <?> "integer literal"
 
 -- | Parse a primitive operation.
 --
 -- @
 -- +#
 -- @
-primOp :: Parser PrimOp
-primOp = P.choice ops <?> "primitive function"
+primOp :: TokenParsing parser => parser PrimOp
+primOp = choice ops <?> "primitive function"
   where
     ops = [ "+"  ~> Add
           , "-"  ~> Sub
@@ -349,30 +239,63 @@ primOp = P.choice ops <?> "primitive function"
           , "/=" ~> Neq
           , ">=" ~> Geq
           , ">"  ~> Gt ]
-    op ~> val = P.try (P.string op <* hashTok) *> pure val
+    op ~> val = token (try (string op <* char '#')) *> pure val
 
--- | Parse a number of variables. enclosed in parentheses, and separated by
--- commas. Used in lambda forms.
+literal :: TokenParsing parser => parser Literal
+literal = token (Literal <$> integer' <* char '#') <?> "integer literal"
+
+
+-- | Parse non-default alternatives. The list of alternatives can be either
+-- empty, all algebraic, or all primitive.
 --
 -- @
--- (f, x, y)
+-- Nil -> ...
+-- Cons x xs -> ...
 -- @
-vars :: Parser [Var]
-vars = parenthesized (P.sepBy varTok commaTok)
-    <?> "variables"
-
--- | Parse a number of atoms. enclosed in parentheses, and separated by
--- commas. Used in function and constructor applications.
 --
 -- @
--- (f, x, 1#)
+-- 1# -> ...
+-- 2# -> ...
 -- @
-atoms :: Parser [Atom]
-atoms = parenthesized (P.sepBy atom commaTok)
-    <?> "atoms"
+nonDefaultAlts :: (Monad parser, TokenParsing parser) => parser NonDefaultAlts
+nonDefaultAlts = AlgebraicAlts . NonEmpty.fromList <$> some algebraicAlt
+             <|> PrimitiveAlts . NonEmpty.fromList <$> some primitiveAlt
+             <|> pure NoNonDefaultAlts
+             <?> "non-default case alternatives"
 
--- | Parse an atom, which can be either a variable or a literal.
-atom :: Parser Atom
-atom = AtomVar <$> varTok
-   <|> AtomLit <$> literal
-   <?> "atom"
+-- | Parse a single algebraic alternative.
+--
+-- @
+-- Cons x xs -> ...
+-- @
+algebraicAlt :: (Monad parser, TokenParsing parser) => parser AlgebraicAlt
+algebraicAlt = try (AlgebraicAlt <$> con)
+                <*> many var
+                <*  arrow
+                <*> expr
+                <*  semi
+                <?> "algebraic case alternative"
+
+-- | Parse a single primitive alternative, such as @1#@.
+--
+-- @
+-- 1# -> ...
+-- @
+primitiveAlt :: (Monad parser, TokenParsing parser) => parser PrimitiveAlt
+primitiveAlt = try (PrimitiveAlt <$> literal) <* arrow <*> expr <* semi
+    <?> "primitive case alternative"
+
+-- | Parse the default alternative, taken if none of the other alternatives
+-- in a @case@ expression match.
+--
+-- @
+-- default -> ...
+-- @
+--
+-- @
+-- v -> ...
+-- @
+defaultAlt :: (Monad parser, TokenParsing parser) => parser DefaultAlt
+defaultAlt = DefaultNotBound <$ reserved "default" <* arrow <*> expr
+         <|> DefaultBound <$> var <* arrow <*> expr
+         <?> "default alternative"
