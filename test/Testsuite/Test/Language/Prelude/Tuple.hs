@@ -9,8 +9,8 @@ module Test.Language.Prelude.Tuple (tests) where
 import           Data.Monoid
 import qualified Data.Tuple  as T
 
-import qualified Stg.Language.Prelude as Stg
-import           Stg.Parser
+import qualified Stg.Language.Prelude   as Stg
+import           Stg.Parser.QuasiQuoter
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -37,11 +37,11 @@ testFst = haskellReferenceTest defSpec
         <> Stg.fst
         <> Stg.eq_Int
         <> [stg|
-        main = () \u () ->
-            let actualFst = () \n () -> fst (tuple)
-            in case eq_Int (expectedResult, actualFst) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let actualFst = \ -> fst tuple
+            in case eq_Int expectedResult actualFst of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testSnd :: TestTree
@@ -54,11 +54,11 @@ testSnd = haskellReferenceTest defSpec
         <> Stg.eq_Int
         <> [stg|
 
-        main = () \u () ->
-            let actualSnd = () \n () -> snd (tuple)
-            in case eq_Int (expectedResult, actualSnd) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let actualSnd = \ -> snd tuple
+            in case eq_Int expectedResult actualSnd of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testCurry :: TestTree
@@ -73,15 +73,15 @@ testCurry = haskellReferenceTest defSpec
         <> Stg.eq_Int
         <> [stg|
 
-        addTuple = () \n (tuple) -> case tuple () of
-            Tuple (a,b) -> add (a,b);
-            badTuple -> Error_addTuple (badTuple);
+        addTuple = \tuple -> case tuple of
+            Tuple a b -> add a b;
+            badTuple  -> Error_addTuple badTuple;
 
-        main = () \u () ->
-            let actual = () \n () -> curry (addTuple, x, y)
-            in case eq_Int (expectedResult, actual) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let actual = \ -> curry addTuple x y
+            in case eq_Int expectedResult actual of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testUncurry :: TestTree
@@ -95,11 +95,11 @@ testUncurry = haskellReferenceTest defSpec
         <> Stg.eq_Int
         <> [stg|
 
-        main = () \u () ->
-            let actual = () \n () -> uncurry (add, tuple)
-            in case eq_Int (expectedResult, actual) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let actual = \ -> uncurry add tuple
+            in case eq_Int expectedResult actual of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }
 
 testSwap :: TestTree
@@ -112,9 +112,9 @@ testSwap = haskellReferenceTest defSpec
         <> Stg.equals_Tuple_Int
         <> [stg|
 
-        main = () \u () ->
-            let actual = () \n () -> swap (tuple)
-            in case eq_Tuple_Int (expectedResult, actual) of
-                True () -> Success ();
-                wrong   -> TestFail (wrong)
+        main = \ =>
+            let actual = \ -> swap tuple
+            in case eq_Tuple_Int expectedResult actual of
+                True  -> Success;
+                wrong -> TestFail wrong
         |] }

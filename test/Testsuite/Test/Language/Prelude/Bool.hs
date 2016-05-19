@@ -8,8 +8,8 @@ module Test.Language.Prelude.Bool (tests) where
 import Data.Bool
 import Data.Monoid
 
-import qualified Stg.Language.Prelude as Stg
-import           Stg.Parser
+import qualified Stg.Language.Prelude   as Stg
+import           Stg.Parser.QuasiQuoter
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -34,11 +34,11 @@ testAnd2 = haskellReferenceTest defSpec
         <> Stg.eq_Bool
         <> Stg.and2
         <> [stg|
-        main = () \u () -> case and2 (b1, b2) of
-                result -> case eq_Bool (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error (badBool)
+        main = \ => case and2 b1 b2 of
+            result -> case eq_Bool result expectedResult of
+                True    -> Success;
+                False   -> TestFail result;
+                badBool -> Error badBool
         |] }
 
 testOr2 :: TestTree
@@ -51,11 +51,11 @@ testOr2 = haskellReferenceTest defSpec
         <> Stg.eq_Bool
         <> Stg.or2
         <> [stg|
-        main = () \u () -> case or2 (b1, b2) of
-                result -> case eq_Bool (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error (badBool)
+        main = \ => case or2 b1 b2 of
+            result -> case eq_Bool result expectedResult of
+                True -> Success;
+                False -> TestFail result;
+                badBool -> Error badBool
         |] }
 
 testNot :: TestTree
@@ -67,11 +67,11 @@ testNot = haskellReferenceTest defSpec
         <> Stg.eq_Bool
         <> Stg.not
         <> [stg|
-        main = () \u () -> case not (b) of
-                result -> case eq_Bool (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error (badBool)
+        main = \ => case not b of
+            result -> case eq_Bool result expectedResult of
+                True -> Success;
+                False -> TestFail result;
+                badBool -> Error badBool
         |] }
 
 testBool :: TestTree
@@ -79,7 +79,7 @@ testBool = haskellReferenceTest defSpec
     { testName = "bool"
     , maxSteps = 1024
     , failWithInfo = True
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = const False
     , source = \(t,f,p) ->
            Stg.boolValue "p" p
@@ -89,9 +89,9 @@ testBool = haskellReferenceTest defSpec
         <> Stg.eq_Int
         <> Stg.bool
         <> [stg|
-        main = () \u () -> case bool (t,f,p) of
-                result -> case eq_Int (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error (badBool)
+        main = \ => case bool t f p of
+            result -> case eq_Int result expectedResult of
+                True -> Success;
+                False -> TestFail result;
+                badBool -> Error badBool
         |] }

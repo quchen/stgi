@@ -30,15 +30,12 @@ library
                      , Stg.Language.Prelude.Number
                      , Stg.Language.Prelude.Tuple
                      , Stg.Language.Prettyprint
-                     , Stg.Language.Prettyprint.Ansi
-                     , Stg.Language.Prettyprint.ParserInverse
                      , Stg.Machine
                      , Stg.Machine.Env
                      , Stg.Machine.Evaluate
                      , Stg.Machine.GarbageCollection
                      , Stg.Machine.Heap
                      , Stg.Machine.Types
-                     , Stg.Parser
                      , Stg.Parser.Parser
                      , Stg.Parser.QuasiQuoter
                      , Stg.Util
@@ -46,8 +43,9 @@ library
   build-depends:       base >= 4.7 && < 5
                      , ansi-wl-pprint
                      , containers
-                     , megaparsec
                      , semigroups
+                     , parsers
+                     , trifecta
                      , template-haskell
                      , text
                      , th-lift
@@ -89,8 +87,6 @@ test-suite testsuite
                      , Test.Language.Prelude.Number
                      , Test.Language.Prelude.Tuple
                      , Test.Language.Prettyprint
-                     , Test.Language.Prettyprint.Ansi
-                     , Test.Language.Prettyprint.ParserInverse
                      , Test.Machine
                      , Test.Machine.Evaluate
                      , Test.Machine.Evaluate.Errors
@@ -115,7 +111,6 @@ test-suite testsuite
                      , stg
                      , ansi-wl-pprint
                      , containers
-                     , megaparsec
                      , semigroups
                      , tasty
                      , tasty-html

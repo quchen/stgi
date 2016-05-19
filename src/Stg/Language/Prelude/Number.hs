@@ -34,7 +34,7 @@ import Data.Monoid ((<>))
 import Data.Text   (Text)
 
 import Stg.Language
-import Stg.Parser
+import Stg.Parser.QuasiQuoter
 
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -45,8 +45,8 @@ import Stg.Parser
 
 -- | Boxed int generator to abbreviate simple number generation.
 --
--- >>> prettyprint (int "one" 1)
--- "one = () \\n () -> Int# (1#)"
+-- >>> prettyprintPlain (int "one" 1)
+-- "one = \\ -> Int# 1#"
 int :: Text -> Integer -> Program
 int name i = Program (Binds [(Var name, LambdaForm [] NoUpdate []
     (AppC (Constr "Int#") [AtomLit (Literal i)]) )])
@@ -69,7 +69,7 @@ binaryOp name op primAlts =
 
 
 primToBool :: Alts
-primToBool = [stgAlts| 1# -> True (); default -> False () |]
+primToBool = [alts| 1# -> True; default -> False |]
 
 eq_Int, lt_Int, leq_Int, gt_Int, geq_Int, neq_Int :: Program
 
@@ -94,7 +94,7 @@ neq_Int = binaryOp "neq_Int" Neq primToBool
 
 
 primIdInt :: Alts
-primIdInt = [stgAlts| v -> Int# (v) |]
+primIdInt = [alts| v -> Int# v |]
 
 add, sub, mul, div, mod :: Program
 
@@ -114,23 +114,23 @@ div = binaryOp "div" Div primIdInt
 mod = binaryOp "mod" Mod primIdInt
 
 min :: Program
-min = [stg|
-    min = () \n (x,y) -> case x () of
-        Int# (x') -> case y () of
-            Int# (y') -> case <=# x' y' of
-                1# -> x ();
-                default -> y ();
-            badInt -> Error_min (badInt);
-        badInt -> Error_min (badInt)
+min = [program|
+    min = \x y -> case x of
+        Int# x' -> case y of
+            Int# y' -> case <=# x' y' of
+                1#      -> x;
+                default -> y;
+            badInt -> Error_min badInt;
+        badInt -> Error_min badInt
     |]
 
 max :: Program
-max = [stg|
-    max = () \n (x,y) -> case x () of
-        Int# (x') -> case y () of
-            Int# (y') -> case >=# x' y' of
-                1# -> x ();
-                default -> y ();
-            badInt -> Error_min (badInt);
-        badInt -> Error_min (badInt)
+max = [program|
+    max = \x y -> case x of
+        Int# x' -> case y of
+            Int# y' -> case >=# x' y' of
+                1# -> x;
+                default -> y;
+            badInt -> Error_min badInt;
+        badInt -> Error_min badInt
     |]

@@ -8,8 +8,8 @@ module Test.Language.Prelude.Function (tests) where
 import Data.Function
 import Data.Monoid
 
-import qualified Stg.Language.Prelude as Stg
-import           Stg.Parser
+import qualified Stg.Language.Prelude   as Stg
+import           Stg.Parser.QuasiQuoter
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -33,12 +33,12 @@ testId = haskellReferenceTest defSpec
         <> Stg.eq_Int
         <> Stg.id
         <> [stg|
-        main = () \u () ->
-            case id (x) of
-                idX -> case eq_Int (idX, x) of
-                    True () -> Success ();
-                    False () -> TestFail (idX);
-                    badBool -> Error (badBool)
+        main = \ =>
+            case id x of
+                idX -> case eq_Int idX x of
+                    True -> Success;
+                    False -> TestFail idX;
+                    badBool -> Error badBool
         |] }
 
 testConst :: TestTree
@@ -50,12 +50,12 @@ testConst = haskellReferenceTest defSpec
         <> Stg.eq_Int
         <> Stg.const
         <> [stg|
-        main = () \u () ->
-            case const (x,y) of
-                constXY -> case eq_Int (constXY, x) of
-                    True () -> Success ();
-                    False () -> TestFail (constXY);
-                    badBool -> Error (badBool)
+        main = \ =>
+            case const x y of
+                constXY -> case eq_Int constXY x of
+                    True -> Success;
+                    False -> TestFail constXY;
+                    badBool -> Error badBool
         |] }
 
 
@@ -74,15 +74,15 @@ testCompose = haskellReferenceTest defSpec
         <> Stg.const
         <> [stg|
 
-        plus2 = () \n (x) -> add (x, two);
-        times3 = () \n (x) -> mul (x, three);
-        plus2times3 = () \n () -> compose (times3, plus2);
-        main = () \u () ->
-            case plus2times3 (x) of
-                result -> case eq_Int (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error (badBool)
+        plus2 = \x -> add x two;
+        times3 = \x -> mul x three;
+        plus2times3 = \ -> compose times3 plus2;
+        main = \ =>
+            case plus2times3 x of
+                result -> case eq_Int result expectedResult of
+                    True -> Success;
+                    False -> TestFail result;
+                    badBool -> Error badBool
         |] }
 
 testFix :: TestTree
@@ -103,19 +103,19 @@ testFix = haskellReferenceTest defSpec
         <> Stg.const
         <> [stg|
 
-        fac' = () \n (rec, m) -> case eq_Int (m, zero) of
-            True () -> one ();
-            False () -> case sub (m, one) of
-                mMinusOne -> case rec (mMinusOne) of
-                    recMMinusOne -> mul (m, recMMinusOne);
-            badBool -> Error_fac' (badBool);
+        fac' = \rec m -> case eq_Int m zero of
+            True -> one;
+            False -> case sub m one of
+                mMinusOne -> case rec mMinusOne of
+                    recMMinusOne -> mul m recMMinusOne;
+            badBool -> Error_fac' badBool;
 
-        fac = () \u () -> fix (fac');
+        fac = \ => fix fac';
 
-        main = () \u () ->
-            case fac (n) of
-                result -> case eq_Int (result, expectedResult) of
-                    True () -> Success ();
-                    False () -> TestFail (result);
-                    badBool -> Error (badBool)
+        main = \ =>
+            case fac n of
+                result -> case eq_Int result expectedResult of
+                    True -> Success;
+                    False -> TestFail result;
+                    badBool -> Error badBool
         |] }

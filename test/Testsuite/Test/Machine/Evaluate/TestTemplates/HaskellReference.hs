@@ -26,7 +26,7 @@ import Stg.Language
 import Stg.Language.Prettyprint
 import Stg.Machine
 import Stg.Machine.Types
-import Stg.Parser
+import Stg.Parser.QuasiQuoter   (stg)
 
 import Test.Machine.Evaluate.TestTemplates.Util
 import Test.Orphans                             ()
@@ -62,9 +62,9 @@ defSpec = HaskellReferenceTestSpec
     { testName = "Default Haskell reference test spec template"
     , maxSteps = 1024
     , failWithInfo = False
-    , successPredicate = "main" ===> [stg| () \n () -> Success () |]
+    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = const False
-    , source = \_ -> [stg| main = () \n () -> DummySource () |] }
+    , source = \_ -> [stg| main = \ -> DummySource |] }
 
 haskellReferenceTest
     :: forall a. (Show a, Arbitrary a)
@@ -72,8 +72,8 @@ haskellReferenceTest
     -> TestTree
 haskellReferenceTest testSpec = askOption (\htmlOpt ->
     let pprDict = case htmlOpt of
-            Just HtmlPath{} -> PrettyprinterDict prettyprint pretty
-            Nothing -> PrettyprinterDict prettyprintAnsi prettyAnsi
+            Just HtmlPath{} -> PrettyprinterDict prettyprintPlain (plain . pretty)
+            Nothing         -> PrettyprinterDict prettyprint pretty
     in testProperty (T.unpack (testName testSpec)) (test pprDict) )
   where
     test :: (Show a, Arbitrary a)
@@ -84,7 +84,7 @@ haskellReferenceTest testSpec = askOption (\htmlOpt ->
         let program = initialState "main" (source testSpec input)
             states = evalsUntil
                 (RunForMaxSteps (maxSteps testSpec))
-                (HaltIf ("main" ===> [stg| () \n () -> Success () |]))
+                (HaltIf ("main" ===> [stg| \ -> Success |]))
                 (PerformGc (const False))
                 program
             finalState = last states

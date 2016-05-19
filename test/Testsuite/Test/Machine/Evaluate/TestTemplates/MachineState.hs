@@ -22,7 +22,7 @@ import Stg.Language
 import Stg.Language.Prettyprint
 import Stg.Machine
 import Stg.Machine.Types
-import Stg.Parser
+import Stg.Parser.QuasiQuoter   (stg)
 
 import Test.Machine.Evaluate.TestTemplates.Util
 import Test.Tasty
@@ -64,10 +64,10 @@ data MachineStateTestSpec = MachineStateTestSpec
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
     { testName             = "Default machine state test template"
-    , successPredicate     = "main" ===> [stg| () \n () -> Success () |]
+    , successPredicate     = "main" ===> [stg| \ -> Success |]
     , forbiddenState       = const False
     , someStateSatisfies   = const True
-    , source               = [stg| main = () \n () -> DummySource () |]
+    , source               = [stg| main = \ -> DummySource |]
     , maxSteps             = 1024
     , performGc            = PerformGc (const True)
     , failWithInfo         = False }
@@ -77,8 +77,8 @@ defSpec = MachineStateTestSpec
 machineStateTest :: MachineStateTestSpec -> TestTree
 machineStateTest testSpec = askOption (\htmlOpt ->
     let pprDict = case htmlOpt of
-            Just HtmlPath{} -> PrettyprinterDict prettyprint pretty
-            Nothing -> PrettyprinterDict prettyprintAnsi prettyAnsi
+            Just HtmlPath{} -> PrettyprinterDict prettyprintPlain (plain . pretty)
+            Nothing         -> PrettyprinterDict prettyprint pretty
     in testCase (T.unpack (testName testSpec)) (test pprDict) )
   where
     program = initialState "main" (source testSpec)

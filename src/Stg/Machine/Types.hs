@@ -10,7 +10,7 @@
 -- | Types used in the execution of the STG machine.
 module Stg.Machine.Types (
     StgState(..),
-    StgStateColours(..),
+    StgStateStyle(..),
     StackFrame(..),
     MemAddr(..),
     Value(..),
@@ -43,7 +43,6 @@ import           Text.Printf
 
 import Data.Stack
 import Stg.Language
-import Stg.Language.Prettyprint.Ansi
 import Stg.Util
 
 
@@ -74,20 +73,24 @@ data StgState = StgState
     }
     deriving (Eq, Ord, Show, Generic)
 
--- | Package of colour definitions used in this module.
-data StgStateColours = StgStateColours
+-- | Package of style definitions used in this module.
+data StgStateStyle = StgStateStyle
     { headline :: Doc -> Doc
         -- ^ Style of headlines in the state overview, such as \"Heap" and
         --   "Frame i".
     , address :: Doc -> Doc
-        -- ^ Style of memory addresses.
+        -- ^ Style of memory addresses, including @0x@ prefix.
+    , addressCore :: Doc -> Doc
+        -- ^ Style of memory addresses; applied only to the actual address
+        --   number, such as @ff@ in @0xff@.
     }
 
 -- | Colour definitions used in this module.
-colour :: StgStateColours
-colour = StgStateColours
-    { headline = dullblue
-    , address = dullcyan . underline
+style :: StgStateStyle
+style = StgStateStyle
+    { headline    = dullblue
+    , address     = dullcyan
+    , addressCore = underline
     }
 
 -- Local re-definition to avoid cyclic import with the Heap module
@@ -96,38 +99,21 @@ heapSize (Heap h) = length h
 
 instance Pretty StgState where
     pretty state = align (vsep
-        [ "Code:" <+> pretty (stgCode state)
-        , nest 4 (vsep [ "Stack", prettyStack (stgStack state) ])
-        , nest 4 (vsep [ "Heap (" <> pretty (heapSize (stgHeap state)) <+> "entries)"
+        [ headline style "Code:" <+> pretty (stgCode state)
+        , nest 4 (vsep [headline style "Stack", prettyStack (stgStack state) ])
+        , nest 4 (vsep [headline style "Heap" <> " (" <> pretty (heapSize (stgHeap state)) <+> "entries)"
                        , pretty (stgHeap state) ])
-        , nest 4 (vsep [ "Globals", pretty (stgGlobals state)])
-        , nest 4 ("Step:" <+> pretty (stgTicks state)) ])
-
-instance PrettyAnsi StgState where
-    prettyAnsi state = align (vsep
-        [ headline colour "Code:" <+> prettyAnsi (stgCode state)
-        , nest 4 (vsep [headline colour "Stack", prettyStackAnsi (stgStack state) ])
-        , nest 4 (vsep [headline colour "Heap" <> " (" <> pretty (heapSize (stgHeap state)) <+> "entries)"
-                       , prettyAnsi (stgHeap state) ])
-        , nest 4 (vsep [headline colour "Globals", prettyAnsi (stgGlobals state)])
-        , nest 4 (headline colour "Step:" <+> pretty (stgTicks state)) ])
+        , nest 4 (vsep [headline style "Globals", pretty (stgGlobals state)])
+        , nest 4 (headline style "Step:" <+> pretty (stgTicks state)) ])
 
 -- | Prettyprint a 'Stack'.
 prettyStack :: Pretty a => Stack a -> Doc
 prettyStack Empty = "(empty)"
 prettyStack stack = (align . vsep) prettyFrames
   where
-    prettyFrame frame i = "[" <+> int i <> "]" <+> align (pretty frame)
-    prettyFrames = zipWith prettyFrame (toList stack) [1..]
-
--- | ANSI-prettyprint a 'Stack'.
-prettyStackAnsi :: PrettyAnsi a => Stack a -> Doc
-prettyStackAnsi Empty = "(empty)"
-prettyStackAnsi stack = (align . vsep) prettyFrames
-  where
     prettyFrame frame i = hsep
-        [ headline colour (int i <> ".")
-        , align (prettyAnsi frame) ]
+        [ headline style (int i <> ".")
+        , align (pretty frame) ]
     prettyFrames = zipWith prettyFrame (toList stack) (reverse [1..length stack])
 
 -- ^ A stack frame of the unified stack that includes arguments, returns, and
@@ -154,29 +140,16 @@ instance Pretty StackFrame where
     pretty = \case
         ArgumentFrame val -> "(Argument)" <+> pretty val
         ReturnFrame alts locals -> "(Return)" <+>
-            (align . vsep) [ fill 7 "Alts:"   <+> align (pretty alts)
-                           , fill 7 "Locals:" <+> align (pretty locals) ]
+            (align . vsep) [ fill 7 (headline style "Alts:")   <+> align (pretty alts)
+                           , fill 7 (headline style "Locals:") <+> align (pretty locals) ]
         UpdateFrame addr -> "(Update)" <+> pretty addr
-
-instance PrettyAnsi StackFrame where
-    prettyAnsi = \case
-        ArgumentFrame val -> "(Argument)" <+> prettyAnsi val
-        ReturnFrame alts locals -> "(Return)" <+>
-            (align . vsep) [ fill 7 (headline colour "Alts:")   <+> align (prettyAnsi alts)
-                           , fill 7 (headline colour "Locals:") <+> align (prettyAnsi locals) ]
-        UpdateFrame addr -> "(Update)" <+> prettyAnsi addr
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty MemAddr where
-    pretty (MemAddr addr) =  "0x" <> hexAddr addr
-      where
-        hexAddr = text . printf "%02x"
-
-instance PrettyAnsi MemAddr where
-    prettyAnsi (MemAddr addr) = address colour (hexAddr addr)
+    pretty (MemAddr addr) = address style ("0x" <> addressCore style (hexAddr addr))
       where
         hexAddr = text . printf "%02x"
 
@@ -187,14 +160,8 @@ data Value = Addr MemAddr | PrimInt Integer
 instance Pretty Value where
     pretty = \case
         Addr addr -> pretty addr
-        PrimInt i -> pretty i <> "#"
+        PrimInt i -> pretty (Literal i)
     prettyList = tupled . map pretty
-
-instance PrettyAnsi Value where
-    prettyAnsi = \case
-        Addr addr -> prettyAnsi addr
-        PrimInt i -> prettyAnsi (Literal i)
-    prettyAnsiList = tupled . map prettyAnsi
 
 -- | The different code states the STG can be in.
 data Code =
@@ -215,19 +182,10 @@ instance Pretty Code where
     pretty = \case
         Eval expr locals -> (align . vsep)
             [ "Eval" <+> pretty expr
-            , "Locals:" <+> pretty locals ]
+            , headline style "Locals:" <+> pretty locals ]
         Enter addr -> "Enter" <+> pretty addr
         ReturnCon constr args -> "ReturnCon" <+> pretty constr <+> prettyList args
-        ReturnInt i -> "ReturnInt" <+> pretty i
-
-instance PrettyAnsi Code where
-    prettyAnsi = \case
-        Eval expr locals -> (align . vsep)
-            [ "Eval" <+> prettyAnsi expr
-            , headline colour "Locals:" <+> prettyAnsi locals ]
-        Enter addr -> "Enter" <+> prettyAnsi addr
-        ReturnCon constr args -> "ReturnCon" <+> prettyAnsi constr <+> prettyAnsiList args
-        ReturnInt i -> "ReturnInt" <+> prettyAnsi (Literal i)
+        ReturnInt i -> "ReturnInt" <+> pretty (Literal i)
 
 -- | Wrapper for nice 'Pretty' instances
 data Mapping k v = Mapping k v
@@ -235,18 +193,10 @@ data Mapping k v = Mapping k v
 instance (Pretty k, Pretty v) => Pretty (Mapping k v) where
     pretty (Mapping k v) = pretty k <+> "->" <+> pretty v
 
-instance (PrettyAnsi k, PrettyAnsi v) => PrettyAnsi (Mapping k v) where
-    prettyAnsi (Mapping k v) = prettyAnsi k <+> "->" <+> prettyAnsi v
-
 -- | Prettyprint a 'Map', @key -> value@.
 prettyMap :: (Pretty k, Pretty v) => Map k v -> Doc
 prettyMap m | M.null m = "(empty)"
 prettyMap m = (align . vsep) [ pretty (Mapping k v) | (k,v) <- M.assocs m ]
-
--- | ANSI-prettyprint a 'Map', @key -> value@.
-prettyAnsiMap :: (PrettyAnsi k, PrettyAnsi v) => Map k v -> Doc
-prettyAnsiMap m | M.null m = "(empty)"
-prettyAnsiMap m = (align . vsep) [ prettyAnsi (Mapping k v) | (k,v) <- M.assocs m ]
 
 -- | The global environment consists of the mapping from top-level definitions
 -- to their respective values.
@@ -255,9 +205,6 @@ newtype Globals = Globals (Map Var Value)
 
 instance Pretty Globals where
     pretty (Globals globals) = prettyMap globals
-
-instance PrettyAnsi Globals where
-    prettyAnsi (Globals globals) = prettyAnsiMap globals
 
 -- | A single association from 'Var'iable to 'Value'.
 data Binding = Binding Var Value
@@ -271,26 +218,14 @@ newtype Locals = Locals (Map Var Value)
 instance Pretty Locals where
     pretty (Locals locals) = prettyMap locals
 
-instance PrettyAnsi Locals where
-    prettyAnsi (Locals locals) = prettyAnsiMap locals
-
 -- | User-facing information about the current state of the STG.
 data Info = Info InfoShort [InfoDetail]
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty Info where
-    pretty = prettyInfo pretty prettyList
-
-instance PrettyAnsi Info where
-    prettyAnsi = prettyInfo prettyAnsi prettyAnsiList
-
-prettyInfo :: (forall a. PrettyAnsi a => a -> Doc)
-    -> (forall a. PrettyAnsi a => [a] -> Doc)
-    -> Info
-    -> Doc
-prettyInfo ppr pprList = \case
-    Info short []      -> ppr short
-    Info short details -> vsep [ppr short, pprList details]
+    pretty = \case
+        Info short []      -> pretty short
+        Info short details -> vsep [pretty short, prettyList details]
 
 -- | Short machine status info. This field may be used programmatically, in
 -- particular it tells the stepper whether the machine has halted.
@@ -324,22 +259,14 @@ data InfoShort =
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty InfoShort where
-    pretty = prettyInfoShort pretty
-
-instance PrettyAnsi InfoShort where
-    prettyAnsi = prettyInfoShort prettyAnsi
-
-prettyInfoShort :: (forall a. PrettyAnsi a => a -> Doc)
-    -> InfoShort
-    -> Doc
-prettyInfoShort ppr = \case
-    HaltedByPredicate -> "Halting predicate held"
-    NoRulesApply      -> "No further rules apply"
-    MaxStepsExceeded  -> "Maximum number of steps exceeded"
-    StateError err    -> "Errorenous state: " <+> ppr err
-    StateTransition t -> ppr t
-    StateInitial      -> "Initial state"
-    GarbageCollection -> "Garbage collection"
+    pretty = \case
+        HaltedByPredicate -> "Halting predicate held"
+        NoRulesApply      -> "No further rules apply"
+        MaxStepsExceeded  -> "Maximum number of steps exceeded"
+        StateError err    -> "Errorenous state:" <+> pretty err
+        StateTransition t -> pretty t
+        StateInitial      -> "Initial state"
+        GarbageCollection -> "Garbage collection"
 
 data StateTransition =
       Enter_NonUpdatableClosure
@@ -386,17 +313,12 @@ instance Pretty StateTransition where
         ReturnInt_DefUnbound          -> "Primitive constructor return, unbound default match"
         ReturnInt_Match               -> "Primitive constructor return, standard match found"
 
-instance PrettyAnsi StateTransition
-
 -- | Type safety wrapper.
 newtype NotInScope = NotInScope [Var]
     deriving (Eq, Ord, Show, Monoid)
 
 instance Pretty NotInScope where
     pretty (NotInScope vars) = commaSep (map pretty vars)
-
-instance PrettyAnsi NotInScope where
-    prettyAnsi (NotInScope vars) = commaSep (map prettyAnsi vars)
 
 data StateError =
       VariablesNotInScope NotInScope
@@ -424,12 +346,6 @@ instance Pretty StateError where
         NonAlgPrimScrutinee -> "Non-algebraic/primitive case scrutinee"
         DivisionByZero -> "Division by zero"
 
-instance PrettyAnsi StateError where
-    prettyAnsi = \case
-        VariablesNotInScope notInScope
-            -> prettyAnsi notInScope <+> "not in scope"
-        x -> pretty x
-
 data InfoDetail =
       Detail_FunctionApplication Var [Atom]
     | Detail_UnusedLocalVariables [Var] Locals
@@ -449,93 +365,86 @@ data InfoDetail =
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty InfoDetail where
-    pretty = prettyInfoDetail pretty
     prettyList = vsep . map pretty
+    pretty items = bulletList (case items of
+        Detail_FunctionApplication val [] ->
+            ["Inspect value" <+> pretty val]
+        Detail_FunctionApplication function args ->
+            [ "Apply function"
+              <+> pretty function
+              <+> "to argument" <> pluralS args
+              <+> commaSep (map pretty args) ]
 
-instance PrettyAnsi InfoDetail where
-    prettyAnsi = prettyInfoDetail prettyAnsi
-    prettyAnsiList = vsep . map prettyAnsi
+        Detail_UnusedLocalVariables vars (Locals locals) ->
+            let used = M.fromList [ (var, ()) | var <- vars ]
+                unused = locals `M.difference` used
+                pprDiscardedBind var val = [pretty var <+> "(" <> pretty val <> ")"]
+            in if
+                | M.null locals -> ["No local values were present, so none was discarded"]
+                | M.null unused -> ["All locals were used, so none was discarded"]
+                | otherwise ->
+                    ["Unused local variable" <> pluralS (M.toList unused) <+> "discarded:"
+                     <+> commaSep (M.foldMapWithKey pprDiscardedBind unused)]
 
-prettyInfoDetail :: (forall a. PrettyAnsi a => a -> Doc) -> InfoDetail -> Doc
-prettyInfoDetail ppr items = bulletList (case items of
-    Detail_FunctionApplication val [] ->
-        ["Inspect value" <+> ppr val]
-    Detail_FunctionApplication function args ->
-        [ "Apply function"
-          <+> ppr function
-          <+> "to argument" <> pluralS args
-          <+> commaSep (map ppr args) ]
+        Detail_EnterNonUpdatable addr args ->
+            [ "Enter closure at" <+> pretty addr
+            , if null args
+                then pretty addr <+> "is a value, so no arguments are popped"
+                else "Pop arguments" <+> commaSep (foldMap (\arg -> [pretty arg]) args) <+> "from the stack" ]
 
-    Detail_UnusedLocalVariables vars (Locals locals) ->
-        let used = M.fromList [ (var, ()) | var <- vars ]
-            unused = locals `M.difference` used
-            pprDiscardedBind var val = [ppr var <+> "(" <> ppr val <> ")"]
-        in if
-            | M.null locals -> ["No local values were present, so none was discarded"]
-            | M.null unused -> ["All locals were used, so none was discarded"]
-            | otherwise ->
-                ["Unused local variable" <> pluralS (M.toList unused) <+> "discarded:"
-                 <+> commaSep (M.foldMapWithKey pprDiscardedBind unused)]
+        Detail_EvalLet vars addrs ->
+            [ hsep
+                [ "Local environment extended by"
+                , commaSep (foldMap (\var -> [pretty var]) vars) ]
+            , hsep
+                [ "Allocate new closure" <> pluralS vars <+> "at"
+                , commaSep (zipWith (\var addr -> pretty addr <+> "(" <> pretty var <> ")") vars addrs)
+                , "on the heap" ]]
 
-    Detail_EnterNonUpdatable addr args ->
-        [ "Enter closure at" <+> ppr addr
-        , if null args
-            then ppr addr <+> "is a value, so no arguments are popped"
-            else "Pop arguments" <+> commaSep (foldMap (\arg -> [ppr arg]) args) <+> "from the stack" ]
+        Detail_EvalCase ->
+            ["Save alternatives and local environment as a stack frame"]
 
-    Detail_EvalLet vars addrs ->
-        [ hsep
-            [ "Local environment extended by"
-            , commaSep (foldMap (\var -> [ppr var]) vars) ]
-        , hsep
-            [ "Allocate new closure" <> pluralS vars <+> "at"
-            , commaSep (zipWith (\var addr -> ppr addr <+> "(" <> ppr var <> ")") vars addrs)
-            , "on the heap" ]]
+        Detail_ReturnConDefBound var addr ->
+            [ "Allocate closure at" <+> pretty addr <+> "for the bound value"
+            , "Extend local environment with" <+> pretty (Mapping var addr) ]
 
-    Detail_EvalCase ->
-        ["Save alternatives and local environment as a stack frame"]
+        Detail_ReturnIntDefBound var i ->
+            [ "Extend local environment with" <+> pretty (Mapping var (PrimInt i)) ]
 
-    Detail_ReturnConDefBound var addr ->
-        [ "Allocate closure at" <+> ppr addr <+> "for the bound value"
-        , "Extend local environment with" <+> ppr (Mapping var addr) ]
+        Detail_EnterUpdatable addr ->
+            [ "Push a new update frame with the entered address" <+> pretty addr
+            , "Overwrite the heap object at" <+> pretty addr <+> "with a black hole" ]
 
-    Detail_ReturnIntDefBound var i ->
-        [ "Extend local environment with" <+> ppr (Mapping var (PrimInt i)) ]
+        Detail_ConUpdate con addrU ->
+            [ "Trying to return" <+> pretty con <> ", but there is no return frame on the top of the stack"
+            , "Update closure at" <+> pretty addrU <+> "given by the update frame with returned constructor"  ]
 
-    Detail_EnterUpdatable addr ->
-        [ "Push a new update frame with the entered address" <+> ppr addr
-        , "Overwrite the heap object at" <+> ppr addr <+> "with a black hole" ]
+        Detail_PapUpdate updAddr ->
+            [ "Not enough arguments on the stack"
+            , "Try to reveal more arguments by performing the update for" <+> pretty updAddr ]
 
-    Detail_ConUpdate con addrU ->
-        [ "Trying to return" <+> ppr con <> ", but there is no return frame on the top of the stack"
-        , "Update closure at" <+> ppr addrU <+> "given by the update frame with returned constructor"  ]
+        Detail_ReturnIntCannotUpdate ->
+            ["No closure has primitive type, so we cannot update one with a primitive int"]
 
-    Detail_PapUpdate updAddr ->
-        [ "Not enough arguments on the stack"
-        , "Try to reveal more arguments by performing the update for" <+> ppr updAddr ]
+        Detail_StackNotEmpty ->
+            [ "The stack is not empty; the program terminated unexpectedly."
+            , "The lack of a better description is a bug in the STG evaluator."
+            , "Please report this to the project maintainers!" ]
 
-    Detail_ReturnIntCannotUpdate ->
-        ["No closure has primitive type, so we cannot update one with a primitive int"]
+        Detail_GarbageCollected addrs ->  ["Removed address" <> pluralES addrs <> ":" <+> pprAddrs addrs]
+          where
+            pprAddrs = pretty . commaSep . foldMap (\addr -> [pretty addr])
+            pluralES [_] = ""
+            pluralES _ = "es"
 
-    Detail_StackNotEmpty ->
-        [ "The stack is not empty; the program terminated unexpectedly."
-        , "The lack of a better description is a bug in the STG evaluator."
-        , "Please report this to the project maintainers!" ]
+        Detail_EnterBlackHole addr tick ->
+            [ "Heap address" <+> pretty addr <+> "is a black hole, created in step" <+> pretty tick
+            , "Entering a black hole means a thunk depends on its own evaluation"
+            , "This is the functional equivalent of an infinite loop"
+            , "GHC reports this condition as \"<<loop>>\"" ]
 
-    Detail_GarbageCollected addrs ->  ["Removed address" <> pluralES addrs <> ":" <+> pprAddrs addrs]
-      where
-        pprAddrs = ppr . commaSep . foldMap (\addr -> [ppr addr])
-        pluralES [_] = ""
-        pluralES _ = "es"
-
-    Detail_EnterBlackHole addr tick ->
-        [ "Heap address" <+> ppr addr <+> "is a black hole, created in step" <+> ppr tick
-        , "Entering a black hole means a thunk depends on its own evaluation"
-        , "This is the functional equivalent of an infinite loop"
-        , "GHC reports this condition as \"<<loop>>\"" ]
-
-    Detail_UpdateClosureWithPrimitive ->
-        [ "A closure never has primitive type, so it cannot be updated with a primitive value" ] )
+        Detail_UpdateClosureWithPrimitive ->
+            [ "A closure never has primitive type, so it cannot be updated with a primitive value" ] )
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]
@@ -544,26 +453,9 @@ data Closure = Closure LambdaForm [Value]
 instance Pretty Closure where
     pretty (Closure lambdaForm []) = pretty lambdaForm
     pretty (Closure lambda freeVals) =
-        prettyLambda id
-                     prettyFree
-                     pretty
-                     prettyList
-                     pretty
-                     lambda
+        prettyLambda prettyFree lambda
       where
-        prettyFree vars = tupled' (zipWith (\k v -> pretty (Mapping k v)) vars freeVals)
-
-instance PrettyAnsi Closure where
-    prettyAnsi (Closure lambdaForm []) = prettyAnsi lambdaForm
-    prettyAnsi (Closure lambda freeVals) =
-        prettyLambda id -- FIXME: this should be lambdaHead to match the Ansi colour version
-                     prettyFree
-                     prettyAnsi
-                     prettyAnsiList
-                     prettyAnsi
-                     lambda
-      where
-        prettyFree vars = tupled' (zipWith (\k v -> prettyAnsi (Mapping k v)) vars freeVals)
+        prettyFree vars = commaSep (zipWith (\k v -> pretty (Mapping k v)) vars freeVals)
 
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr HeapObject)
@@ -571,9 +463,6 @@ newtype Heap = Heap (Map MemAddr HeapObject)
 
 instance Pretty Heap where
     pretty (Heap heap) = prettyMap heap
-
-instance PrettyAnsi Heap where
-    prettyAnsi (Heap heap) = prettyAnsiMap heap
 
 data HeapObject =
       HClosure Closure
@@ -591,22 +480,16 @@ data HeapObject =
         -- display purposes.
     deriving (Eq, Ord, Show)
 
-prettyHeapObject :: (Closure -> Doc) -> (Doc -> Doc) -> HeapObject -> Doc
-prettyHeapObject pprClosure style = \case
-    HClosure closure@(Closure lambda _freeVals) ->
-        style (classify lambda) <+> align (pprClosure closure)
-    Blackhole tick -> style "BLACKHOLE" <+> "(from step " <> integer tick <> ")"
-  where
-    classify = \case
-        LambdaForm _ _ [] AppC{} -> "CON"
-        LambdaForm _ _ (_:_) _   -> "FUN"
-        LambdaForm _ _ []    _   -> "THUNK"
-        LambdaForm{} -> "" -- Fallthrough pattern to silence inexhaustive
-                           -- warning by GHC 7.10.3. Probably a compiler
-                           -- bug.
-
 instance Pretty HeapObject where
-    pretty = prettyHeapObject pretty id
-
-instance PrettyAnsi HeapObject where
-    prettyAnsi = prettyHeapObject prettyAnsi bold
+    pretty = \case
+        HClosure closure@(Closure lambda _freeVals) ->
+            bold (classify lambda) <+> align (pretty closure)
+        Blackhole tick -> bold "BLACKHOLE" <+> "(from step " <> integer tick <> ")"
+      where
+        classify = \case
+            LambdaForm _ _ [] AppC{} -> "CON"
+            LambdaForm _ _ (_:_) _   -> "FUN"
+            LambdaForm _ _ []    _   -> "THUNK"
+            LambdaForm{} -> "" -- Fallthrough pattern to silence inexhaustive
+                               -- warning by GHC 7.10.3. Probably a compiler
+                               -- bug.

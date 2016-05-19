@@ -20,7 +20,7 @@ import Stg.Util
 
 
 
-runForPager :: (forall a. PrettyAnsi a => a -> Text) -> Program -> IO ()
+runForPager :: (forall a. Pretty a => a -> Text) -> Program -> IO ()
 runForPager ppr prog =
     let states = evalsUntil RunIndefinitely
                             (HaltIf (const False))

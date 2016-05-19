@@ -5,17 +5,21 @@ module Test.Parser.QuasiQuoter (tests) where
 
 
 
+import Data.Bifunctor
+
+import Stg.Language.Prettyprint
+import Stg.Parser.Parser        as Parser
+import Stg.Parser.QuasiQuoter   as QQ
+
 import Test.Tasty
 import Test.Tasty.HUnit
-
-import Stg.Parser
 
 
 
 tests :: TestTree
 tests = testGroup "Quasiquoter"
     [ testCase "Simple definition"
-        (let actual = Right [stg| f = () \n () -> Hello () |]
-             expected = parse "f = () \\n () -> Hello ()"
+        (let actual = Right [stg| f = \ -> Hello |]
+             expected = first prettyprint (parse Parser.program "f = \\ -> Hello")
          in assertEqual "" expected actual)
     ]
