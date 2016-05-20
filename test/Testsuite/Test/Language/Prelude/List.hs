@@ -34,6 +34,7 @@ tests = testGroup "List"
     , testSort
     , testFilter
     , testMap
+    , testZip
     , testZipWith
     , testGroup "Folds"
         [ testFoldr
@@ -96,6 +97,30 @@ testMap = haskellReferenceTest defSpec
                 plusOffset = \n -> add n offset;
                 actual = \(plusOffset) => map plusOffset inputList
             in case equals_List_Int actual expectedResult of
+                True  -> Success;
+                wrong -> TestFail wrong
+        |] }
+
+testZip :: TestTree
+testZip = haskellReferenceTest defSpec
+    { testName = "zip, map"
+    , source = \(list1, list2) ->
+           Stg.equals_List_Int
+        <> Stg.listOfNumbers "list1" list1
+        <> Stg.listOfNumbers "list2" list2
+        <> Stg.listOfNumbers "expectedResult" (zipWith (+) list1 list2)
+        <> Stg.add
+        <> Stg.map
+        <> Stg.uncurry
+        <> Stg.zip
+        <> [stg|
+
+        main = \ =>
+            letrec
+                zipped   = \ -> zip list1 list2;
+                addTuple = \ -> uncurry add;
+                summed   = \(addTuple zipped) -> map addTuple zipped
+            in case equals_List_Int summed expectedResult of
                 True  -> Success;
                 wrong -> TestFail wrong
         |] }
