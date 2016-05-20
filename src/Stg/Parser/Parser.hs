@@ -49,6 +49,7 @@ import           Control.Monad
 import           Data.Char                    (isSpace)
 import qualified Data.List.NonEmpty           as NonEmpty
 import qualified Data.Map.Strict              as M
+import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Text.Parser.Token.Highlight
@@ -100,21 +101,17 @@ var = ident varId
 reserved :: (Monad parser, TokenParsing parser) => Text -> parser ()
 reserved = reserveText varId
 
--- | Syntax rules for parsing constructor-looking like identifiers.
-conId :: TokenParsing parser => IdentifierStyle parser
-conId = IdentifierStyle
-    { _styleName = "constructor"
-    , _styleStart = upper
-    , _styleLetter = alphaNum <|> oneOf "_'#" -- TODO: allow '#' only at the end
-    , _styleReserved = []
-    , _styleHighlight = Constructor
-    , _styleReservedHighlight = ReservedConstructor }
-
 -- | Parse a constructor identifier. Constructors follow the same naming
 -- conventions as variables, but start with an upper-case character instead, and
 -- may end with a @#@ symbol.
 con :: (Monad parser, TokenParsing parser) => parser Constr
-con = ident conId
+con = highlight Constructor constructor <?> "constructor"
+  where
+    constructor = token (do
+        start <- upper
+        body  <- many (alphaNum <|> oneOf "_'")
+        end   <- string "#" <|> pure ""
+        (pure . Constr . T.pack) (start : body <> end) )
 
 -- | Parse an STG program.
 program :: (Monad parser, TokenParsing parser) => parser Program
