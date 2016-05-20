@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 module Test.Parser.Parser (tests) where
 
@@ -10,9 +11,10 @@ import           Data.Monoid
 import           Data.Text      (Text)
 import qualified Data.Text      as T
 
-import Stg.Language
-import Stg.Language.Prettyprint
-import Stg.Parser.Parser
+import           Stg.Language
+import           Stg.Language.Prettyprint
+import           Stg.Parser.Parser
+import qualified Stg.Parser.QuasiQuoter   as QQ
 
 import Test.Orphans     ()
 import Test.Tasty
@@ -21,18 +23,19 @@ import Test.Tasty.HUnit
 
 
 tests :: TestTree
-tests = testGroup "Explicit parses"
+tests = testGroup "Hand-written cases"
     [ simpleParses
-    , badParses ]
+    , badParses
+    , stresstest ]
 
 
 
-shouldParseToSuccess
+shouldParseTo
     :: Text  -- ^ Test name
     -> Text  -- ^ Parser input
     -> Binds -- ^ Expected STG bindings
     -> TestTree
-shouldParseToSuccess testName input output = testCase (T.unpack testName) test
+shouldParseTo testName input output = testCase (T.unpack testName) test
   where
     actual = first prettyprint (parse program input)
     expected = Right (Program output)
@@ -51,25 +54,25 @@ shouldParseToSuccess testName input output = testCase (T.unpack testName) test
 
 simpleParses :: TestTree
 simpleParses = testGroup "Well-written programs"
-    [ shouldParseToSuccess "Simple binding to boxed literal"
+    [ shouldParseTo "Simple binding to boxed literal"
         "one = \\ -> Int# 1#"
         (Binds [("one", LambdaForm [] NoUpdate []
                           (AppC "Int#" [AtomLit 1]) )])
 
-    , shouldParseToSuccess "Constructor application"
+    , shouldParseTo "Constructor application"
         "con = \\ -> Maybe b 1#"
         (Binds [("con", LambdaForm [] NoUpdate []
                           (AppC "Maybe"
                                  [AtomVar "b" , AtomLit 1] ))])
 
-    , shouldParseToSuccess "Bound pattern"
+    , shouldParseTo "Bound pattern"
         "id = \\ x -> case x of y -> y"
         (Binds [("id", LambdaForm [] NoUpdate ["x"]
                           (Case (AppF "x" [])
                                 (Alts NoNonDefaultAlts
                                       (DefaultBound "y" (AppF "y" []))) ))])
 
-    , shouldParseToSuccess "Primitive function application"
+    , shouldParseTo "Primitive function application"
         "add1 = \\n -> case +# n 1# of n' -> Int# n'"
         (Binds [("add1", LambdaForm [] NoUpdate ["n"]
                             (Case (AppP Add (AtomVar "n") (AtomLit 1))
@@ -77,7 +80,7 @@ simpleParses = testGroup "Well-written programs"
                                       (DefaultBound "n'" (AppC "Int#" [AtomVar "n'"])))))])
 
 
-    , shouldParseToSuccess "Let"
+    , shouldParseTo "Let"
         "a = \\ ->                                                           \n\
         \    let y = \\(a) x -> Foo x                                        \n\
         \    in Con y"
@@ -87,7 +90,7 @@ simpleParses = testGroup "Well-written programs"
                                         (AppC "Foo" [AtomVar "x"]))])
                              (AppC "Con" [AtomVar "y"])))])
 
-    , shouldParseToSuccess "fix"
+    , shouldParseTo "fix"
         "fix = \\f ->                                                        \n\
         \    letrec x = \\(f x) => f x in x"
         (Binds
@@ -97,7 +100,7 @@ simpleParses = testGroup "Well-written programs"
                                          (AppF "f" [AtomVar "x"]))])
                              (AppF "x" [])))])
 
-    , shouldParseToSuccess "factorial"
+    , shouldParseTo "factorial"
         "fac = \\n ->                                                        \n\
         \   case n of                                                        \n\
         \       0#      -> Int# 1#;                                          \n\
@@ -129,7 +132,7 @@ simpleParses = testGroup "Well-written programs"
                                                 (DefaultBound (Var "result") (AppC (Constr "Int#") [AtomVar (Var "result")])) ))])
                                         (DefaultBound (Var "err") (AppC (Constr "Error_fac") [AtomVar (Var "err")])) ))))))))))])
 
-   , shouldParseToSuccess "map with comment"
+   , shouldParseTo "map with comment"
         "-- Taken from the 1992 STG paper, page 21.                          \n\
         \map = \\f xs ->                                                     \n\
         \    case xs of                                                      \n\
@@ -152,7 +155,7 @@ simpleParses = testGroup "Well-written programs"
                                (AppC "Cons" [AtomVar "fy", AtomVar "mfy"])) ])
                      (DefaultNotBound (AppF "badListError" [])) )))])
 
-    , shouldParseToSuccess "map, differently implemented"
+    , shouldParseTo "map, differently implemented"
          "-- Taken from the 1992 STG paper, page 22.                         \n\
          \map = \\f ->                                                       \n\
          \    letrec mf = \\(f mf) xs ->                                     \n\
@@ -199,4 +202,21 @@ badParses :: TestTree
 badParses = testGroup "Parsers that should fail"
     [ shouldFailToParse "Updatable lambda forms don't take arguments"
         "x = \\y => z"
+    , shouldFailToParse "Standard constructors are not updatable"
+        "x = \\(y) => Con y"
+    ]
+
+stresstest :: TestTree
+stresstest = testGroup "Stress test"
+    [ shouldParseTo "As few as possible spaces"
+        "x=\\y->case x of default->z"
+        [QQ.binds| x = \y -> case x of default -> z |]
+    , testGroup "Too few spaces"
+        [ shouldFailToParse "casex of"
+            "x=\\y->casex of default->z"
+        , shouldFailToParse "case xof"
+            "x=\\y->case xof default->z"
+        , shouldFailToParse "ofdefault"
+            "x=\\y->case x ofdefault->z"
+        ]
     ]
