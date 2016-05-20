@@ -128,7 +128,7 @@ of a couple of alternatives.
     non-recursive.
   - **Letrec:** `letrec ...bindings... in expression`: The recursive version of
     `let`; behaves just like in Haskell.
-  - **Case:** `case <expression> of <alts>`: evaluate the <expression> (called
+  - **Case:** `case <expression> of <alts>`: evaluate the `<expression>` (called
     scrutinee) to WHNF and continue evaluating the matching alternative. Note
     that the WHNF part makes case strict, and indeed it is the *only* construct
     that does evaluation.
@@ -220,11 +220,42 @@ A couple of things to keep in mind:
   a "variable not in scope" error.
 
 
-### Code examples
+### Code example
 
-Instead of recreating lots of examples here, have a look at the modules in the
-`Prelude`, which contain the STG versions of common Haskell functions. Combined
-with the above explanations, this is all you should need to get started.
+The 1992 paper gives two implementations of the `map` function in section 4.1.
+The first one is the STG version of
+
+```haskell
+map f [] = []
+map f (y:ys) = f y : map f ys
+```
+
+which, in this STG implementation, would be written
+
+```haskell
+map = \f xs -> case xs of
+    Nil -> Nil;
+    Cons y ys -> let fy = \(f y) => f y;
+                     mfy = \(f ys) => map f ys
+                 in Cons fy mfy;
+    badList -> Error_map badList
+```
+
+For comparison, the paper's version is
+
+```haskell
+map = {} \n {f,xs} -> case xs of
+    Nil {} -> Nil {}
+    Cons {y,ys} -> let fy = {f,y} \u {} -> f {y}
+                       mfy = {f,ys} \u {} -> map {f,ys}
+                   in Cons {fy,mfy}
+    badList -> Error_map {badList}
+    -- (The paper omits the default case for readability)
+```
+
+You can find lots of further examples of standard Haskell functions implemented
+by hand in STG in the `Prelude` modules. Combined with the above explanations,
+this is all you should need to get started.
 
 
 Running an STG program
