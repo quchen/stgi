@@ -69,7 +69,8 @@ concat2 = [program|
         badList -> Error_concat2 badList
     |]
 
--- | Lazy left list fold.
+-- | Lazy left list fold. Provided mostly for seeing how it causes stack
+-- overflows.
 --
 -- @
 -- foldl : (b -> a -> b) -> b -> [a] -> b
@@ -113,7 +114,7 @@ foldr = [program|
 -- | Build a list by repeatedly applying a function to an initial value.
 --
 -- @
--- iterate f x = [x f x f (f x) ...]
+-- iterate f x = [x, f x, f (f x), ...]
 -- @
 --
 -- @
@@ -130,7 +131,7 @@ iterate = [program|
 -- | Infinite list created by repeating an initial (non-empty) list.
 --
 -- @
--- cycle [x,y,z] = [x,y,z x,y,z x,y,z ...]
+-- cycle [x,y,z] = [x,y,z, x,y,z, x,y,z, ...]
 -- @
 --
 -- @
@@ -143,6 +144,10 @@ cycle = concat2 <> [program|
     |]
 
 -- | Take n elements form the beginning of a list.
+--
+-- @
+-- take 3 [1..] = [1,2,3]
+-- @
 --
 -- @
 -- take : Int -> [a] -> [a]
@@ -168,7 +173,7 @@ take = [program|
 -- | Keep only the elements for which a predicate holds.
 --
 -- @
--- filter even [1..] = [2 4 6 ...]
+-- filter even [1..] = [2, 4, 6, ...]
 -- @
 --
 -- @
@@ -211,7 +216,7 @@ reverse = nil <> [program|
 -- | Repeat a single element infinitely.
 --
 -- @
--- repeat 1 = [1 1 1 ...]
+-- repeat 1 = [1, 1, 1, ...]
 -- @
 --
 -- @
@@ -226,7 +231,7 @@ repeat = [program|
 -- | Repeat a single element a number of times.
 --
 -- @
--- replicate 3 1 = [1 1 1]
+-- replicate 3 1 = [1, 1, 1]
 -- @
 --
 -- @
@@ -289,19 +294,21 @@ map = [program|
 
 -- | Generate a list of numbers.
 --
+-- Also demonstrate nicely how much overhead seemingly simple lists have.
+--
 -- @
--- listOfNumbers [1 -2 3]
+-- listOfNumbers [1, -2, 3]
 -- @
 --
 -- @
--- numbers = () \=>
+-- numbers = \ =>
 --     letrec
---         int_'2 = () \-> Int\# (-2\#;
---         int_1 = () \-> Int\# (1\#;
---         int_3 = () \-> Int\# (3\#;
---         list_ix0_int_1 = (int_1,list_ix1_int_'2) \=> Cons int_1 list_ix1_int_'2;
---         list_ix1_int_'2 = (int_'2,list_ix2_int_3) \=> Cons int_ 2,list_ix2_int_3;
---         list_ix2_int_3 = (int_3) \=> Cons int_3 nil)
+--         int_'2 = \ -> Int\# -2\#;
+--         int_1  = \ -> Int\# 1\#;
+--         int_3  = \ -> Int\# 3\#;
+--         list_ix0_int_1  = \(int_1 list_ix1_int_'2) => Cons int_1  list_ix1_int_'2;
+--         list_ix1_int_'2 = \(int_'2 list_ix2_int_3) => Cons int_'2 list_ix2_int_3;
+--         list_ix2_int_3  = \(int_3)                 => Cons int_3  nil
 --     in list_ix0_int_1;
 -- nil = () -> Nil
 -- @
@@ -351,7 +358,7 @@ listOfNumbers name ints = nil <>
 -- | Equality of lists of integers.
 --
 -- @
--- map : [Int] -> [Int] -> Bool
+-- equals_List_Int : [Int] -> [Int] -> Bool
 -- @
 equals_List_Int = Num.eq_Int <> [program|
     equals_List_Int = \xs ys ->
@@ -373,7 +380,7 @@ equals_List_Int = Num.eq_Int <> [program|
 -- | Length of a list.
 --
 -- @
--- length : [a] -> [a] -> Bool
+-- length : [a] -> Int
 -- @
 length = [program|
     length = \ =>
