@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module Test.Language.Prelude.List (tests) where
+module Test.Prelude.List (tests) where
 
 
 
@@ -11,7 +11,7 @@ import           Data.Monoid
 import           Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Language.Prelude   as Stg
+import qualified Stg.Prelude   as Stg
 import           Stg.Machine.Types
 import           Stg.Parser.QuasiQuoter
 

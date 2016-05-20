@@ -13,7 +13,7 @@ import System.Environment
 import System.IO             (stdout)
 
 import           Stg.Language
-import qualified Stg.Language.Prelude     as Stg
+import qualified Stg.Prelude     as Stg
 import           Stg.Language.Prettyprint
 import           Stg.Parser.QuasiQuoter
 import           Stg.RunForPager

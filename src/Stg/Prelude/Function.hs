@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Stg.Language.Prelude.Function (
+module Stg.Prelude.Function (
     seq,
     id,
     const,

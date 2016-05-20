@@ -8,6 +8,7 @@ import Data.Monoid
 import qualified Test.Language as Language
 import qualified Test.Machine  as Machine
 import qualified Test.Parser   as Parser
+import qualified Test.Prelude  as Prelude
 import qualified Test.Stack    as Stack
 
 import Test.Tasty
@@ -50,4 +51,5 @@ tests = testGroup "STG"
     [ Stack.tests
     , Parser.tests
     , Machine.tests
-    , Language.tests ]
+    , Language.tests
+    , Prelude.tests ]

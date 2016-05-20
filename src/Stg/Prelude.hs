@@ -3,7 +3,7 @@
 --
 -- This module should be imported qualified, since it heavily conflicts with the
 -- standard Haskell "Prelude".
-module Stg.Language.Prelude (
+module Stg.Prelude (
     -- * Lists
     nil,
     concat2,
@@ -77,8 +77,8 @@ module Stg.Language.Prelude (
 
 import Prelude ()
 
-import Stg.Language.Prelude.Bool
-import Stg.Language.Prelude.Function
-import Stg.Language.Prelude.List
-import Stg.Language.Prelude.Number
-import Stg.Language.Prelude.Tuple
+import Stg.Prelude.Bool
+import Stg.Prelude.Function
+import Stg.Prelude.List
+import Stg.Prelude.Number
+import Stg.Prelude.Tuple

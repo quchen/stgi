@@ -2,15 +2,15 @@
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module Test.Language.Prelude.Tuple (tests) where
+module Test.Prelude.Tuple (tests) where
 
 
 
 import           Data.Monoid
 import qualified Data.Tuple  as T
 
-import qualified Stg.Language.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()

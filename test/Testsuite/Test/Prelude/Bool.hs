@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-module Test.Language.Prelude.Bool (tests) where
+module Test.Prelude.Bool (tests) where
 
 
 
 import Data.Bool
 import Data.Monoid
 
-import qualified Stg.Language.Prelude   as Stg
+import qualified Stg.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference

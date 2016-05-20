@@ -23,12 +23,6 @@ library
   hs-source-dirs:      src
   exposed-modules:     Data.Stack
                      , Stg.Language
-                     , Stg.Language.Prelude
-                     , Stg.Language.Prelude.Bool
-                     , Stg.Language.Prelude.Function
-                     , Stg.Language.Prelude.List
-                     , Stg.Language.Prelude.Number
-                     , Stg.Language.Prelude.Tuple
                      , Stg.Language.Prettyprint
                      , Stg.Machine
                      , Stg.Machine.Env
@@ -38,6 +32,12 @@ library
                      , Stg.Machine.Types
                      , Stg.Parser.Parser
                      , Stg.Parser.QuasiQuoter
+                     , Stg.Prelude
+                     , Stg.Prelude.Bool
+                     , Stg.Prelude.Function
+                     , Stg.Prelude.List
+                     , Stg.Prelude.Number
+                     , Stg.Prelude.Tuple
                      , Stg.Util
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
@@ -80,12 +80,6 @@ test-suite testsuite
   hs-source-dirs:      test/Testsuite
   main-is:             Main.hs
   other-modules:       Test.Language
-                     , Test.Language.Prelude
-                     , Test.Language.Prelude.Bool
-                     , Test.Language.Prelude.Function
-                     , Test.Language.Prelude.List
-                     , Test.Language.Prelude.Number
-                     , Test.Language.Prelude.Tuple
                      , Test.Language.Prettyprint
                      , Test.Machine
                      , Test.Machine.Evaluate
@@ -104,6 +98,12 @@ test-suite testsuite
                      , Test.Parser
                      , Test.Parser.Parser
                      , Test.Parser.QuasiQuoter
+                     , Test.Prelude
+                     , Test.Prelude.Bool
+                     , Test.Prelude.Function
+                     , Test.Prelude.List
+                     , Test.Prelude.Number
+                     , Test.Prelude.Tuple
                      , Test.Stack
                      , Test.Util
                      , Test.UtilTH

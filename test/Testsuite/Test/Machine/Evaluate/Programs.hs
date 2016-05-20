@@ -16,7 +16,7 @@ import Data.Foldable
 import Data.Monoid
 import Test.Tasty
 
-import qualified Stg.Language.Prelude   as Stg
+import qualified Stg.Prelude   as Stg
 import           Stg.Machine.Types
 import           Stg.Parser.QuasiQuoter
 

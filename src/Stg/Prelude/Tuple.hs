@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-module Stg.Language.Prelude.Tuple (
+module Stg.Prelude.Tuple (
     fst,
     snd,
     curry,
@@ -21,7 +21,7 @@ import qualified Data.Text   as T
 import qualified Prelude     as P
 
 import Stg.Language
-import Stg.Language.Prelude.Number
+import Stg.Prelude.Number
 import Stg.Parser.QuasiQuoter
 
 

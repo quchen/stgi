@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes     #-}
 
 -- | Boolean functions, like in "Data.Bool".
-module Stg.Language.Prelude.Bool (
+module Stg.Prelude.Bool (
     and2,
     or2,
     not,

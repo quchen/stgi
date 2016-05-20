@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-module Stg.Language.Prelude.List (
+module Stg.Prelude.List (
     nil,
     concat2,
     reverse,
@@ -39,7 +39,7 @@ import Stg.Language
 import Stg.Parser.QuasiQuoter
 import Stg.Util
 
-import Stg.Language.Prelude.Number as Num
+import Stg.Prelude.Number as Num
 
 
 

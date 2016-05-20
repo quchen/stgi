@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-module Stg.Language.Prelude.Number (
+module Stg.Prelude.Number (
     -- * Convenience
     int,
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-module Test.Language.Prelude.Number (tests) where
+module Test.Prelude.Number (tests) where
 
 
 
@@ -9,7 +9,7 @@ import Data.Monoid
 import Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Language.Prelude   as Stg
+import qualified Stg.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
