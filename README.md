@@ -119,8 +119,7 @@ usual lambda from Haskell.
 
 ### Expressions
 
-The body of a lambda form is an expression. Expressions can, in general, be one
-of a couple of alternatives.
+Expressions can, in general, be one of a couple of alternatives.
 
   - **Let:** `let <...bindings...> in <expression>`: Introduce local definitions
     similar to Haskell's `let`, with one key difference: the `...bindings...`
@@ -148,6 +147,14 @@ maybe = \just nothing x -> case x of
     Just j  -> just j;
     Nothing -> nothing
 ```
+
+Some lambda expressions can only contain certain sub-elements; these special
+cases are detailed in the sections below. To foreshadow these issues:
+
+- Lambda forms always have lifted (not primitive) type
+- Lambda forms with non-empty argument lists and standard constructors are never
+  updatable
+
 
 ### Updates
 
