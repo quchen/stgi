@@ -115,14 +115,14 @@ con = highlight Constructor constructor <?> "constructor"
 
 -- | Parse an STG program.
 program :: (Monad parser, TokenParsing parser) => parser Program
-program = someSpace *> fmap Program binds <* eof
+program = someSpace *> fmap Program binds <* eof <?> "STG program"
 
 -- | Parse a collection of bindings, used by @let(rec)@ expressions and at the
 -- top level of a program.
 binds :: (Monad parser, TokenParsing parser) => parser Binds
-binds = fmap (Binds . M.fromList) (sepBy1 binding semi)
+binds = bindings <?> "Non-empty list of bindings"
   where
-    binding :: (Monad parser, TokenParsing parser) => parser (Var, LambdaForm)
+    bindings = fmap (Binds . M.fromList) (sepBy1 binding semi)
     binding = (,) <$> var <* symbol "=" <*> lambdaForm
 
 comment :: TokenParsing parser => parser ()
@@ -134,7 +134,7 @@ comment = skipToken (highlight Comment (lineComment <|> blockComment)) <?> ""
 -- | Parse a lambda form, consisting of a list of free variables, and update
 -- flag, a list of bound variables, and the function body.
 lambdaForm :: (Monad parser, TokenParsing parser) => parser LambdaForm
-lambdaForm = lf >>= validateLambda
+lambdaForm = lf >>= validateLambda <?> "lambda form"
   where
     lf :: (Monad parser, TokenParsing parser) => parser LambdaForm
     lf = (\free bound upd body -> LambdaForm free upd bound body)
@@ -143,7 +143,6 @@ lambdaForm = lf >>= validateLambda
          <*> many var
          <*> updateArrow
          <*> expr
-         <?> "lambda form"
 
     validateLambda = \case
         LambdaForm _ Update [] AppC{} ->
@@ -192,7 +191,7 @@ expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
         <*> (binds <?> "list of free variables")
         <*  reserved "in"
         <*> (expr <?> "let(rec) expression")
-        <?> "let"
+        <?> "let(rec)"
     case' = Case
         <$  reserved "case"
         <*> (expr <?> "case scrutinee")
