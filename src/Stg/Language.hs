@@ -127,7 +127,7 @@ data Expr =
       Let !Rec !Binds !Expr    -- ^ Let expression @let(rec) ... in ...@
     | Case !Expr !Alts         -- ^ Case expression @case ... of ... x -> y@
     | AppF !Var ![Atom]        -- ^ Function application @f x y z@
-    | AppC !Constr ![Atom]     -- ^ Constructor application @Just a@
+    | AppC !Constr ![Atom]     -- ^ Saturated constructor application @Just a@
     | AppP !PrimOp !Atom !Atom -- ^ Primitive function application @+# 1# 2#@
     | Lit !Literal             -- ^ Literal expression @1#@
     deriving (Eq, Ord, Show, Generic)

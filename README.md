@@ -105,7 +105,7 @@ language.
 An STG program consists of a set of bindings, which each have the form
 
 ```haskell
-name = \(<free vars>) <bound vars> -> body
+name = \(<free vars>) <bound vars> -> <expression body>
 ```
 
 The right-hand side is called a *lambda form*, and is closely related to the
@@ -121,31 +121,88 @@ usual lambda from Haskell.
 
 Expressions can, in general, be one of a couple of alternatives.
 
-  - **Let:** `let <...bindings...> in <expression>`: Introduce local definitions
-    similar to Haskell's `let`, with one key difference: the `...bindings...`
-    cannot refer to each other (or themselves). In other words, `let` is
-    non-recursive.
-  - **Letrec:** `letrec ...bindings... in expression`: The recursive version of
-    `let`; behaves just like in Haskell.
-  - **Case:** `case <expression> of <alts>`: evaluate the `<expression>` (called
-    scrutinee) to WHNF and continue evaluating the matching alternative. Note
-    that the WHNF part makes case strict, and indeed it is the *only* construct
-    that does evaluation.
-  - **Function application:** `function <args>`: Like Haskell's function
-    application. The `<args>` are primitive values or variables.
-  - **Primitive application:** `primop# <arg1> <arg2>`: Primitive operation on
-    unboxed integers.
-  - **Constructor application:** `Constructor <args>`: An algebraic data
-    constructor applied to a number of arguments, just like function
-    application.
-  - **Primitive literal:** An integer postfixed with `#`, like `123#`.
+  - **Letrec**
+
+    ```haskell
+    letrec <...bindings...> in <expression>
+    ```
+
+    Introduce local definitions, just like Haskell's `let`.
+
+  - **Let**
+
+    ```haskell
+    let <...bindings...> in <expression>
+    ```
+
+    Like `letrec`, but the bindings cannot refer to each other (or themselves).
+    In other words, `let` is non-recursive.
+
+  - **Case**
+
+    ```haskell
+    case <expression> of <alts>
+    ```
+
+    Evaluate the `<expression>` (called scrutinee) to WHNF and continue
+    evaluating the matching alternative. Note that the WHNF part makes case
+    strict, and indeed it is the *only* construct that does evaluation.
+
+    The `<alts>` are semicolon-separated list of alternatives of the form
+
+    ```haskell
+    Constructor <args> -> <expression> -- Algebraic
+    1# -> <expression>                 -- Primitive
+    ```
+
+    and can be either all algebraic or all primitive. Each list of alts must
+    include a default alternative at the end, which can optinally bind a
+    variable.
+
+    ```haskell
+    v -> <expression; v is in scope> -- bound default
+    default -> <expression>          -- unbound default
+    ```
+
+  - **Function application**
+
+    ```haskell
+    function <args>
+    ```
+
+    Like Haskell's function application. The `<args>` are primitive values or
+    variables.
+
+  - **Primitive application**
+
+    ```haskell
+    primop# <arg1> <arg2>
+    ```
+
+    Primitive operation on unboxed integers.
+
+  - **Constructor application**
+
+    ```haskell
+    Constructor <args>
+    ```
+
+    An algebraic data constructor applied to a number of arguments, just like
+    function application. Note that constructors always have to be saturated
+    (not partially applied); to get a partially applied constructor, wrap it in
+    a lambda form.
+
+  - **Primitive literal**
+
+    An integer postfixed with `#`, like `123#`.
 
 For example, Haskell's `maybe` function could be implemented in STG like this:
 
 ```haskell
 maybe = \just nothing x -> case x of
-    Just j  -> just j;
-    Nothing -> nothing
+    Just j   -> just j;
+    Nothing  -> nothing
+    badMaybe -> Error_badMaybe badMaybe
 ```
 
 Some lambda expressions can only contain certain sub-elements; these special
