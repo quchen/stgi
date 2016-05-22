@@ -83,14 +83,22 @@ data StgStateStyle = StgStateStyle
     , addressCore :: Doc -> Doc
         -- ^ Style of memory addresses; applied only to the actual address
         --   number, such as @ff@ in @0xff@.
+
+    , closureType :: Doc -> Doc
+        -- ^ Style of the type of a closure, such as BLACKHOLE or FUN.
+
+    , stackFrameType :: Doc -> Doc
+        -- ^ Style of the stack frame annotation, such as UPD or ARG.
     }
 
 -- | Colour definitions used in this module.
 style :: StgStateStyle
 style = StgStateStyle
-    { headline    = dullblue
-    , address     = dullcyan
-    , addressCore = underline
+    { headline       = dullblue
+    , address        = dullcyan
+    , addressCore    = underline
+    , closureType    = bold
+    , stackFrameType = bold
     }
 
 -- Local re-definition to avoid cyclic import with the Heap module
@@ -138,11 +146,11 @@ data StackFrame =
 
 instance Pretty StackFrame where
     pretty = \case
-        ArgumentFrame val -> "(Argument)" <+> pretty val
-        ReturnFrame alts locals -> "(Return)" <+>
+        ArgumentFrame val -> stackFrameType style "Arg" <+> pretty val
+        ReturnFrame alts locals -> stackFrameType style "Ret" <+>
             (align . vsep) [ fill 7 (headline style "Alts:")   <+> align (pretty alts)
                            , fill 7 (headline style "Locals:") <+> align (pretty locals) ]
-        UpdateFrame addr -> "(Update)" <+> pretty addr
+        UpdateFrame addr -> stackFrameType style "Upd" <+> pretty addr
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int
@@ -481,15 +489,17 @@ data HeapObject =
     deriving (Eq, Ord, Show)
 
 instance Pretty HeapObject where
-    pretty = \case
-        HClosure closure@(Closure lambda _freeVals) ->
-            bold (classify lambda) <+> align (pretty closure)
-        Blackhole tick -> bold "BLACKHOLE" <+> "(from step " <> integer tick <> ")"
+    pretty ho = closureType style (typeOf ho) <+> pprHo ho
       where
-        classify = \case
-            LambdaForm _ _ [] AppC{} -> "CON"
-            LambdaForm _ _ (_:_) _   -> "FUN"
-            LambdaForm _ _ []    _   -> "THUNK"
-            LambdaForm{} -> "" -- Fallthrough pattern to silence inexhaustive
-                               -- warning by GHC 7.10.3. Probably a compiler
-                               -- bug.
+        pprHo = \case
+            HClosure closure -> align (pretty closure)
+            Blackhole tick   -> "(from step" <+> integer tick <> ")"
+        typeOf = \case
+            HClosure (Closure lf _free) -> case lf of
+                LambdaForm _ _ [] AppC{} -> "Con"
+                LambdaForm _ _ (_:_) _   -> "Fun"
+                LambdaForm _ _ []    _   -> "Thunk"
+                LambdaForm{} -> "CLASSIFICATION ERROR"
+                               -- Fallthrough pattern to silence incorrect
+                               -- inexhaustive warning by GHC 7.10.3.
+            Blackhole _ -> "Blackhole"
