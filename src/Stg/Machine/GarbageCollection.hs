@@ -15,6 +15,7 @@ module Stg.Machine.GarbageCollection (
 
 
 import           Data.Foldable
+import           Data.Map      (Map)
 import qualified Data.Map      as M
 import           Data.Monoid   hiding (Alt)
 import           Data.Set      (Set)
@@ -53,7 +54,6 @@ splitHeap StgState
     , stgStack   = stack }
   = let GcState {aliveHeap = alive, oldHeap = dead}
             = until everythingCollected gcStep start
-
         start = GcState
             { aliveHeap = mempty
             , oldHeap = heap
@@ -62,7 +62,9 @@ splitHeap StgState
     in (Dead dead, alive)
 
 everythingCollected :: GcState -> Bool
-everythingCollected GcState{evacuate = Alive alive} = S.null alive
+everythingCollected = noAlives
+  where
+    noAlives GcState {evacuate = Alive alive} = S.null alive
 
 data GcState = GcState
     { aliveHeap :: Alive Heap
@@ -85,17 +87,16 @@ gcStep GcState
     , oldHeap   = Heap oldRest }
   = GcState
     { aliveHeap = oldAlive <> Alive (Heap scavenged)
-    , evacuate  = newParentRescued
+    , evacuate  = Alive (addrs scavenged)
     , oldHeap   = Heap newRest }
   where
-    -- A closure is alive iff it is on the alive heap, or the closure that
-    -- contained it was scavenged in a previous step.
-    isAlive addr _closure = M.member addr alive || S.member addr evacuateAddrs
-
-    -- :: (Map MemAddr Closure, Map MemAddr Closure)
+    scavenged, newRest :: Map MemAddr HeapObject
     (scavenged, newRest) = M.partitionWithKey isAlive oldRest
-
-    newParentRescued = Alive (addrs scavenged)
+      where
+        -- A closure is alive iff it is on the alive heap, or the closure that
+        -- contained it was scavenged in a previous step.
+        isAlive addr _closure = M.member addr alive
+                             || S.member addr evacuateAddrs
 
 
 
@@ -111,10 +112,11 @@ instance (Foldable f, Addresses a) => Addresses (f a) where
     addrs = foldMap addrs
 
 instance Addresses Code where
-    addrs (Eval _expr locals)   = addrs locals
-    addrs (Enter addr)          = addrs addr
-    addrs (ReturnCon _con args) = addrs args
-    addrs (ReturnInt _int)      = mempty
+    addrs = \case
+        Eval _expr locals   -> addrs locals
+        Enter addr          -> addrs addr
+        ReturnCon _con args -> addrs args
+        ReturnInt _int      -> mempty
 
 instance Addresses StackFrame where
     addrs = \case
@@ -126,14 +128,13 @@ instance Addresses MemAddr where
     addrs addr = S.singleton addr
 
 instance Addresses Globals where
-    addrs (Globals globals)
-        = S.fromList [ addr | (_, Addr addr) <- M.assocs globals ]
+    addrs (Globals globals) = addrs globals
 
 instance Addresses Locals where
-    addrs (Locals locals) = addrs (Globals locals)
+    addrs (Locals locals) = addrs locals
 
 instance Addresses Closure where
-    addrs (Closure _lambdaForm free) = addrs free
+    addrs (Closure _lf free) = addrs free
 
 instance Addresses HeapObject where
     addrs = \case
@@ -142,5 +143,5 @@ instance Addresses HeapObject where
 
 instance Addresses Value where
     addrs = \case
-        Addr s     -> S.singleton s
+        Addr addr  -> addrs addr
         PrimInt _i -> mempty
