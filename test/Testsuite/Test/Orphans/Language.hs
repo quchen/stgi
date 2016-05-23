@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE QuasiQuotes           #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -19,13 +20,14 @@ import           Test.SmallCheck.Series
 import           Test.Tasty.QuickCheck
 
 import Stg.Language
+import Stg.Parser.QuasiQuoter
 
 import Test.Util
 
 
 
 --------------------------------------------------------------------------------
--- Helper functions
+-- Helpers
 
 shrinkBut1stLetter :: Text -> [Text]
 shrinkBut1stLetter text = case T.uncons text of
@@ -49,7 +51,10 @@ instance Arbitrary Binds where
     arbitrary = do
         xs <- listOf1 (scaled (2%3) arbitrary)
         pure (Binds (M.fromList xs))
-    shrink (Binds b) = (map (Binds . M.fromList) . shrinkBut1st . M.toList) b
+    shrink (Binds b) =
+          [binds| bind = \ -> Unit |]
+        : [binds| bind1 = \ -> Unit1; bind2 = \ -> Unit2 |]
+        : (map (Binds . M.fromList) . shrinkBut1st . M.toList) b
       where
         -- Bindings have to be non-empty, we ensure at least one element is in
         -- the shrunken result.
@@ -72,7 +77,13 @@ instance Arbitrary LambdaForm where
             -- Standard constructors are never updatable, so we exclude those
             [arbitrary2 AppC | updateFlag == NoUpdate] )
         pure (LambdaForm free updateFlag bound body)
-    shrink = filter isValid . genericShrink
+    shrink lf =
+          [lambdaForm| \ -> x |]
+        : [lambdaForm| \ => x |]
+        : [lambdaForm| \x -> x |]
+        : [lambdaForm| \(y) x -> x |]
+        : [lambdaForm| \(y z) x w -> Con x y z w |]
+        : filter isValid (genericShrink lf)
       where
         isValid (LambdaForm _ Update (_:_) AppF{}) = False
         isValid (LambdaForm _ Update (_:_) AppC{}) = False
@@ -105,27 +116,30 @@ instance Arbitrary NonDefaultAlts where
     arbitrary = oneof
         [ pure NoNonDefaultAlts
         , fmap (AlgebraicAlts . NonEmpty.fromList)
-            (scaled (2%3) (listOf1 (arbitrary3 AlgebraicAlt)))
+            (listOf1 (scaled (2%3) (arbitrary3 AlgebraicAlt)))
         , fmap (PrimitiveAlts . NonEmpty.fromList)
-            (scaled (2%3) (listOf1 (arbitrary2 PrimitiveAlt))) ]
+            (listOf1 (scaled (2%3) (arbitrary2 PrimitiveAlt))) ]
 
 instance Arbitrary DefaultAlt where
     arbitrary = oneof [arbitrary1 DefaultNotBound, arbitrary2 DefaultBound]
     shrink = genericShrink
 
 instance Arbitrary Literal where
-    arbitrary = fmap Literal (resize 128 arbitrary)
+    arbitrary = resize 128 (arbitrary1 Literal)
     shrink = genericShrink
 
 instance Arbitrary PrimOp where
     arbitrary = allEnums
     shrink = genericShrink
 
+word, lower, upper :: Gen Text
+word = T.pack <$> listOf (elements (['a'..'z'] <> ['A'..'Z'] <> ['0'..'9'] <> "\'_"))
+lower = T.singleton <$> elements ['a'..'z']
+upper = T.singleton <$> elements ['A'..'Z']
+
 instance Arbitrary Var where
     arbitrary = do
-        x <- T.singleton <$> elements ['a'..'z']
-        xs <- T.pack <$> listOf (elements (['a'..'z'] <> ['A'..'Z'] <> ['0'..'9'] <> "\'_"))
-        let var = Var (x <> xs)
+        var <- (\head' tail' -> Var (head' <> tail')) <$> lower <*> word
         if var `elem` reservedKeywords
             then arbitrary
             else pure var
@@ -136,11 +150,10 @@ instance Arbitrary Atom where
     shrink = genericShrink
 
 instance Arbitrary Constr where
-    arbitrary = do
-        x <- T.singleton <$> elements ['A'..'Z']
-        xs <- T.pack <$> listOf (elements (['a'..'z'] <> ['A'..'Z'] <> ['0'..'9'] <> "\'_"))
-        hash <- frequency [(9, pure ""), (1, pure "#")]
-        (pure . Constr) (x <> xs <> hash)
+    arbitrary = (\head' tail' hash -> Constr (head' <> tail' <> hash))
+                <$> upper
+                <*> word
+                <*> frequency [(3, pure ""), (1, pure "#")]
     shrink (Constr constr) = map Constr (shrinkBut1stLetter constr)
 
 
