@@ -6,6 +6,7 @@ module Stg.Machine.GarbageCollection (
     garbageCollect,
 
     -- * Algorithms
+    GarbageCollectionAlgorithm,
     markAndSweep,
     twoSpaceStopAndCopy,
 ) where

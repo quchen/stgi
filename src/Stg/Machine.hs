@@ -17,6 +17,9 @@ module Stg.Machine (
     -- * Garbage collection
     garbageCollect,
     PerformGc(..),
+    GarbageCollectionAlgorithm,
+    markAndSweep,
+    twoSpaceStopAndCopy,
 ) where
 
 
@@ -74,8 +77,9 @@ data RunForSteps =
 -- | Predicate to decide whether the machine should halt.
 newtype HaltIf = HaltIf (StgState -> Bool)
 
--- | Predicate to decide whether a garbage collection should be attempted
-newtype PerformGc = PerformGc (StgState -> Bool)
+-- | Decide whether garbage collection should be attempted, and with which
+-- algorithm.
+newtype PerformGc = PerformGc (StgState -> Maybe GarbageCollectionAlgorithm)
 
 -- | Evaluate the STG until a predicate holds, aborting if the maximum number of
 -- steps are exceeded.
@@ -121,14 +125,18 @@ evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc) = go False
             -> terminate (state { stgInfo = Info HaltedByPredicate [] })
 
         state@StgState{ stgInfo = Info StateTransition{} _ }
-            | attemptGc && performGc state -> case garbageCollect markAndSweep state of
+            | attemptGc
+            , Just algorithm <- performGc state
+            -> case garbageCollect algorithm state of
                 stateGc@StgState{stgInfo = Info GarbageCollection _} ->
                     state : stateGc : go False (evalStep stateGc)
                 _otherwise -> state : go True (evalStep state)
             | otherwise -> state : go True (evalStep state)
 
         state@StgState{ stgInfo = Info StateInitial _ }
-            | attemptGc && performGc state -> case garbageCollect markAndSweep state of
+            | attemptGc
+            , Just algorithm <- performGc state
+            -> case garbageCollect algorithm state of
                 stateGc@StgState{stgInfo = Info GarbageCollection _} ->
                     state : stateGc : go False (evalStep stateGc)
                 _otherwise -> state : go True (evalStep state)
