@@ -3,7 +3,7 @@
 {-# LANGUAGE LambdaCase                 #-}
 
 -- | Two space stop-and-copy algorithm.
-module Stg.Machine.GarbageCollection.TwoSpaceSopAndCopy (
+module Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy (
     garbageCollect,
 
     -- * Low-level

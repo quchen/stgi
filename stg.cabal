@@ -28,7 +28,7 @@ library
                      , Stg.Machine.Env
                      , Stg.Machine.Evaluate
                      , Stg.Machine.GarbageCollection
-                     , Stg.Machine.GarbageCollection.TwoSpaceSopAndCopy
+                     , Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy
                      , Stg.Machine.Heap
                      , Stg.Machine.Types
                      , Stg.Parser.Parser
