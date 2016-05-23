@@ -19,6 +19,7 @@ import Stg.Machine.Types
 
 
 
+-- | Remove all unused addresses, without moving the others.
 triStateTracing :: GarbageCollectionAlgorithm
 triStateTracing = GarbageCollectionAlgorithm splitHeap
 

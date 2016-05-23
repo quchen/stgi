@@ -1,3 +1,4 @@
+{-# LANGUAGE NumDecimals       #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
@@ -36,7 +37,7 @@ prettyIndented :: Pretty a => a -> Text
 prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprint
 
 splitHeapTest :: GarbageCollectionAlgorithm -> TestTree
-splitHeapTest algorithm = localOption (Timeout 1000 "1 s")
+splitHeapTest algorithm = localOption (Timeout 1e6 "1 s")
     (testGroup "Split heap in dead/alive"
         [ unusedIsCollected
         , usedIsNotCollected
