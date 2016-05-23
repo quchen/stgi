@@ -28,6 +28,7 @@ library
                      , Stg.Machine.Env
                      , Stg.Machine.Evaluate
                      , Stg.Machine.GarbageCollection
+                     , Stg.Machine.GarbageCollection.TwoSpaceSopAndCopy
                      , Stg.Machine.Heap
                      , Stg.Machine.Types
                      , Stg.Parser.Parser
@@ -39,16 +40,17 @@ library
                      , Stg.Prelude.Number
                      , Stg.Prelude.Tuple
                      , Stg.Util
-  ghc-options:         -Wall
+  ghc-options:         -Wall -fdefer-typed-holes
   build-depends:       base >= 4.7 && < 5
                      , ansi-wl-pprint
                      , containers
-                     , semigroups
                      , parsers
-                     , trifecta
+                     , semigroups
                      , template-haskell
                      , text
                      , th-lift
+                     , transformers
+                     , trifecta
   other-extensions:    DeriveGeneric
                      , FlexibleInstances
                      , GeneralizedNewtypeDeriving
