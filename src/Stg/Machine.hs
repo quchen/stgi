@@ -121,14 +121,14 @@ evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc) = go False
             -> terminate (state { stgInfo = Info HaltedByPredicate [] })
 
         state@StgState{ stgInfo = Info StateTransition{} _ }
-            | attemptGc && performGc state -> case garbageCollect state of
+            | attemptGc && performGc state -> case garbageCollect markAndSweep state of
                 stateGc@StgState{stgInfo = Info GarbageCollection _} ->
                     state : stateGc : go False (evalStep stateGc)
                 _otherwise -> state : go True (evalStep state)
             | otherwise -> state : go True (evalStep state)
 
         state@StgState{ stgInfo = Info StateInitial _ }
-            | attemptGc && performGc state -> case garbageCollect state of
+            | attemptGc && performGc state -> case garbageCollect markAndSweep state of
                 stateGc@StgState{stgInfo = Info GarbageCollection _} ->
                     state : stateGc : go False (evalStep stateGc)
                 _otherwise -> state : go True (evalStep state)

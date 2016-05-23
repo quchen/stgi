@@ -16,6 +16,7 @@ import           Test.Tasty.HUnit
 
 import Stg.Language.Prettyprint
 import Stg.Machine.GarbageCollection
+import Stg.Machine.GarbageCollection.Common
 import Stg.Machine.Types
 import Stg.Parser.QuasiQuoter
 
@@ -25,18 +26,21 @@ import Test.Orphans ()
 
 tests :: TestTree
 tests = testGroup "Garbage collection"
-    [ splitHeapTest
+    [ testGroup "Mark-and-sweep"
+        [splitHeapTest markAndSweep]
+    , testGroup "Two space stop-and-copy"
+        [splitHeapTest twoSpaceStopAndCopy]
     ]
 
 prettyIndented :: Pretty a => a -> Text
 prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprint
 
-splitHeapTest :: TestTree
-splitHeapTest = testGroup "Split heap in dead/alive"
-    [ unusedIsCollected
-    , usedIsNotCollected
-    , heapSplit
-    ]
+splitHeapTest :: GarbageCollectionAlgorithm -> TestTree
+splitHeapTest algorithm = localOption (Timeout 1000 "1 s")
+    (testGroup "Split heap in dead/alive"
+        [ unusedIsCollected
+        , usedIsNotCollected
+        , heapSplit ])
   where
     (~>) = (,)
     dirtyHeap = Heap
@@ -68,7 +72,7 @@ splitHeapTest = testGroup "Split heap in dead/alive"
     unusedIsCollected = testCase "Dead address is found" test
       where
         expectedDead = S.singleton (MemAddr 3)
-        (Dead (Heap actualDead), Alive cleanHeap) = splitHeap dummyState
+        (Dead (Heap actualDead), Alive cleanHeap) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedDead
                            (M.keysSet actualDead)
@@ -77,7 +81,7 @@ splitHeapTest = testGroup "Split heap in dead/alive"
       where
         expectedHeap = let Heap h = dirtyHeap
                        in Heap (M.delete (MemAddr 3) h)
-        (_dead, Alive cleanHeap) = splitHeap dummyState
+        (_dead, Alive cleanHeap) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedHeap
                            cleanHeap
@@ -86,7 +90,7 @@ splitHeapTest = testGroup "Split heap in dead/alive"
       where
         expected = dirtyHeap
         actual = dead <> cleanHeap
-        (Dead dead, Alive cleanHeap) = splitHeap dummyState
+        (Dead dead, Alive cleanHeap) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expected
                            actual

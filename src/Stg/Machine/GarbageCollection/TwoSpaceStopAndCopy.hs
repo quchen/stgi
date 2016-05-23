@@ -2,14 +2,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 
--- | Two space stop-and-copy algorithm.
+-- | Two space stop-and-copy garbage collector.
 module Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy (
-    garbageCollect,
-
-    -- * Low-level
-    splitHeap,
-    Dead(..),
-    Alive(..),
+    twoSpaceStopAndCopy,
 ) where
 
 
@@ -23,28 +18,14 @@ import           Data.Set                  (Set)
 import qualified Data.Set                  as S
 import           Data.Traversable
 
-import qualified Stg.Machine.Heap  as H
+import           Stg.Machine.GarbageCollection.Common
+import qualified Stg.Machine.Heap                     as H
 import           Stg.Machine.Types
 
 
 
-garbageCollect :: StgState -> StgState
-garbageCollect stgState
-  = let (Dead deadHeap, Alive cleanHeap) = splitHeap stgState
-    in if H.size deadHeap > 0
-        then stgState { stgHeap  = cleanHeap
-                   , stgTicks = stgTicks stgState + 1
-                   , stgInfo  = Info GarbageCollection
-                                     [Detail_GarbageCollected (toList (H.addresses deadHeap))] }
-        else stgState
-
--- | Alive objects.
-newtype Alive a = Alive a
-    deriving (Eq, Ord, Show, Monoid)
-
--- | Dead objects that been eliminated by garbage collection.
-newtype Dead a = Dead a
-    deriving (Eq, Ord, Show, Monoid)
+twoSpaceStopAndCopy :: GarbageCollectionAlgorithm
+twoSpaceStopAndCopy = GarbageCollectionAlgorithm splitHeap
 
 -- | Old objects represent the previous generation of alive objects, and
 -- contain both dead and alive objects.
@@ -60,7 +41,7 @@ splitHeap StgState
     , stgGlobals = globals
     , stgStack   = stack }
   = let GcState {aliveHeap = alive, oldHeap = old}
-            = execState twoSpaceSopAndCopy GcState
+            = execState evacuateScavenge GcState
                 { aliveHeap = mempty
                 , forwards = mempty
                 , toEvacuate = (Alive . mconcat)
@@ -71,16 +52,16 @@ splitHeap StgState
                in Dead (Heap (o `M.difference` a))
     in (dead, alive)
 
-twoSpaceSopAndCopy :: State GcState ()
-twoSpaceSopAndCopy = do
+evacuateScavenge :: State GcState ()
+evacuateScavenge = do
     GcState { toEvacuate = Alive evacuateNext
             , oldHeap = Old old } <- get
     unless (S.null evacuateNext) (do
         toAddrs <- for (toList evacuateNext) evacuate
         for_ toAddrs (\toAddr -> case H.lookup toAddr old of
-            Nothing -> error "twoSpaceSopAndCopy error: address not found!"
+            Nothing -> error "evacuateScavenge error: address not found!"
             Just heapObject -> scavenge heapObject )
-        twoSpaceSopAndCopy )
+        evacuateScavenge )
 
 data GcState = GcState
     { aliveHeap :: Alive Heap
@@ -132,51 +113,3 @@ scavenge (HClosure (Closure lf frees)) = do
         Addr addr -> fmap Addr (evacuate addr )
         PrimInt i -> pure (PrimInt i) )
     pure (HClosure (Closure lf frees'))
-
-
-
--- | Collect all mentioned addresses in a machine element.
---
--- Note that none of the types in "Stg.Language" contain addresses, since an
--- address is not something present in the STG _language_, only in the execution
--- contest the language is put in in the "Stg.Machine" modules.
-class Addresses a where
-    addrs :: a -> Set MemAddr
-
-instance (Foldable f, Addresses a) => Addresses (f a) where
-    addrs = foldMap addrs
-
-instance Addresses Code where
-    addrs = \case
-        Eval _expr locals   -> addrs locals
-        Enter addr          -> addrs addr
-        ReturnCon _con args -> addrs args
-        ReturnInt _int      -> mempty
-
-instance Addresses StackFrame where
-    addrs = \case
-        ArgumentFrame vals       -> addrs vals
-        ReturnFrame _alts locals -> addrs locals
-        UpdateFrame addr         -> addrs addr
-
-instance Addresses MemAddr where
-    addrs addr = S.singleton addr
-
-instance Addresses Globals where
-    addrs (Globals globals) = addrs globals
-
-instance Addresses Locals where
-    addrs (Locals locals) = addrs locals
-
-instance Addresses Closure where
-    addrs (Closure _lf free) = addrs free
-
-instance Addresses HeapObject where
-    addrs = \case
-        HClosure closure  -> addrs closure
-        Blackhole _bhTick -> mempty
-
-instance Addresses Value where
-    addrs = \case
-        Addr addr  -> addrs addr
-        PrimInt _i -> mempty
