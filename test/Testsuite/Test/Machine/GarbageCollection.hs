@@ -6,13 +6,11 @@ module Test.Machine.GarbageCollection (tests) where
 
 
 
-import qualified Data.Map         as M
+import qualified Data.Map    as M
 import           Data.Monoid
-import qualified Data.Set         as S
-import           Data.Text        (Text)
-import qualified Data.Text        as T
-import           Test.Tasty
-import           Test.Tasty.HUnit
+import qualified Data.Set    as S
+import           Data.Text   (Text)
+import qualified Data.Text   as T
 
 import Stg.Language.Prettyprint
 import Stg.Machine.GarbageCollection
@@ -20,14 +18,16 @@ import Stg.Machine.GarbageCollection.Common
 import Stg.Machine.Types
 import Stg.Parser.QuasiQuoter
 
-import Test.Orphans ()
+import Test.Orphans     ()
+import Test.Tasty
+import Test.Tasty.HUnit
 
 
 
 tests :: TestTree
 tests = testGroup "Garbage collection"
-    [ testGroup "Mark-and-sweep"
-        [splitHeapTest markAndSweep]
+    [ testGroup "Tri-state tracing"
+        [splitHeapTest triStateTracing]
     , testGroup "Two space stop-and-copy"
         [splitHeapTest twoSpaceStopAndCopy]
     ]

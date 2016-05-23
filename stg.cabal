@@ -29,7 +29,7 @@ library
                      , Stg.Machine.Evaluate
                      , Stg.Machine.GarbageCollection
                      , Stg.Machine.GarbageCollection.Common
-                     , Stg.Machine.GarbageCollection.MarkAndSweep
+                     , Stg.Machine.GarbageCollection.TriStateTracing
                      , Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy
                      , Stg.Machine.Heap
                      , Stg.Machine.Types

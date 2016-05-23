@@ -72,7 +72,7 @@ defSpec = MachineStateTestSpec
     , allSatisfied         = []
     , source               = [stg| main = \ -> DummySource |]
     , maxSteps             = 1024
-    , performGc            = PerformGc (const (Just markAndSweep))
+    , performGc            = PerformGc (const (Just triStateTracing))
     , failWithInfo         = False }
 
 -- | Evaluate the @main@ closure of a STG program, and check whether the machine

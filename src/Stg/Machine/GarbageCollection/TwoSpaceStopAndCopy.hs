@@ -32,8 +32,6 @@ twoSpaceStopAndCopy = GarbageCollectionAlgorithm splitHeap
 newtype Old a = Old a
     deriving (Eq, Ord, Show, Monoid)
 
--- | Split the heap of an 'StgState' in two components: dead (can be discarded)
--- and alive (are still used) closures.
 splitHeap :: StgState -> (Dead Heap, Alive Heap)
 splitHeap StgState
     { stgCode    = code

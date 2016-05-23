@@ -7,7 +7,7 @@ module Stg.Machine.GarbageCollection (
 
     -- * Algorithms
     GarbageCollectionAlgorithm,
-    markAndSweep,
+    triStateTracing,
     twoSpaceStopAndCopy,
 ) where
 
@@ -16,7 +16,7 @@ module Stg.Machine.GarbageCollection (
 import Data.Foldable
 
 import           Stg.Machine.GarbageCollection.Common
-import           Stg.Machine.GarbageCollection.MarkAndSweep
+import           Stg.Machine.GarbageCollection.TriStateTracing
 import           Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy
 import qualified Stg.Machine.Heap                                  as H
 import           Stg.Machine.Types

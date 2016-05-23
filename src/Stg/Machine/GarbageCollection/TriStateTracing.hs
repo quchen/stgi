@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
 
--- | Mark-and-sweep garbage collector.
-module Stg.Machine.GarbageCollection.MarkAndSweep (
-    markAndSweep,
+-- | Tri-state ("tri-colour") tracing garbage collector.
+module Stg.Machine.GarbageCollection.TriStateTracing (
+    triStateTracing,
 ) where
 
 
@@ -19,11 +19,9 @@ import Stg.Machine.Types
 
 
 
-markAndSweep :: GarbageCollectionAlgorithm
-markAndSweep = GarbageCollectionAlgorithm splitHeap
+triStateTracing :: GarbageCollectionAlgorithm
+triStateTracing = GarbageCollectionAlgorithm splitHeap
 
--- | Split the heap of an 'StgState' in two components: dead (can be discarded)
--- and alive (are still used) closures.
 splitHeap :: StgState -> (Dead Heap, Alive Heap)
 splitHeap StgState
     { stgCode    = code
@@ -35,23 +33,25 @@ splitHeap StgState
         start = GcState
             { aliveHeap = mempty
             , oldHeap = heap
-            , evacuate = (Alive . mconcat)
+            , staged = (Alive . mconcat)
                 [addrs code, addrs globals, addrs stack] }
     in (Dead dead, alive)
 
 everythingCollected :: GcState -> Bool
 everythingCollected = noAlives
   where
-    noAlives GcState {evacuate = Alive alive} = S.null alive
+    noAlives GcState {staged = Alive alive} = S.null alive
 
+-- | Each closure is in one of three states: in the alive heap, staged for
+-- later rescue, or not even staged yet.
 data GcState = GcState
     { aliveHeap :: Alive Heap
         -- ^ Heap of closures known to be alive.
         --   Has no overlap with the old heap.
 
-    , evacuate :: Alive (Set MemAddr)
+    , staged :: Alive (Set MemAddr)
         -- ^ Memory addresses known to be alive,
-        --   but not yet scavenged from the old heap.
+        --   but not yet rescued from the old heap.
 
     , oldHeap :: Heap
         -- ^ The old heap, containing both dead
@@ -61,17 +61,15 @@ data GcState = GcState
 gcStep :: GcState -> GcState
 gcStep GcState
     { aliveHeap = oldAlive@(Alive (Heap alive))
-    , evacuate  = Alive evacuateAddrs
+    , staged    = Alive stagedAddrs
     , oldHeap   = Heap oldRest }
   = GcState
-    { aliveHeap = oldAlive <> Alive (Heap scavenged)
-    , evacuate  = Alive (addrs scavenged)
+    { aliveHeap = oldAlive <> Alive (Heap rescued)
+    , staged    = Alive (addrs rescued)
     , oldHeap   = Heap newRest }
   where
-    scavenged, newRest :: Map MemAddr HeapObject
-    (scavenged, newRest) = M.partitionWithKey isAlive oldRest
+    rescued, newRest :: Map MemAddr HeapObject
+    (rescued, newRest) = M.partitionWithKey isAlive oldRest
       where
-        -- A closure is alive iff it is on the alive heap, or the closure that
-        -- contained it was scavenged in a previous step.
         isAlive addr _closure = M.member addr alive
-                             || S.member addr evacuateAddrs
+                             || S.member addr stagedAddrs

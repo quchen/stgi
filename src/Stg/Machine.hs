@@ -18,7 +18,7 @@ module Stg.Machine (
     garbageCollect,
     PerformGc(..),
     GarbageCollectionAlgorithm,
-    markAndSweep,
+    triStateTracing,
     twoSpaceStopAndCopy,
 ) where
 
