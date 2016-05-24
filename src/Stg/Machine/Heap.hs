@@ -52,16 +52,13 @@ alloc lambdaForm heap = (addr, heap')
 allocMany :: [HeapObject] -> Heap -> ([MemAddr], Heap)
 allocMany heapObjects (Heap heap) = (addrs, heap')
   where
-    addrs = takeMatchingLength
-        (L.filter (\i -> M.notMember i heap) (map MemAddr [0..]))
-        heapObjects
+    smallestUnusedAddr = case M.maxViewWithKey heap of
+        Nothing -> 0
+        Just ((MemAddr maxAddr, _), _) -> maxAddr+1
+    addrs = zipWith (\addr _obj -> MemAddr addr)
+                    [smallestUnusedAddr ..]
+                    heapObjects
     heap' = Heap (heap <> M.fromList (zip addrs heapObjects))
-
--- | Take as many elements from one list as there are in another.
---
--- This is just a lazier version of @\xs ys -> take (length ys) xs@.
-takeMatchingLength :: [a] -> [b] -> [a]
-takeMatchingLength xs ys = zipWith const xs ys
 
 -- | All addresses allocated on the heap.
 addresses :: Heap -> Set MemAddr
