@@ -24,7 +24,7 @@ runForPager :: (forall a. Pretty a => a -> Text) -> Program -> IO ()
 runForPager ppr prog =
     let states = evalsUntil RunIndefinitely
                             (HaltIf (const False))
-                            (PerformGc (const (Just triStateTracing)))
+                            (PerformGc (const (Just twoSpaceStopAndCopy)))
                             (initialState "main" prog)
         line = T.replicate 80 "-"
         fatLine = T.replicate 80 "="

@@ -81,9 +81,11 @@ evacuateScavenge = do
     unless (S.null evacuateNext) (do
         Old heap <- askOldHeap
         toAddrs <- for (toList evacuateNext) evacuate
-        for_ toAddrs (\toAddr -> case H.lookup toAddr heap of
+        evacuateNext' <- fmap mconcat ( for toAddrs (\toAddr -> case H.lookup toAddr heap of
             Nothing -> error "evacuateScavenge error: address not found!"
-            Just heapObject -> scavenge heapObject )
+            Just heapObject -> scavenge heapObject ))
+        gcState <- getGcState
+        putGcState gcState { toEvacuate = evacuateNext' }
         evacuateScavenge )
 
 data GcState = GcState
@@ -125,10 +127,7 @@ evacuate addr = do
                                        , forwards = forwards' }
                     pure addr'
 
-scavenge :: HeapObject -> Gc HeapObject
-scavenge bh@Blackhole{} = pure bh
-scavenge (HClosure (Closure lf frees)) = do
-    frees' <- for frees (\case
-        Addr addr -> fmap Addr (evacuate addr)
-        PrimInt i -> pure (PrimInt i) )
-    pure (HClosure (Closure lf frees'))
+scavenge :: HeapObject -> Gc (Alive (Set MemAddr))
+scavenge Blackhole{} = pure mempty
+scavenge (HClosure (Closure _lf frees)) =
+    fmap (Alive . S.fromList) (sequence [ evacuate addr | Addr addr <- frees ])
