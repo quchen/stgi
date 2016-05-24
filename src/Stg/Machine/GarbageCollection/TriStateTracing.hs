@@ -1,7 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
 
--- | Tri-state ("tri-colour") tracing garbage collector.
+-- | Tri-state ("tri-colour") garbage collector.
+--
+-- * Not compacting: alive memory is not altered
+-- * Tracing
 module Stg.Machine.GarbageCollection.TriStateTracing (
     triStateTracing,
 ) where

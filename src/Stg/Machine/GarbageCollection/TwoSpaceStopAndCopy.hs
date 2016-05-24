@@ -3,6 +3,9 @@
 {-# LANGUAGE LambdaCase                 #-}
 
 -- | Two space stop-and-copy garbage collector.
+--
+-- * Compacting: Alive memory is moved to a new location
+-- * Tracing
 module Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy (
     twoSpaceStopAndCopy,
 ) where
@@ -10,12 +13,14 @@ module Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy (
 
 
 import           Control.Monad
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.State
 import           Data.Foldable
-import           Data.Map                  (Map)
-import qualified Data.Map                  as M
-import           Data.Set                  (Set)
-import qualified Data.Set                  as S
+import           Data.Map                   (Map)
+import qualified Data.Map                   as M
+import           Data.Set                   (Set)
+import qualified Data.Set                   as S
 import           Data.Traversable
 
 import           Stg.Machine.GarbageCollection.Common
@@ -33,32 +38,53 @@ twoSpaceStopAndCopy = GarbageCollectionAlgorithm splitHeap
 newtype Old a = Old a
     deriving (Eq, Ord, Show, Monoid)
 
+newtype Gc a = Gc (ReaderT (Old Heap) (State GcState) a)
+    deriving (Functor, Applicative, Monad)
+
+askOldHeap :: Gc (Old Heap)
+askOldHeap = Gc ask
+
+getGcState :: Gc GcState
+getGcState = Gc (lift get)
+
+putGcState :: GcState -> Gc ()
+putGcState s = Gc (lift (put s))
+
+execGc :: Gc a -> Old Heap -> GcState -> GcState
+execGc (Gc rsa) oldHeap gcState =
+    let sa = runReaderT rsa oldHeap
+        finalState = execState sa gcState
+    in finalState
+
 splitHeap :: StgState -> (Dead Heap, Alive Heap)
 splitHeap StgState
     { stgCode    = code
     , stgHeap    = heap
     , stgGlobals = globals
     , stgStack   = stack }
-  = let GcState {aliveHeap = alive}
-            = execState (evacuateScavenge (Old heap)) GcState
-                { aliveHeap = mempty
-                , forwards = mempty
-                , toEvacuate = (Alive . mconcat)
-                    [addrs code, addrs globals, addrs stack] }
-        dead = let Alive (Heap a) = alive
-                   (Heap o)       = heap
-               in Dead (Heap (o `M.difference` a))
-    in (dead, alive)
+  = let rootAddrs = mconcat [addrs code, addrs globals, addrs stack]
+        initialState = GcState
+            { aliveHeap = mempty
+            , forwards = mempty
+            , toEvacuate = Alive rootAddrs }
+        finalState = execGc evacuateScavenge (Old heap) initialState
+    in case finalState of
+        GcState {aliveHeap = alive} ->
+            let Alive (Heap a) = alive
+                Heap o         = heap
+                dead           = Dead (Heap (o `M.difference` a))
+            in (dead, alive)
 
-evacuateScavenge :: Old Heap -> State GcState ()
-evacuateScavenge oldHeap@(Old heap) = do
-    GcState { toEvacuate = Alive evacuateNext } <- get
+evacuateScavenge :: Gc ()
+evacuateScavenge = do
+    GcState { toEvacuate = Alive evacuateNext } <- getGcState
     unless (S.null evacuateNext) (do
-        toAddrs <- for (toList evacuateNext) (evacuate oldHeap)
+        Old heap <- askOldHeap
+        toAddrs <- for (toList evacuateNext) evacuate
         for_ toAddrs (\toAddr -> case H.lookup toAddr heap of
             Nothing -> error "evacuateScavenge error: address not found!"
-            Just heapObject -> scavenge oldHeap heapObject )
-        evacuateScavenge oldHeap )
+            Just heapObject -> scavenge heapObject )
+        evacuateScavenge )
 
 data GcState = GcState
     { aliveHeap :: Alive Heap
@@ -80,31 +106,29 @@ followForwardChain addr forw = case M.lookup addr forw of
 
 -- | Copy a closure from from-space to to-space, and return the new memory
 -- address.
-evacuate :: Old Heap -> MemAddr -> State GcState MemAddr
-evacuate (Old heap) addr = do
+evacuate :: MemAddr -> Gc MemAddr
+evacuate addr = do
     gcState@GcState
         { aliveHeap = Alive alive
-        , forwards  = forw } <- get
-
-    let alreadyCollected = M.lookup addr forw
-    case alreadyCollected of
-        Nothing -> case H.lookup (followForwardChain addr forw) heap of
-            Nothing -> error "Tried collecting a non-existent memory address!"
-            Just heapObject -> do
-                let (addr', alive') = H.alloc heapObject alive
-                    forwards' = M.insert addr addr' forw
-                put gcState { aliveHeap = Alive alive'
-                            , forwards = forwards' }
-                pure addr'
-
-        -- Forward pointer exists, so the object has previously been collected.
-        -- Don't do anything to it.
+        , forwards  = forw } <- getGcState
+    let alreadyEvacuated = M.lookup addr forw
+    case alreadyEvacuated of
         Just forward -> pure forward
+        Nothing -> do
+            Old heap <- askOldHeap
+            case H.lookup (followForwardChain addr forw) heap of
+                Nothing -> error "Tried collecting a non-existent memory address!"
+                Just heapObject -> do
+                    let (addr', alive') = H.alloc heapObject alive
+                        forwards' = M.insert addr addr' forw
+                    putGcState gcState { aliveHeap = Alive alive'
+                                       , forwards = forwards' }
+                    pure addr'
 
-scavenge :: Old Heap -> HeapObject -> State GcState HeapObject
-scavenge _ bh@Blackhole{} = pure bh
-scavenge oldHeap (HClosure (Closure lf frees)) = do
+scavenge :: HeapObject -> Gc HeapObject
+scavenge bh@Blackhole{} = pure bh
+scavenge (HClosure (Closure lf frees)) = do
     frees' <- for frees (\case
-        Addr addr -> fmap Addr (evacuate oldHeap addr )
+        Addr addr -> fmap Addr (evacuate addr)
         PrimInt i -> pure (PrimInt i) )
     pure (HClosure (Closure lf frees'))
