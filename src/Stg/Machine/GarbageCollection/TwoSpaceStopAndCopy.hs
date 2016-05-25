@@ -27,7 +27,7 @@ import           Stg.Machine.GarbageCollection.Common
 import qualified Stg.Machine.Heap                     as H
 import           Stg.Machine.Types
 
-
+import Debug.Trace
 
 -- | Remove all unused addresses by moving them to a safe location.
 twoSpaceStopAndCopy :: GarbageCollectionAlgorithm
@@ -99,12 +99,19 @@ evacuateScavengeLoop = do
     unless (null evacuateNext) (do
         putGcState gcState { toEvacuate = mempty }
 
-        -- NB: Unfortunately we cannot fuse these traversals, since scavenging
-        --     assumes all heap objects have been evacuated
-        traverse evacuate evacuateNext >>= traverse_ scavenge
+        do  evacuated <- traverse evacuate evacuateNext
+            let uniqueEvacuated = nub' evacuated
+            traverse_ scavenge uniqueEvacuated
 
         evacuateScavengeLoop )
-
+  where
+    -- Efficient version of 'Data.List.nub'.
+    nub' = go S.empty
+      where
+        go _ [] = []
+        go cache (x:xs)
+            | S.member x cache = go cache xs
+            | otherwise = x : go (S.insert x cache) xs
 
 
 data EvacuationStatus = NotEvacuated | AlreadyEvacuated (To MemAddr)
@@ -118,6 +125,7 @@ evacuate :: From MemAddr -> Gc (To MemAddr)
 evacuate = \fromAddr -> resolveForward fromAddr >>= \case
     AlreadyEvacuated newAddr -> pure newAddr
     NotEvacuated -> do
+        traceM ("Evatuating " ++ show fromAddr)
         valueOnOldHeap <- do
             From heap <- askFromHeap
             let From addr = fromAddr
@@ -161,6 +169,7 @@ evacuate = \fromAddr -> resolveForward fromAddr >>= \case
 -- evacuated new addresses.
 scavenge :: To MemAddr -> Gc ()
 scavenge (To scavengeAddr) = do
+    traceM ("Scavenge " ++ show scavengeAddr)
     scavengeHeapObject <- do
         GcState { toHeap = To heap } <- getGcState
         pure (H.lookup scavengeAddr heap)
