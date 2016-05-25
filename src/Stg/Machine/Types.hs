@@ -154,7 +154,7 @@ instance Pretty StackFrame where
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Enum, Bounded, Generic)
 
 instance Pretty MemAddr where
     pretty (MemAddr addr) = address style ("0x" <> addressCore style (hexAddr addr))
