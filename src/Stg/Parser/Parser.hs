@@ -88,7 +88,7 @@ varId = IdentifierStyle
     { _styleName = "variable"
     , _styleStart = lower <|> char '_'
     , _styleLetter = alphaNum <|> oneOf "_'"
-    , _styleReserved = ["let", "letrec", "in", "case", "of", "default", "_"]
+    , _styleReserved = ["let", "letrec", "in", "case", "of", "default"]
     , _styleHighlight = Identifier
     , _styleReservedHighlight = ReservedIdentifier }
 
