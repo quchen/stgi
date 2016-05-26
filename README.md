@@ -1,9 +1,11 @@
-STG interpreter
+STG interpreter [![](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
 ===============
 
-[![Build Status](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
+A user-centric visual STG implementation to help understand Haskell's execution
+model.
 
 ![](screenshot.png)
+
 
 About the machine
 -----------------
