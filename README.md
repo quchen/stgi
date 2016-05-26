@@ -63,7 +63,7 @@ Differences from the 1992 paper
   e.g. with `Int#`.
 - A lambda's head is written `\(free) bound -> body`, where `free` and
   `bound` are space-separated variable lists, instead of the paper's
-  `(free) \n (bound) -> body`, which uses comma-separated lists. The
+  `{free} \n {bound} -> body`, which uses comma-separated lists. The
   update flag `\u` is signified using a double arrow `=>` instead of the
   normal arrow `->`.
 
@@ -75,7 +75,8 @@ Differences from the 1992 paper
   clearer, since the stack is always popped from the top. For example, having a
   return frame at the top means the program is close to a `case` expression.
 - There are different objects on the heap, not just closures:
-    - Closures are classified in three groups for the user:
+    - Closures are all represented alike, but classified for the user in the
+      visual output:
         - Constructors are closures with a constructor application body, and
           only free variables.
         - Other closures with only free variables are thunks.
@@ -192,7 +193,7 @@ Expressions can, in general, be one of a couple of alternatives.
     An algebraic data constructor applied to a number of arguments, just like
     function application. Note that constructors always have to be saturated
     (not partially applied); to get a partially applied constructor, wrap it in
-    a lambda form.
+    a lambda form that fills in the missing arguments with parameters.
 
   - **Primitive literal**
 
