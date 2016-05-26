@@ -397,7 +397,7 @@ instance Pretty InfoDetail where
         Detail_EnterNonUpdatable addr args ->
             [ "Enter closure at" <+> pretty addr
             , if null args
-                then pretty addr <+> "is a value, so no arguments are popped"
+                then pretty addr <+> "does not take any arguments, so none are popped"
                 else "Pop arguments" <+> commaSep (foldMap (\arg -> [pretty arg]) args) <+> "from the stack" ]
 
         Detail_EvalLet vars addrs ->
