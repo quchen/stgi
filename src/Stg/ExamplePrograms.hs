@@ -8,11 +8,26 @@ module Stg.ExamplePrograms (
 
     -- * Fibonacci
 
-        -- ** Naive implementation
+        -- ** Naive implementation (exponential time)
         fibonacciNaive,
+
+        -- ** Improved implementation (linear time)
+        fibonacciImproved,
 
         -- ** zipWith (+) solution
         fibonacciZipWith,
+
+    -- * List concatenation
+
+        -- | It is well-known that Haskell's (++) operator is linear if
+        -- associated to the right, but quadratic when associated to the left.
+        -- These two examples showcase the issue.
+
+        -- ** Right-associated
+        listConcatRightAssociated,
+
+        -- ** Left-associated
+        listConcatLeftAssociated,
 ) where
 
 
@@ -33,7 +48,8 @@ import qualified Stg.Prelude            as Stg
 -- You can picture this as what happens to `fibo` in the Haskell program
 --
 -- @
--- main = traverse_ print fibo
+-- main = let fibo = 'zipWith' ('+') fibo ('tail' fibo)
+--        in 'Data.Foldable.traverse_' 'print' fibo
 -- @
 fibonacciZipWith :: Program
 fibonacciZipWith = mconcat
@@ -98,4 +114,119 @@ fibonacciNaive n = mconcat
                             fibNMinusTwo -> case add fibNMinusOne fibNMinusTwo of
                                 result -> result
         in fib n
+    |]]
+
+-- | Calculate the n-th Fibonacci number using the more effective formula
+--
+-- @
+-- fib = fib' 0 1
+--   where
+--     fib' x _ | n <= 0 = x
+--     fib' x !y n = fib' y (x+y) (n-1)
+-- @
+--
+-- This implementation is a lot faster than the naive exponential
+-- implementation. For examle, calculating the 10th Fibonacci number (55) takes
+-- only 490 steps, compared to the many thousand of the exponential version.
+fibonacciImproved :: Integer -> Program
+fibonacciImproved n = mconcat
+    [ Stg.add
+    , Stg.leq_Int
+    , Stg.sub
+    , Stg.int "zero" 1
+    , Stg.int "one" 1
+    , Stg.int "n" n
+    , [program|
+    main = \ =>
+        letrec
+            fib = \(fib') -> fib' zero one;
+            fib' = \(fib') x y n -> case leq_Int n zero of
+                True -> x;
+                _False -> case add x y of
+                    xy -> case sub n one of
+                        nMinusOne -> fib' y xy nMinusOne
+        in fib n
+    |]]
+
+-- | Generic list concatenation program. All that's missing is a STG binding
+-- for 'concat' that flattens a list of lists.<
+listConcatTemplate :: Program
+listConcatTemplate = mconcat
+    [ Stg.listOfNumbers "list0" [0]
+    , Stg.listOfNumbers "list1" [1]
+    , Stg.listOfNumbers "list2" [2]
+    , Stg.listOfNumbers "list3" [3]
+    , Stg.listOfNumbers "list4" [4]
+    , Stg.listOfNumbers "list5" [5]
+    , Stg.listOfNumbers "list6" [6]
+    , Stg.listOfNumbers "list7" [7]
+    , Stg.listOfNumbers "list8" [8]
+    , Stg.listOfNumbers "list9" [9]
+    , Stg.concat2
+    , Stg.nil
+    , [program|
+
+    forceList = \xs -> case xs of
+        Nil -> Done;
+        Cons _ xs' -> forceList xs';
+        _ -> BadListError;
+
+    main = \ => case forceList concatenated of
+        _ -> concatenated
+    |]]
+
+-- | Force the right-associated concatenation
+--
+-- @
+-- [0] '++' ([1] '++' ([2] '++' ([3] '++' ([4] '++' ([5] '++' ([6] '++' ([7] '++' ([8] '++' [9]))))))))
+-- @
+--
+-- and store it in the @main@ closure.
+--
+-- This computation is __linear__ in the number of elements of the sublists.
+listConcatRightAssociated :: Program
+listConcatRightAssociated = mconcat
+    [ listConcatTemplate
+    , [program|
+
+    concatenated = \ =>
+        letrec
+            list0123456789 = \(list123456789) => concat2 list0 list123456789;
+            list123456789  = \(list23456789)  => concat2 list1 list23456789;
+            list23456789   = \(list3456789)   => concat2 list2 list3456789;
+            list3456789    = \(list456789)    => concat2 list3 list456789;
+            list456789     = \(list56789)     => concat2 list4 list56789;
+            list56789      = \(list6789)      => concat2 list5 list6789;
+            list6789       = \(list789)       => concat2 list6 list789;
+            list789        = \(list89)        => concat2 list7 list89;
+            list89         = \                => concat2 list8 list9
+        in list0123456789
+    |]]
+
+-- | Force the left-associated concatenation
+--
+-- @
+-- (((((((([0] '++' [1]) '++' [2]) '++' [3]) '++' [4]) '++' [5]) '++' [6]) '++' [7]) '++' [8]) '++' [9]
+-- @
+--
+-- and store it in the @main@ closure.
+--
+-- This computation is __quadratic__ in the number of elements of the sublists.
+listConcatLeftAssociated :: Program
+listConcatLeftAssociated = mconcat
+    [ listConcatTemplate
+    , [program|
+
+    concatenated = \ =>
+        letrec
+            list01         = \                => concat2 list0         list1;
+            list012        = \(list01)        => concat2 list01        list2;
+            list0123       = \(list012)       => concat2 list012       list3;
+            list01234      = \(list0123)      => concat2 list0123      list4;
+            list012345     = \(list01234)     => concat2 list01234     list5;
+            list0123456    = \(list012345)    => concat2 list012345    list6;
+            list01234567   = \(list0123456)   => concat2 list0123456   list7;
+            list012345678  = \(list01234567)  => concat2 list01234567  list8;
+            list0123456789 = \(list012345678) => concat2 list012345678 list9
+        in list0123456789
     |]]

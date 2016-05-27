@@ -46,7 +46,7 @@ main = do
     ansi <- case optAnsi opts of
         Just x -> pure x
         Nothing -> hSupportsANSI stdout
-    let prog = Example.fibonacciNaive 10
+    let prog = Example.fibonacciZipWith
     if ansi
         then runForPager prettyprint      prog
         else runForPager prettyprintPlain prog
