@@ -7,17 +7,19 @@ module Test.Machine.GarbageCollection (tests) where
 
 
 
-import qualified Data.Map    as M
+import           Control.DeepSeq
+import qualified Data.Map        as M
 import           Data.Monoid
-import qualified Data.Set    as S
-import           Data.Text   (Text)
-import qualified Data.Text   as T
+import qualified Data.Set        as S
+import           Data.Text       (Text)
+import qualified Data.Text       as T
 
-import Stg.Language.Prettyprint
-import Stg.Machine.GarbageCollection
-import Stg.Machine.GarbageCollection.Common
-import Stg.Machine.Types
-import Stg.Parser.QuasiQuoter
+import           Stg.Language.Prettyprint
+import           Stg.Machine
+import           Stg.Machine.GarbageCollection.Common
+import           Stg.Machine.Types
+import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude                          as Stg
 
 import Test.Orphans     ()
 import Test.Tasty
@@ -27,11 +29,13 @@ import Test.Tasty.HUnit
 
 tests :: TestTree
 tests = testGroup "Garbage collection"
-    [ testGroup "Tri-state tracing"
-        [splitHeapTest triStateTracing]
-    , testGroup "Two space stop-and-copy"
-        [splitHeapTest twoSpaceStopAndCopy]
-    ]
+    [ gcTests "Tri-state tracing"       triStateTracing
+    , gcTests "Two space stop-and-copy" twoSpaceStopAndCopy ]
+
+gcTests :: Text -> GarbageCollectionAlgorithm -> TestTree
+gcTests name algorithm = testGroup (T.unpack name)
+    [ test algorithm | test <- [ splitHeapTest
+                               , fibonacciSumTest ]]
 
 prettyIndented :: Pretty a => a -> Text
 prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprint
@@ -95,3 +99,37 @@ splitHeapTest algorithm = localOption (Timeout 1e6 "1 s")
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expected
                            actual
+
+
+fibonacciSumTest :: GarbageCollectionAlgorithm -> TestTree
+fibonacciSumTest algorithm
+  = localOption (Timeout 1e6 "1 s") (testCase "Long-running program" test)
+  where
+    -- This program choked on the new copying GC (ran into an infinite loop),
+    -- so it is added as a test case. It's much rather a sanity test than a
+    -- minimal example displaying the actual issue, however.
+    source = mconcat
+            [ Stg.add
+            , Stg.int "zero" 0
+            , Stg.foldl'
+            , Stg.zipWith ] <> [stg|
+
+        flipConst = \x y -> y;
+        main = \ =>
+            letrec
+                fibo = \ =>
+                    letrec
+                        fib0 = \(fib1) -> Cons zero fib1;
+                        fib1 = \(fib2) =>
+                            let one = \ -> Int# 1#
+                            in Cons one fib2;
+                        fib2 = \(fib0 fib1) => zipWith add fib0 fib1
+                    in fib0
+            in foldl' flipConst zero fibo
+        |]
+    prog = initialState "main" source
+    states = take 1e3 (evalsUntil (RunForMaxSteps 1e10)
+                                   (HaltIf (const False))
+                                   (PerformGc (const (Just algorithm)))
+                                   prog )
+    test = rnf states `seq` pure ()

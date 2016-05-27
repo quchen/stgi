@@ -46,6 +46,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , ansi-wl-pprint
                      , containers
+                     , deepseq
                      , parsers
                      , semigroups
                      , template-haskell
@@ -115,6 +116,7 @@ test-suite testsuite
                      , stg
                      , ansi-wl-pprint
                      , containers
+                     , deepseq
                      , semigroups
                      , tasty
                      , tasty-html

@@ -27,7 +27,7 @@ import           Stg.Machine.GarbageCollection.Common
 import qualified Stg.Machine.Heap                     as H
 import           Stg.Machine.Types
 
-import Debug.Trace
+
 
 -- | Remove all unused addresses by moving them to a safe location.
 twoSpaceStopAndCopy :: GarbageCollectionAlgorithm
@@ -125,7 +125,6 @@ evacuate :: From MemAddr -> Gc (To MemAddr)
 evacuate = \fromAddr -> resolveForward fromAddr >>= \case
     AlreadyEvacuated newAddr -> pure newAddr
     NotEvacuated -> do
-        traceM ("Evatuating " ++ show fromAddr)
         valueOnOldHeap <- do
             From heap <- askFromHeap
             let From addr = fromAddr
@@ -169,7 +168,6 @@ evacuate = \fromAddr -> resolveForward fromAddr >>= \case
 -- evacuated new addresses.
 scavenge :: To MemAddr -> Gc ()
 scavenge (To scavengeAddr) = do
-    traceM ("Scavenge " ++ show scavengeAddr)
     scavengeHeapObject <- do
         GcState { toHeap = To heap } <- getGcState
         pure (H.lookup scavengeAddr heap)
