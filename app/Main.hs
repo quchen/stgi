@@ -18,11 +18,11 @@ import           Stg.RunForPager
 
 
 data Options = Options { optAnsi       :: Maybe Bool
-                       , optShowStates :: Maybe Int }
+                       , optNumStates :: Maybe Int }
 
 defOptions :: Options
 defOptions = Options { optAnsi       = Nothing
-                     , optShowStates = Nothing }
+                     , optNumStates = Nothing }
 
 options :: [OptDescr (Options -> Options)]
 options =
@@ -38,9 +38,9 @@ options =
     , Option ['n'] ["showStates"]
         (OptArg
             (\x -> case x >>= readMaybe of
-                   Just n | n == 0    -> \opts -> opts { optShowStates = Nothing }
-                          | otherwise -> \opts -> opts { optShowStates = Just n  }
-                   _otherwise         -> \opts -> opts { optShowStates = Nothing } )
+                   Just n | n == 0    -> \opts -> opts { optNumStates = Nothing }
+                          | otherwise -> \opts -> opts { optNumStates = Just n  }
+                   _otherwise         -> \opts -> opts { optNumStates = Nothing } )
             "int" )
         "Colourize output" ]
 
@@ -58,7 +58,7 @@ main = do
     ansi <- case optAnsi opts of
         Just x -> pure x
         Nothing -> hSupportsANSI stdout
-    let numStates = optShowStates opts
+    let numStates = optNumStates opts
 
     let prog = Example.fibonacciZipWith
     if ansi
