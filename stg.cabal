@@ -22,6 +22,7 @@ Flag doctest
 library
   hs-source-dirs:      src
   exposed-modules:     Data.Stack
+                     , Stg.ExamplePrograms
                      , Stg.Language
                      , Stg.Language.Prettyprint
                      , Stg.Machine

@@ -1,21 +1,17 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
 
 module Main (main) where
 
 
 
-import Data.Monoid
 import System.Console.ANSI   (hSupportsANSI)
 import System.Console.GetOpt
 import System.Environment
 import System.IO             (stdout)
 
-import           Stg.Language
+import qualified Stg.ExamplePrograms      as Example
 import           Stg.Language.Prettyprint
-import           Stg.Parser.QuasiQuoter
-import qualified Stg.Prelude              as Stg
 import           Stg.RunForPager
 
 
@@ -50,27 +46,7 @@ main = do
     ansi <- case optAnsi opts of
         Just x -> pure x
         Nothing -> hSupportsANSI stdout
+    let prog = Example.fibonacciNaive 10
     if ansi
         then runForPager prettyprint      prog
         else runForPager prettyprintPlain prog
-
-prog :: Program
-prog = mconcat
-        [ Stg.add
-        , Stg.int "zero" 0
-        , Stg.foldl'
-        , Stg.zipWith ] <> [program|
-
-    flipConst = \x y -> y;
-    main = \ =>
-        letrec
-            fibo = \ =>
-                letrec
-                    fib0 = \(fib1) -> Cons zero fib1;
-                    fib1 = \(fib2) =>
-                        let one = \ -> Int# 1#
-                        in Cons one fib2;
-                    fib2 = \(fib0 fib1) => zipWith add fib0 fib1
-                in fib0
-        in foldl' flipConst zero fibo
-    |]

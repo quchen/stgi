@@ -335,8 +335,12 @@ this is all you should need to get started.
 Running an STG program
 ----------------------
 
-There is only one way to directly run an STG program, and that is by writing it
-in `app/Main.hs`. Afterwards, run
+The `app/Main.hs` file is written so you can easily switch out the `prog` value.
+The `Stg.ExamplePrograms` module provides a number of programs that might be
+worth having a look, and are a good starting point for modifications or adding
+your own programs.
+
+When you're happy with your `app/Main.hs`, run
 
 ```bash
 stack build --exec "stg-exe --colour=true" | less -R
