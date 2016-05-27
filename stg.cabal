@@ -30,7 +30,6 @@ library
                      , Stg.Machine.GarbageCollection
                      , Stg.Machine.GarbageCollection.Common
                      , Stg.Machine.GarbageCollection.TriStateTracing
-                     , Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy
                      , Stg.Machine.Heap
                      , Stg.Machine.Types
                      , Stg.Parser.Parser

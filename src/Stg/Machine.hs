@@ -19,7 +19,6 @@ module Stg.Machine (
     PerformGc(..),
     GarbageCollectionAlgorithm,
     triStateTracing,
-    twoSpaceStopAndCopy,
 ) where
 
 

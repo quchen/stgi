@@ -29,8 +29,7 @@ import Test.Tasty.HUnit
 
 tests :: TestTree
 tests = testGroup "Garbage collection"
-    [ gcTests "Tri-state tracing"       triStateTracing
-    , gcTests "Two space stop-and-copy" twoSpaceStopAndCopy ]
+    [ gcTests "Tri-state tracing"       triStateTracing ]
 
 gcTests :: Text -> GarbageCollectionAlgorithm -> TestTree
 gcTests name algorithm = testGroup (T.unpack name)
