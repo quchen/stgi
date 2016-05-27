@@ -30,12 +30,12 @@ import Stg.Util
 -- | Add a list of bindings to the local environment.
 --
 -- Already existing variables will be shadowed (i.e. overwritten).
-addLocals :: [Binding] -> Locals -> Locals
+addLocals :: [Mapping Var Value] -> Locals -> Locals
 addLocals defs locals = makeLocals defs <> locals
 
 -- | Create a local environment from a list of bindings.
-makeLocals :: [Binding] -> Locals
-makeLocals = Locals . M.fromList . map (\(Binding k v) -> (k,v))
+makeLocals :: [Mapping Var Value] -> Locals
+makeLocals = Locals . M.fromList . map (\(Mapping k v) -> (k,v))
 
 -- | Look up the value of an 'Atom' first in the local, then in the global
 -- environment.

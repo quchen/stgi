@@ -4,14 +4,15 @@ module Test.Orphans.Machine () where
 
 
 
-import qualified Data.Map              as M
-import           Test.Tasty.QuickCheck
+import qualified Data.Map as M
 
 import Stg.Machine.Types
 
 import Test.Orphans.Language ()
 import Test.Orphans.Stack    ()
+import Test.Tasty.QuickCheck
 import Test.Util
+
 
 
 instance Arbitrary StgState where
@@ -40,6 +41,9 @@ instance Arbitrary Code where
                       , arbitrary1 Enter
                       , arbitrary2 ReturnCon
                       , arbitrary1 ReturnInt ]
+
+instance (Arbitrary k, Arbitrary v) => Arbitrary (Mapping k v) where
+    arbitrary = arbitrary2 Mapping
 
 instance Arbitrary Globals where
     arbitrary = arbitrary1 (Globals . M.fromList)

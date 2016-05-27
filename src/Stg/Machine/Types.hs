@@ -15,7 +15,7 @@ module Stg.Machine.Types (
     MemAddr(..),
     Value(..),
     Code(..),
-    Binding(..),
+    Mapping(..),
     Globals(..),
     Locals(..),
     Closure(..),
@@ -195,8 +195,9 @@ instance Pretty Code where
         ReturnCon constr args -> "ReturnCon" <+> pretty constr <+> prettyList args
         ReturnInt i -> "ReturnInt" <+> pretty (Literal i)
 
--- | Wrapper for nice 'Pretty' instances
+-- | A single key -> value association.
 data Mapping k v = Mapping k v
+    deriving (Eq, Ord, Show)
 
 instance (Pretty k, Pretty v) => Pretty (Mapping k v) where
     pretty (Mapping k v) = pretty k <+> "->" <+> pretty v
@@ -213,10 +214,6 @@ newtype Globals = Globals (Map Var Value)
 
 instance Pretty Globals where
     pretty (Globals globals) = prettyMap globals
-
--- | A single association from 'Var'iable to 'Value'.
-data Binding = Binding Var Value
-    deriving (Eq, Ord, Show)
 
 -- | The global environment consists if the mapping from local definitions
 -- to their respective values.
@@ -357,7 +354,7 @@ instance Pretty StateError where
 data InfoDetail =
       Detail_FunctionApplication Var [Atom]
     | Detail_UnusedLocalVariables [Var] Locals
-    | Detail_EnterNonUpdatable MemAddr [Value]
+    | Detail_EnterNonUpdatable MemAddr [Mapping Var Value]
     | Detail_EvalLet [Var] [MemAddr]
     | Detail_EvalCase
     | Detail_ReturnConDefBound Var MemAddr
@@ -398,7 +395,9 @@ instance Pretty InfoDetail where
             [ "Enter closure at" <+> pretty addr
             , if null args
                 then pretty addr <+> "does not take any arguments, so none are popped"
-                else "Pop arguments" <+> commaSep (foldMap (\arg -> [pretty arg]) args) <+> "from the stack" ]
+                else hang 4 (vsep
+                        [ "Extend local environment with mappings from bound values to argument frame addresses:"
+                        , commaSep (foldMap (\arg -> [pretty arg]) args) ])]
 
         Detail_EvalLet vars addrs ->
             [ hsep

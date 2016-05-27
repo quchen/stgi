@@ -130,13 +130,13 @@ stgRule s@StgState
     , args <- [ arg | ArgumentFrame arg <- frames ]
 
   = let locals = makeLocals (freeLocals <> boundLocals)
-        freeLocals = zipWith Binding free freeVals
-        boundLocals = zipWith Binding bound args
+        freeLocals = zipWith Mapping free freeVals
+        boundLocals = zipWith Mapping bound args
 
     in s { stgCode  = Eval body locals
          , stgStack = stack'
          , stgInfo  = Info (StateTransition Enter_NonUpdatableClosure)
-                           [Detail_EnterNonUpdatable addr args] }
+                           [Detail_EnterNonUpdatable addr boundLocals] }
 
 
 
@@ -157,8 +157,8 @@ stgRule s@StgState
             in H.allocMany preallocatedObjs heap
 
         -- The local environment enriched by the definitions in the 'let'.
-        locals' = let newBindings = zipWith Binding letVars (map Addr newAddrs)
-                  in makeLocals newBindings <> locals
+        locals' = let newMappings = zipWith Mapping letVars (map Addr newAddrs)
+                  in makeLocals newMappings <> locals
 
         -- The local environment applicable in the lambda forms defined in the
         -- 'let' binding.
@@ -203,7 +203,7 @@ stgRule s@StgState
     , Left defaultAlt <- lookupPrimitiveAlt alts (Literal opXY)
 
   = let (locals', expr) = case defaultAlt of
-            DefaultBound pat e -> (addLocals [Binding pat (PrimInt opXY)] locals, e)
+            DefaultBound pat e -> (addLocals [Mapping pat (PrimInt opXY)] locals, e)
             DefaultNotBound e -> (locals, e)
 
     in s { stgCode = Eval expr locals'
@@ -258,7 +258,7 @@ stgRule s@StgState
     , stgStack = ReturnFrame alts locals :< stack' }
     | Right (AlgebraicAlt _con vars expr) <- lookupAlgebraicAlt alts con
 
-  = let locals' = addLocals (zipWith Binding vars ws) locals
+  = let locals' = addLocals (zipWith Mapping vars ws) locals
 
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
@@ -286,7 +286,7 @@ stgRule s@StgState
     , stgTicks = ticks }
     | Left (DefaultBound v expr) <- lookupAlgebraicAlt alts con
 
-  = let locals' = addLocals [Binding v (Addr addr)] locals
+  = let locals' = addLocals [Mapping v (Addr addr)] locals
         (addr, heap') = H.alloc (HClosure closure) heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
         vs = let newVar _old i = Var ("alg8_" <> show' ticks <> "-" <> show' i)
@@ -334,7 +334,7 @@ stgRule s@StgState
     , stgStack = ReturnFrame alts locals :< stack' }
     | Left (DefaultBound v expr) <- lookupPrimitiveAlt alts (Literal k)
 
-  = let locals' = addLocals [Binding v (PrimInt k)] locals
+  = let locals' = addLocals [Mapping v (PrimInt k)] locals
 
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
@@ -397,7 +397,7 @@ stgRule s@StgState
         <- H.lookup addr heap
 
   = let stack' = UpdateFrame addr :< stack
-        locals = makeLocals (zipWith Binding free freeVals)
+        locals = makeLocals (zipWith Mapping free freeVals)
         heap' = H.update addr (Blackhole tick) heap
 
     in s { stgCode  = Eval body locals
