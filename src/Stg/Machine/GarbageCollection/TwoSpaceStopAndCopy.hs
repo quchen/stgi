@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE MultiWayIf                 #-}
 
 -- | Two space stop-and-copy garbage collector.
 --
@@ -12,7 +13,6 @@ module Stg.Machine.GarbageCollection.TwoSpaceStopAndCopy (
 
 
 
-import           Control.Monad
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.State
@@ -20,6 +20,8 @@ import           Data.Foldable
 import           Data.Map                   (Map)
 import qualified Data.Map                   as M
 import           Data.Monoid
+import           Data.Sequence              (Seq, ViewL (..), (|>))
+import qualified Data.Sequence              as Seq
 import qualified Data.Set                   as S
 import           Data.Traversable
 
@@ -70,8 +72,12 @@ data GcState = GcState
         -- ^ Forward pointers to the new locations of already collected heap
         -- objects
 
-    , toEvacuate :: Alive [From MemAddr]
-        -- ^ Closures known to be alive, but not yet evacuated.
+    , toScavenge :: Alive (Seq (To MemAddr))
+        -- ^ Heap objects already evacuated, but not yet scavenged. Contains
+        -- only objects that are also in the 'toHeap'.
+
+    , toEvacuate :: Alive (Seq (From MemAddr))
+        -- ^ Heap objects known to be alive, but not yet evacuated.
     } deriving (Eq, Ord, Show)
 
 splitHeap :: StgState -> (Dead Heap, Alive Heap)
@@ -80,10 +86,12 @@ splitHeap StgState
     , stgHeap    = heap
     , stgGlobals = globals
     , stgStack   = stack }
-  = let rootAddrs = (map From . concatMap S.toList) [addrs code, addrs globals, addrs stack]
+  = let rootAddrs = (Seq.fromList . map From . concatMap S.toList)
+                        [addrs code, addrs globals, addrs stack]
         initialState = GcState
-            { toHeap = mempty
-            , forwards = mempty
+            { toHeap     = mempty
+            , forwards   = mempty
+            , toScavenge = mempty
             , toEvacuate = Alive rootAddrs }
         finalState = execGc evacuateScavengeLoop (From heap) initialState
     in case finalState of
@@ -95,23 +103,24 @@ splitHeap StgState
 
 evacuateScavengeLoop :: Gc ()
 evacuateScavengeLoop = do
-    gcState@GcState { toEvacuate = Alive evacuateNext } <- getGcState
-    unless (null evacuateNext) (do
-        putGcState gcState { toEvacuate = mempty }
+    do  GcState { toEvacuate = Alive evacuateNext } <- getGcState
+        traverse_ evacuate evacuateNext
+    let scavengeLoop = do
+            GcState { toScavenge = Alive scavengeNext } <- getGcState
+            if | Seq.null scavengeNext -> pure ()
+               | otherwise -> scavengeAll scavengeNext >> scavengeLoop
+    scavengeLoop
 
-        do  evacuated <- traverse evacuate evacuateNext
-            let uniqueEvacuated = nub' evacuated
-            traverse_ scavenge uniqueEvacuated
-
-        evacuateScavengeLoop )
+scavengeAll :: Seq (To MemAddr) -> Gc ()
+scavengeAll = go S.empty
   where
-    -- Efficient version of 'Data.List.nub'.
-    nub' = go S.empty
-      where
-        go _ [] = []
-        go cache (x:xs)
-            | S.member x cache = go cache xs
-            | otherwise = x : go (S.insert x cache) xs
+    go cache toAddrs = case Seq.viewl toAddrs of
+        EmptyL -> pure ()
+        addr :< rest
+            | S.member addr cache -> go cache rest
+            | otherwise -> do
+                scavenge addr
+                go (S.insert addr cache) rest
 
 
 data EvacuationStatus = NotEvacuated | AlreadyEvacuated (To MemAddr)
@@ -140,6 +149,10 @@ evacuate = \fromAddr -> resolveForward fromAddr >>= \case
                     let (addr', to') = H.alloc heapObject to
                     setAliveHeap (To to')
                     pure (To addr')
+
+                -- 2. Register the object to be scavenged
+                do  gcState@GcState { toScavenge = Alive sc } <- getGcState
+                    putGcState gcState { toScavenge = Alive (sc |> newAddr) }
 
                 -- 2. Create forwarding pointer to make evacuation idempotent
                 createForward fromAddr newAddr
@@ -191,6 +204,6 @@ scavenge (To scavengeAddr) = do
 
             -- 3. Add the addresses found in the just evacuated heap objects
             --    to the to-reclaim list
-            do  gcState@GcState { toEvacuate = evac } <- getGcState
-                let newEvacs = Alive [ From addr | Addr addr <- frees' ]
-                putGcState gcState { toEvacuate = evac <> newEvacs }
+            do  gcState@GcState { toEvacuate = Alive evac } <- getGcState
+                let newEvacs = Seq.fromList [ From addr | Addr addr <- frees' ]
+                putGcState gcState { toEvacuate = Alive (evac <> newEvacs) }
