@@ -122,7 +122,7 @@ program = someSpace *> fmap Program binds <* eof <?> "STG program"
 -- | Parse a collection of bindings, used by @let(rec)@ expressions and at the
 -- top level of a program.
 binds :: (Monad parser, TokenParsing parser) => parser Binds
-binds = bindings <?> "Non-empty list of bindings"
+binds = bindings <?> "non-empty list of bindings"
   where
     bindings = fmap (Binds . M.fromList) (sepBy1 binding semi)
     binding = (,) <$> var <* symbol "=" <*> lambdaForm
@@ -163,7 +163,7 @@ lambdaForm = lf >>= validateLambda <?> "lambda form"
     updateArrow :: (Monad parser, TokenParsing parser) => parser UpdateFlag
     updateArrow = token (symbol "->" *> pure NoUpdate
                      <|> symbol "=>" *> pure Update
-                     <?> "Update arrow" )
+                     <?> "update arrow" )
 
 -- | Parse an arrow token, @->@.
 arrow :: TokenParsing parser => parser ()
@@ -190,13 +190,13 @@ expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
     letHead = reserved "letrec" *> pure (Let Recursive)
           <|> reserved "let"    *> pure (Let NonRecursive)
     let' = letHead
-        <*> (binds <?> "list of free variables")
+        <*> binds
         <*  reserved "in"
-        <*> (expr <?> "let(rec) expression")
+        <*> expr
         <?> "let(rec)"
     case' = Case
         <$  reserved "case"
-        <*> (expr <?> "case scrutinee")
+        <*> (expr <?> "expression (as case scrutinee)")
         <*  reserved "of"
         <*> alts
         <?> "case expression"
@@ -215,7 +215,7 @@ alts = Alts
 atom :: (Monad parser, TokenParsing parser) => parser Atom
 atom = AtomVar <$> var
    <|> AtomLit <$> literal
-   <?> "atom"
+   <?> "atom (variable or literal)"
 
 
 -- | Parse a primitive operation.
