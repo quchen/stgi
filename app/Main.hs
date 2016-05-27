@@ -13,9 +13,9 @@ import System.Environment
 import System.IO             (stdout)
 
 import           Stg.Language
-import qualified Stg.Prelude     as Stg
 import           Stg.Language.Prettyprint
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude              as Stg
 import           Stg.RunForPager
 
 

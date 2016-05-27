@@ -336,10 +336,10 @@ listOfNumbers name ints = nil <>
     listBind ix i tailName =
         ( Var (listBindName ix i)
         , LambdaForm ([Var (intName i)] <> [ Var tailName | tailName P./= "nil"])
-                     Update
+                     NoUpdate -- Standard constructors are not updatable
                      []
                      (AppC (Constr "Cons")
-                           [AtomVar (Var (intName i)),AtomVar (Var tailName)] ))
+                           [AtomVar (Var (intName i)), AtomVar (Var tailName)] ))
     listBindName :: P.Integer -> P.Integer -> Text
     listBindName ix i = "list_ix" <> show' ix <> "_" <> intName i
 
