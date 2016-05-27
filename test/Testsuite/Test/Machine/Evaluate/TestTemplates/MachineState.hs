@@ -41,13 +41,14 @@ data MachineStateTestSpec = MachineStateTestSpec
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
-    , forbiddenState :: StgState -> Bool
+    , failPredicate :: StgState -> Bool
         -- ^ Fail if this predicate holds. This can be used to constrain the
         -- heap size during the test, for example.
 
-    , someStateSatisfies :: StgState -> Bool
-        -- ^ Fail if this predicate held for no intermediate state. Useful to
-        -- check whether some rule applied, for example.
+    , allSatisfied :: [StgState -> Bool]
+        -- ^ All of these predicates have to hold for some (not necessarily the
+        -- same) intermediate states. This is for example useful to check
+        -- whether at some point rule 1 was applied, and at another rule 2.
 
     , source :: Program
         -- ^ STG program to run.
@@ -56,24 +57,26 @@ data MachineStateTestSpec = MachineStateTestSpec
         -- ^ Maximum number of steps to take
 
     , performGc :: PerformGc
+        -- ^ Perform GC under which conditions?
 
     , failWithInfo :: Bool
-        -- ^ Print program code and final state on test failure?
+        -- ^ Print program code and final state on test failure? Very useful for
+        -- fixing tests.
     }
 
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
     { testName             = "Default machine state test template"
     , successPredicate     = "main" ===> [stg| \ -> Success |]
-    , forbiddenState       = const False
-    , someStateSatisfies   = const True
+    , failPredicate        = const False
+    , allSatisfied         = []
     , source               = [stg| main = \ -> DummySource |]
     , maxSteps             = 1024
     , performGc            = PerformGc (const True)
     , failWithInfo         = False }
 
--- | Evaluate the @main@ closure of a STG program, and check whether the
--- machine state satisfies a predicate when it is evaluated.
+-- | Evaluate the @main@ closure of a STG program, and check whether the machine
+-- state satisfies a predicate when it is evaluated.
 machineStateTest :: MachineStateTestSpec -> TestTree
 machineStateTest testSpec = askOption (\htmlOpt ->
     let pprDict = case htmlOpt of
@@ -89,9 +92,9 @@ machineStateTest testSpec = askOption (\htmlOpt ->
     finalState = last states
 
     test :: PrettyprinterDict -> Assertion
-    test pprDict = case L.find (forbiddenState testSpec) states of
+    test pprDict = case L.find (failPredicate testSpec) states of
         Just badState -> fail_failPredicateTrue pprDict testSpec badState
-        Nothing -> case L.any (someStateSatisfies testSpec) states of
+        Nothing -> case states `allSatisfyAtSomePoint` allSatisfied testSpec of
             True -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> pure ()
                 _otherwise -> fail_successPredicateNotTrue pprDict testSpec finalState
@@ -135,3 +138,12 @@ fail_failPredicateTrue
                 [ hang 4 (vsep ["Program:", pprDoc (source testSpec)])
                 , hang 4 (vsep ["Bad state:", pprDoc badState]) ]
             else failWithInfoInfoText ]
+
+
+allSatisfyAtSomePoint
+    :: [StgState]
+    -> [StgState -> Bool]
+    -> Bool
+allSatisfyAtSomePoint states (p:ps)
+  = L.any p states && allSatisfyAtSomePoint states ps
+allSatisfyAtSomePoint _ [] = True

@@ -301,9 +301,10 @@ enterUpdatableClosure = machineStateTest defSpec
         main = \ => case Unit of
             default -> Success
         |]
-    , someStateSatisfies = \state -> case stgInfo state of
-        Info (StateTransition Enter_UpdatableClosure) _ -> True
-        _otherwise -> False
+    , allSatisfied =
+        [ \state -> case stgInfo state of
+            Info (StateTransition Enter_UpdatableClosure) _ -> True
+            _otherwise -> False ]
     }
 
 algebraicReturnUpdate :: TestTree
@@ -314,9 +315,10 @@ algebraicReturnUpdate = machineStateTest defSpec
             default -> Success;
         updateMe = \ => case Unit of default -> Unit
         |]
-    , someStateSatisfies = \state -> case stgInfo state of
-        Info (StateTransition ReturnCon_Update) _ -> True
-        _otherwise -> False
+    , allSatisfied =
+        [ \state -> case stgInfo state of
+            Info (StateTransition ReturnCon_Update) _ -> True
+            _otherwise -> False ]
     }
 
 missingArgsUpdate :: TestTree
@@ -335,9 +337,10 @@ missingArgsUpdate = machineStateTest defSpec
         flip = \f x y -> f y x;
         flipTuple = \ => flip tuple
         |]
-    , someStateSatisfies = \state -> case stgInfo state of
-        Info (StateTransition Enter_PartiallyAppliedUpdate) _ -> True
-        _otherwise -> False
+    , allSatisfied =
+        [ \state -> case stgInfo state of
+            Info (StateTransition Enter_PartiallyAppliedUpdate) _ -> True
+            _otherwise -> False ]
     }
 
 primopShortcut_defaultBound :: TestTree
@@ -349,7 +352,7 @@ primopShortcut_defaultBound = machineStateTest defSpec
             2# -> TestFail 2#;
             v  -> Success
         |]
-    , forbiddenState = \state -> case stgCode state of
+    , failPredicate = \state -> case stgCode state of
         Eval AppP{} _ -> True -- The point of the shortcut is to never reach
                               -- the AppP rule itself.
         _otherwise    -> False
@@ -364,7 +367,7 @@ primopShortcut_normalMatch = machineStateTest defSpec
                 3#    -> Success;
                 wrong -> TestFail wrong
         |]
-    , forbiddenState = \state -> case stgCode state of
+    , failPredicate = \state -> case stgCode state of
         Eval AppP{} _ -> True -- The point of the shortcut is to never reach
                               -- the AppP rule itself.
         _otherwise    -> False
