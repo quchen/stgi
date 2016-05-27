@@ -33,6 +33,7 @@ module Stg.Machine.Types (
 
 
 
+import           Control.DeepSeq
 import           Data.Foldable
 import           Data.Map                     (Map)
 import qualified Data.Map                     as M
@@ -154,7 +155,7 @@ instance Pretty StackFrame where
 
 -- | A memory address.
 newtype MemAddr = MemAddr Int
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Enum, Bounded, Generic)
 
 instance Pretty MemAddr where
     pretty (MemAddr addr) = address style ("0x" <> addressCore style (hexAddr addr))
@@ -197,7 +198,7 @@ instance Pretty Code where
 
 -- | A single key -> value association.
 data Mapping k v = Mapping k v
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance (Pretty k, Pretty v) => Pretty (Mapping k v) where
     pretty (Mapping k v) = pretty k <+> "->" <+> pretty v
@@ -210,7 +211,7 @@ prettyMap m = (align . vsep) [ pretty (Mapping k v) | (k,v) <- M.assocs m ]
 -- | The global environment consists of the mapping from top-level definitions
 -- to their respective values.
 newtype Globals = Globals (Map Var Value)
-    deriving (Eq, Ord, Show, Monoid)
+    deriving (Eq, Ord, Show, Monoid, Generic)
 
 instance Pretty Globals where
     pretty (Globals globals) = prettyMap globals
@@ -218,7 +219,7 @@ instance Pretty Globals where
 -- | The global environment consists if the mapping from local definitions
 -- to their respective values.
 newtype Locals = Locals (Map Var Value)
-    deriving (Eq, Ord, Show, Monoid)
+    deriving (Eq, Ord, Show, Monoid, Generic)
 
 instance Pretty Locals where
     pretty (Locals locals) = prettyMap locals
@@ -320,7 +321,7 @@ instance Pretty StateTransition where
 
 -- | Type safety wrapper.
 newtype NotInScope = NotInScope [Var]
-    deriving (Eq, Ord, Show, Monoid)
+    deriving (Eq, Ord, Show, Generic, Monoid)
 
 instance Pretty NotInScope where
     pretty (NotInScope vars) = commaSep (map pretty vars)
@@ -466,7 +467,7 @@ instance Pretty Closure where
 
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr HeapObject)
-    deriving (Eq, Ord, Show, Monoid)
+    deriving (Eq, Ord, Show, Generic, Monoid)
 
 instance Pretty Heap where
     pretty (Heap heap) = prettyMap heap
@@ -486,7 +487,7 @@ data HeapObject =
         -- To make the black hole a bit more transparent, it is tagged with
         -- the STG tick in which it was introduced. This tag is used only for
         -- display purposes.
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 instance Pretty HeapObject where
     pretty ho = closureType style (typeOf ho) <+> pprHo ho
@@ -503,3 +504,22 @@ instance Pretty HeapObject where
                                -- Fallthrough pattern to silence incorrect
                                -- inexhaustive warning by GHC 7.10.3.
             Blackhole _ -> "Blackhole"
+
+instance NFData StgState
+instance NFData StackFrame
+instance NFData MemAddr
+instance NFData Value
+instance NFData Code
+instance (NFData k, NFData v) => NFData (Mapping k v) where
+    rnf (Mapping k v) = rnf k `seq` rnf v `seq` ()
+instance NFData Globals
+instance NFData Locals
+instance NFData Info
+instance NFData InfoShort
+instance NFData StateTransition
+instance NFData NotInScope
+instance NFData StateError
+instance NFData InfoDetail
+instance NFData Closure
+instance NFData Heap
+instance NFData HeapObject

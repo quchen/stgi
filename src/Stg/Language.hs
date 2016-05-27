@@ -35,6 +35,7 @@ module Stg.Language (
 
 
 
+import           Control.DeepSeq
 import           Data.List.NonEmpty           (NonEmpty (..))
 import qualified Data.List.NonEmpty           as NonEmpty
 import           Data.Map                     (Map)
@@ -361,3 +362,20 @@ instance Pretty Atom where
 
 instance Pretty Constr where
     pretty (Constr name) = constructor style (string (T.unpack name))
+
+instance NFData Program
+instance NFData Binds
+instance NFData LambdaForm
+instance NFData UpdateFlag
+instance NFData Rec
+instance NFData Expr
+instance NFData Alts
+instance NFData NonDefaultAlts
+instance NFData AlgebraicAlt
+instance NFData PrimitiveAlt
+instance NFData DefaultAlt
+instance NFData Literal
+instance NFData PrimOp
+instance NFData Var
+instance NFData Atom
+instance NFData Constr

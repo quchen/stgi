@@ -28,6 +28,8 @@ library
                      , Stg.Machine.Env
                      , Stg.Machine.Evaluate
                      , Stg.Machine.GarbageCollection
+                     , Stg.Machine.GarbageCollection.Common
+                     , Stg.Machine.GarbageCollection.TriStateTracing
                      , Stg.Machine.Heap
                      , Stg.Machine.Types
                      , Stg.Parser.Parser
@@ -39,16 +41,18 @@ library
                      , Stg.Prelude.Number
                      , Stg.Prelude.Tuple
                      , Stg.Util
-  ghc-options:         -Wall
+  ghc-options:         -Wall -fdefer-typed-holes
   build-depends:       base >= 4.7 && < 5
                      , ansi-wl-pprint
                      , containers
-                     , semigroups
+                     , deepseq
                      , parsers
-                     , trifecta
+                     , semigroups
                      , template-haskell
                      , text
                      , th-lift
+                     , transformers
+                     , trifecta
   other-extensions:    DeriveGeneric
                      , FlexibleInstances
                      , GeneralizedNewtypeDeriving
@@ -111,6 +115,7 @@ test-suite testsuite
                      , stg
                      , ansi-wl-pprint
                      , containers
+                     , deepseq
                      , semigroups
                      , tasty
                      , tasty-html

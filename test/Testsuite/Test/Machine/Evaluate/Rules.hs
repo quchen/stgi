@@ -71,7 +71,7 @@ tests = testGroup "Rules"
 defSpec :: MachineStateTestSpec
 defSpec = MachineTest.defSpec
     { maxSteps  = 32
-    , performGc = PerformGc (const False) }
+    , performGc = PerformGc (const Nothing) }
 
 nonUpdatableFunctionApplication :: TestTree
 nonUpdatableFunctionApplication = machineStateTest defSpec

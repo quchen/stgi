@@ -12,6 +12,7 @@ module Data.Stack (
 
 
 
+import           Control.DeepSeq
 import           Data.Foldable                as F
 import           Data.Monoid
 import qualified GHC.Exts                     as OL
@@ -48,6 +49,10 @@ instance OL.IsList (Stack a) where
     type Item (Stack a) = a
     fromList = foldr (:<) Empty
     toList = F.toList
+
+instance NFData a => NFData (Stack a) where
+    rnf Empty = ()
+    rnf (x :< xs) = rnf x `seq` rnf xs
 
 -- | Push a list of items onto the stack. The first item will be at the
 -- top of the stack.

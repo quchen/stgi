@@ -85,7 +85,7 @@ haskellReferenceTest testSpec = askOption (\htmlOpt ->
             states = evalsUntil
                 (RunForMaxSteps (maxSteps testSpec))
                 (HaltIf ("main" ===> [stg| \ -> Success |]))
-                (PerformGc (const False))
+                (PerformGc (const Nothing))
                 program
             finalState = last states
         in case L.find (failPredicate testSpec) states of
