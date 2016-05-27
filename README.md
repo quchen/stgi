@@ -154,8 +154,8 @@ Expressions can, in general, be one of a couple of alternatives.
     The `<alts>` are semicolon-separated list of alternatives of the form
 
     ```haskell
-    Constructor <args> -> <expression> -- Algebraic
-    1# -> <expression>                 -- Primitive
+    Constructor <args> -> <expression> -- algebraic
+    1# -> <expression>                 -- primitive
     ```
 
     and can be either all algebraic or all primitive. Each list of alts must
@@ -183,6 +183,17 @@ Expressions can, in general, be one of a couple of alternatives.
     ```
 
     Primitive operation on unboxed integers.
+
+    The following operations are supported:
+
+      - Arithmetic
+        - `+#`: addition
+        - `-#`: subtraction
+        - `*#`: multiplication
+        - `/#`: integer division (truncated towards -∞)
+        - `%#`: modulo (truncated towards -∞)
+      - Boolean, returning `1#` for truth and `0#` for falsehood:
+        `<#`, `<=#`, `==#`, `/=#`, `>=#`, `>#`
 
   - **Constructor application**
 
