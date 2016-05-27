@@ -9,6 +9,7 @@ import System.Console.ANSI   (hSupportsANSI)
 import System.Console.GetOpt
 import System.Environment
 import System.IO             (stdout)
+import Text.Read
 
 import qualified Stg.ExamplePrograms      as Example
 import           Stg.Language.Prettyprint
@@ -16,10 +17,12 @@ import           Stg.RunForPager
 
 
 
-data Options = Options { optAnsi :: Maybe Bool }
+data Options = Options { optAnsi       :: Maybe Bool
+                       , optShowStates :: Maybe Int }
 
 defOptions :: Options
-defOptions = Options { optAnsi = Nothing }
+defOptions = Options { optAnsi       = Nothing
+                     , optShowStates = Nothing }
 
 options :: [OptDescr (Options -> Options)]
 options =
@@ -31,6 +34,14 @@ options =
                    Just "true"  -> \opts -> opts { optAnsi = Just True  }
                    Just _       -> \opts -> opts { optAnsi = Just False } )
             "auto|false|true" )
+        "Colourize output"
+    , Option ['n'] ["showStates"]
+        (OptArg
+            (\x -> case x >>= readMaybe of
+                   Just n | n == 0    -> \opts -> opts { optShowStates = Nothing }
+                          | otherwise -> \opts -> opts { optShowStates = Just n  }
+                   _otherwise         -> \opts -> opts { optShowStates = Nothing } )
+            "int" )
         "Colourize output" ]
 
 handleArgs :: [String] -> IO Options
@@ -43,10 +54,13 @@ handleArgs argv = case getOpt Permute options argv of
 main :: IO ()
 main = do
     opts <- getArgs >>= handleArgs
+
     ansi <- case optAnsi opts of
         Just x -> pure x
         Nothing -> hSupportsANSI stdout
+    let numStates = optShowStates opts
+
     let prog = Example.fibonacciZipWith
     if ansi
-        then runForPager prettyprint      prog
-        else runForPager prettyprintPlain prog
+        then runForPager prettyprint      numStates prog
+        else runForPager prettyprintPlain numStates prog

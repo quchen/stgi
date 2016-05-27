@@ -20,12 +20,20 @@ import Stg.Util
 
 
 
-runForPager :: (forall a. Pretty a => a -> Text) -> Program -> IO ()
-runForPager ppr prog =
-    let states = evalsUntil RunIndefinitely
+runForPager
+    :: (forall a. Pretty a => a -> Text)
+    -> Maybe Int -- ^ Steps to show. Negative numbers count from the end.
+    -> Program
+    -> IO ()
+runForPager ppr showSteps prog =
+    let allStates = evalsUntil RunIndefinitely
                             (HaltIf (const False))
                             (PerformGc (const (Just triStateTracing)))
                             (initialState "main" prog)
+        states = case showSteps of
+            Just n | n > 0 -> take n allStates
+                   | n < 0 -> takeFromEnd (abs n) allStates
+            _else -> allStates
         line = T.replicate 80 "-"
         fatLine = T.replicate 80 "="
     in do
@@ -39,3 +47,10 @@ runForPager ppr prog =
             T.putStrLn line
             T.putStrLn (ppr state) )
         T.putStrLn fatLine
+
+takeFromEnd :: Int -> [a] -> [a]
+takeFromEnd n xs = zipOverflow (drop n xs) xs
+  where
+    zipOverflow (_:xs) (_:ys) = zipOverflow xs ys
+    zipOverflow xs [] = xs
+    zipOverflow [] ys = ys
