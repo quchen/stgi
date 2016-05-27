@@ -478,7 +478,8 @@ data HeapObject =
         -- ^ When an updatable closure is entered, it is overwritten by a
         -- black hole. This has two main benefits:
         --
-        -- 1. Memory mentioned only in the closure is now ready to be collected
+        -- 1. Memory mentioned only in the closure is now ready to be collected,
+        --    avoiding certain space leaks.
         -- 2. Entering a black hole means a thunk depends on itself, allowing
         --    the interpreter to catch some non-terminating computations with
         --    a useful error

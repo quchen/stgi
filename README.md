@@ -247,6 +247,7 @@ A couple of things to keep in mind:
   the *update analysis* would do in a compiler when translating into the STG.
 
 
+
 ### Pitfalls
 
 - Semicolons are an annoyance that allows the grammar to be simpler. This
@@ -270,9 +271,15 @@ A couple of things to keep in mind:
   is invalid, and the machine would halt in an error state.
 
 - Function application cannot be nested, since function arguments are primitives
-  or variables. Haskell's `f (g x)` would be written
-  `let gx = \ -> g x in f gx` in the STG, assuming all variables are in global
-  scope.
+  or variables. Haskell's `map f (map g xs)` would be written
+
+  ```haskell
+  let map_g_xs = \ -> map g xs
+  in map f map_g_xs
+  ```
+
+  assuming all variables are in global scope. This means that nesting functions
+  in Haskell results in a heap allocation via `let`.
 
 - Free variable values have to be explicitly given to the closure. Function
   composition could be implemented like
@@ -338,6 +345,43 @@ stack build --exec "stg-exe --colour=true" | less -R
 to get coloured output in `less`. Type `/====` to search for `====`, which
 finds the top of every new step; use `n` (next step) or `N` (previous step) to
 navigate through the execution.
+
+
+
+### Special conditions
+
+#### Unhelpful error?
+
+The goal of this project is being useful to human readers. If you find an error
+message that is unhelpful or even misleading, please report it as a bug!
+
+#### Black holes
+
+The heap does not only contain closures (lambda forms with values for the free
+variables), but also black holes. Black holes are annotated with the step in
+which they were created; this annotation is purely for display purposes, and not
+used by the machine.
+
+At runtime, when an updatable closure is entered (evaluated), it is overwritten
+by a black hole. Black holes do not only provide better overview over what
+thunk is currently evaluated, but have two useful technical benefits:
+
+1. Memory mentioned only in the closure is now ready to be collected,
+   avoiding certain space leaks. [The 1992 paper][stg1992] gives the following
+   example in section 9.3.3:
+
+   ```haskell
+   list = \(x) => <long list>
+   l = \(list) => last list
+   ```
+
+   When entering `l` without black holes, the entire `list` is kept in memory
+   until `last` is done. On the other hand, overwriting `l` with a black hole
+   upon entering deletes the `last` pointer from it, and `last` can run, and be
+   garbage collected, incrementally.
+
+2. Entering a black hole means a thunk depends on itself, allowing the
+ interpreter to catch some non-terminating computations with a useful error
 
 
 
