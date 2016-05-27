@@ -65,7 +65,7 @@ data StgState = StgState
     , stgGlobals :: Globals
         -- ^ The environment consisting of the top-level definitions.
 
-    , stgTicks :: Integer
+    , stgSteps :: Integer
         -- ^ A counter, used to generte fresh variable names from.
 
     , stgInfo :: Info
@@ -112,7 +112,7 @@ instance Pretty StgState where
         , nest 4 (vsep [headline style "Heap" <> " (" <> pretty (heapSize (stgHeap state)) <+> "entries)"
                        , pretty (stgHeap state) ])
         , nest 4 (vsep [headline style "Globals", pretty (stgGlobals state)])
-        , nest 4 (headline style "Step:" <+> pretty (stgTicks state)) ])
+        , nest 4 (headline style "Step:" <+> pretty (stgSteps state)) ])
 
 -- | Prettyprint a 'Stack'.
 prettyStack :: Pretty a => Stack a -> Doc

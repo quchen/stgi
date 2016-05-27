@@ -35,7 +35,7 @@ runForPager ppr prog =
         T.putStrLn (ppr prog)
         for_ states (\state -> do
             T.putStrLn fatLine
-            T.putStrLn (show' (stgTicks state) <> ". " <> ppr (stgInfo state))
+            T.putStrLn (show' (stgSteps state) <> ". " <> ppr (stgInfo state))
             T.putStrLn line
             T.putStrLn (ppr state) )
         T.putStrLn fatLine

@@ -90,7 +90,7 @@ isArgFrame _else           = False
 -- | Perform a single STG machine evaluation step.
 evalStep :: StgState -> StgState
 evalStep state = let state' = stgRule state
-                 in state' { stgTicks = stgTicks state' + 1 }
+                 in state' { stgSteps = stgSteps state' + 1 }
 
 
 
@@ -283,13 +283,13 @@ stgRule s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack'
     , stgHeap  = heap
-    , stgTicks = ticks }
+    , stgSteps = steps }
     | Left (DefaultBound v expr) <- lookupAlgebraicAlt alts con
 
   = let locals' = addLocals [Mapping v (Addr addr)] locals
         (addr, heap') = H.alloc (HClosure closure) heap
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
-        vs = let newVar _old i = Var ("alg8_" <> show' ticks <> "-" <> show' i)
+        vs = let newVar _old i = Var ("alg8_" <> show' steps <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
@@ -392,7 +392,7 @@ stgRule s@StgState
     { stgCode  = Enter addr
     , stgStack = stack
     , stgHeap  = heap
-    , stgTicks = tick }
+    , stgSteps = tick }
     | Just (HClosure (Closure (LambdaForm free Update [] body) freeVals))
         <- H.lookup addr heap
 
@@ -413,9 +413,9 @@ stgRule s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = UpdateFrame addr :< stack'
     , stgHeap  = heap
-    , stgTicks = ticks }
+    , stgSteps = steps }
 
-  = let vs = let newVar _old i = Var ("upd16_" <> show' ticks <> "-" <> show' i)
+  = let vs = let newVar _old i = Var ("upd16_" <> show' steps <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = H.update addr (HClosure (Closure lf ws)) heap
@@ -433,14 +433,14 @@ stgRule s@StgState
     { stgCode  = Enter addrEnter
     , stgStack = stack
     , stgHeap  = heap
-    , stgTicks = ticks }
+    , stgSteps = steps }
     | Just (HClosure (Closure (LambdaForm _vs NoUpdate xs _body) _wsf))
         <- H.lookup addrEnter heap
     , Just (argFrames, UpdateFrame addrUpdate :< stack')
         <- popArgsUntilUpdate stack xs
 
   = let xs1 = zipWith const xs (F.toList argFrames)
-        f = Var ("upd17a_" <> show' ticks)
+        f = Var ("upd17a_" <> show' steps)
         fxs1 = AppF f (map AtomVar xs1)
         freeVars = f : xs1
         freeVals = zipWith const

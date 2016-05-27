@@ -31,7 +31,7 @@ garbageCollect state
   = let (Dead deadHeap, Alive cleanHeap) = splitHeap state
     in if H.size deadHeap > 0
         then state { stgHeap  = cleanHeap
-                   , stgTicks = stgTicks state + 1
+                   , stgSteps = stgSteps state + 1
                    , stgInfo  = Info GarbageCollection
                                      [Detail_GarbageCollected (toList (H.addresses deadHeap))] }
         else state

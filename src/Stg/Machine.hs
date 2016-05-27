@@ -51,7 +51,7 @@ initialState mainVar (Program binds) = initializedState
         , stgStack   = mempty
         , stgHeap    = mempty
         , stgGlobals = mempty
-        , stgTicks   = 0
+        , stgSteps   = 0
         , stgInfo    = Info StateInitial [] }
     initializedState = case evalStep dummyLetInitial of
         state | terminated state -> state
@@ -59,7 +59,7 @@ initialState mainVar (Program binds) = initializedState
             { stgCode = Eval (AppF _mainVar []) (Locals locals) }
           -> state
             { stgCode    = Eval (AppF mainVar []) mempty
-            , stgTicks   = 0
+            , stgSteps   = 0
             , stgGlobals = Globals locals
             , stgInfo    = Info StateInitial [] }
         badState -> badState
@@ -112,9 +112,9 @@ evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc) = go False
     terminate = (:[])
     go attemptGc = \case
 
-        state@StgState{ stgTicks = ticks }
+        state@StgState{ stgSteps = steps }
             | RunForMaxSteps maxSteps <- runForSteps
-            , ticks >= maxSteps
+            , steps >= maxSteps
             -> terminate (state { stgInfo = Info MaxStepsExceeded [] })
 
         state | haltIf state

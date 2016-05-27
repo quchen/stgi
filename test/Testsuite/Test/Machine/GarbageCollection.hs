@@ -54,7 +54,7 @@ splitHeapTest = testGroup "Split heap in dead/alive"
         , stgStack   = mempty
         , stgHeap    = dirtyHeap
         , stgGlobals = globals
-        , stgTicks   = 0
+        , stgSteps   = 0
         , stgInfo    = Info GarbageCollection [] }
 
     errorMsg cleanHeap = T.unlines
