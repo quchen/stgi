@@ -47,8 +47,10 @@ module Stg.Parser.Parser (
 import           Control.Applicative
 import           Control.Monad
 import           Data.Char                    (isSpace)
+import           Data.List                    as L
 import qualified Data.List.NonEmpty           as NonEmpty
 import qualified Data.Map.Strict              as M
+import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
@@ -266,11 +268,21 @@ nonDefaultAlts = AlgebraicAlts . NonEmpty.fromList <$> some algebraicAlt
 -- @
 algebraicAlt :: (Monad parser, TokenParsing parser) => parser AlgebraicAlt
 algebraicAlt = try (AlgebraicAlt <$> con)
-                <*> many var
-                <*  arrow
-                <*> expr
-                <*  semi
-                <?> "algebraic case alternative"
+           <*> (many var >>= disallowDuplicates)
+           <*  arrow
+           <*> expr
+           <*  semi
+           <?> "algebraic case alternative"
+  where
+    disallowDuplicates vars = case duplicates vars of
+        [] -> pure vars
+        dups ->
+            let plural = case dups of [_] -> ""; _ -> "s"
+                errMsg = "Duplicate variable" <> plural <> " in binding: "
+                         <> L.intercalate ", " varNames
+                varNames = map (\(Var v) -> T.unpack v) dups
+            in fail errMsg
+    duplicates = mapMaybe (\case (x:_:_) -> Just x; _ -> Nothing) . group . sort
 
 -- | Parse a single primitive alternative, such as @1#@.
 --

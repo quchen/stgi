@@ -204,6 +204,8 @@ badParses = testGroup "Parsers that should fail"
         "x = \\y => z"
     , shouldFailToParse "Standard constructors are not updatable"
         "x = \\(y) => Con y"
+    , shouldFailToParse "Pattern variables have to be unique"
+        "x = \\ -> case x of Tuple x x -> X; _ -> _"
     ]
 
 stresstest :: TestTree
