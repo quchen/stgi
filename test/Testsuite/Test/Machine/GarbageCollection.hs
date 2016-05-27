@@ -40,11 +40,10 @@ prettyIndented :: Pretty a => a -> Text
 prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprint
 
 splitHeapTest :: GarbageCollectionAlgorithm -> TestTree
-splitHeapTest algorithm = localOption (Timeout 1e6 "1 s")
-    (testGroup "Split heap in dead/alive"
-        [ unusedIsCollected
-        , usedIsNotCollected
-        , heapSplit ])
+splitHeapTest algorithm = testGroup "Split heap in dead/alive"
+    [ unusedIsCollected
+    , usedIsNotCollected
+    , heapSplit ]
   where
     (~>) = (,)
     dirtyHeap = Heap
@@ -101,8 +100,7 @@ splitHeapTest algorithm = localOption (Timeout 1e6 "1 s")
 
 
 fibonacciSumTest :: GarbageCollectionAlgorithm -> TestTree
-fibonacciSumTest algorithm
-  = localOption (Timeout 1e6 "1 s") (testCase "Long-running program" test)
+fibonacciSumTest algorithm = testCase "Long-running program" test
   where
     -- This program choked on the new copying GC (ran into an infinite loop),
     -- so it is added as a test case. It's much rather a sanity test than a
