@@ -39,7 +39,7 @@ equals_Tuple_Int :: Program
 fst = [program|
     fst = \tuple ->
         case tuple of
-            Tuple a b -> a;
+            Tuple a b -> a
             badTuple -> Error_fst badTuple
     |]
 
@@ -51,7 +51,7 @@ fst = [program|
 snd = [program|
     snd = \tuple ->
         case tuple of
-            Tuple a b -> b;
+            Tuple a b -> b
             badTuple -> Error_snd badTuple
     |]
 
@@ -73,7 +73,7 @@ curry = [program|
 -- @
 uncurry = fst <> snd <> [program|
     uncurry = \f tuple ->
-        let fst' = \(tuple) -> fst tuple;
+        let fst' = \(tuple) -> fst tuple
             snd' = \(tuple) -> snd tuple
         in f fst' snd'
     |]
@@ -86,7 +86,7 @@ uncurry = fst <> snd <> [program|
 swap = [program|
     swap = \tuple ->
         case tuple of
-            Tuple a b -> Tuple b a;
+            Tuple a b -> Tuple b a
             badTuple -> Error_snd badTuple |]
 
 -- | Generate a tuple of numbers.
@@ -114,9 +114,9 @@ equals_Tuple_Int = eq_Int <> [program|
         case tup1 of
             Tuple a b -> case tup2 of
                 Tuple x y -> case eq_Int a x of
-                    True -> eq_Int b y;
-                    False -> False;
-                    badBool -> Error_eq_Tuple badBool;
-                badTuple -> Error_eq_Tuple badTuple;
+                    True -> eq_Int b y
+                    False -> False
+                    badBool -> Error_eq_Tuple badBool
+                badTuple -> Error_eq_Tuple badTuple
             badTuple -> Error_eq_Tuple badTuple
     |]

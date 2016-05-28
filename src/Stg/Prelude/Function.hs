@@ -35,7 +35,7 @@ seq, id, const, compose, fix :: Program
 -- whereas in the STG
 --
 -- @
--- constUnit = \(x) -> Unit ();
+-- constUnit = \(x) -> Unit ()
 -- seq (constUnit, Unit) = ERROR
 -- @
 seq = [program| seq = \x y -> case x of default -> y |]

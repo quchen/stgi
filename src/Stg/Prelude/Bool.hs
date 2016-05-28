@@ -29,13 +29,13 @@ eq_Bool, and2, or2, not, bool :: Program
 eq_Bool = [program|
     eq_Bool = \x y -> case x of
         True -> case y of
-            True    -> True;
-            False   -> False;
-            badBool -> Error_eq_Bool badBool;
+            True    -> True
+            False   -> False
+            badBool -> Error_eq_Bool badBool
         False -> case y of
-            True    -> False;
-            False   -> True;
-            badBool -> Error_eq_Bool badBool;
+            True    -> False
+            False   -> True
+            badBool -> Error_eq_Bool badBool
         badBool -> Error_eq_Bool badBool
     |]
 
@@ -46,8 +46,8 @@ eq_Bool = [program|
 -- @
 and2 = [program|
     and2 = \x y -> case x of
-        True  -> y;
-        False -> False;
+        True  -> y
+        False -> False
         badBool  -> Error_and2 badBool
     |]
 
@@ -58,8 +58,8 @@ and2 = [program|
 -- @
 or2 = [program|
     or2 = \x y -> case x of
-        True     -> True;
-        False    -> y;
+        True     -> True
+        False    -> y
         badBool  -> Error_or2 badBool
     |]
 
@@ -70,8 +70,8 @@ or2 = [program|
 -- @
 not = [program|
     not = \x -> case x of
-        True -> False;
-        False -> True;
+        True -> False
+        False -> True
         badBool  -> Error_not badBool
     |]
 
@@ -88,8 +88,8 @@ not = [program|
 -- @
 bool = [program|
     bool = \f t p -> case p of
-        True    -> t;
-        False   -> f;
+        True    -> t
+        False   -> f
         badBool -> Error_bool badBool
     |]
 

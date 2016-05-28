@@ -8,8 +8,8 @@ module Test.Prelude.Function (tests) where
 import Data.Function
 import Data.Monoid
 
-import qualified Stg.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -36,8 +36,8 @@ testId = haskellReferenceTest defSpec
         main = \ =>
             case id x of
                 idX -> case eq_Int idX x of
-                    True -> Success;
-                    False -> TestFail idX;
+                    True -> Success
+                    False -> TestFail idX
                     badBool -> Error badBool
         |] }
 
@@ -53,8 +53,8 @@ testConst = haskellReferenceTest defSpec
         main = \ =>
             case const x y of
                 constXY -> case eq_Int constXY x of
-                    True -> Success;
-                    False -> TestFail constXY;
+                    True -> Success
+                    False -> TestFail constXY
                     badBool -> Error badBool
         |] }
 
@@ -74,14 +74,14 @@ testCompose = haskellReferenceTest defSpec
         <> Stg.const
         <> [stg|
 
-        plus2 = \x -> add x two;
-        times3 = \x -> mul x three;
-        plus2times3 = \ -> compose times3 plus2;
+        plus2 = \x -> add x two
+        times3 = \x -> mul x three
+        plus2times3 = \ -> compose times3 plus2
         main = \ =>
             case plus2times3 x of
                 result -> case eq_Int result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
+                    True -> Success
+                    False -> TestFail result
                     badBool -> Error badBool
         |] }
 
@@ -104,18 +104,18 @@ testFix = haskellReferenceTest defSpec
         <> [stg|
 
         fac' = \rec m -> case eq_Int m zero of
-            True -> one;
+            True -> one
             False -> case sub m one of
                 mMinusOne -> case rec mMinusOne of
-                    recMMinusOne -> mul m recMMinusOne;
-            badBool -> Error_fac' badBool;
+                    recMMinusOne -> mul m recMMinusOne
+            badBool -> Error_fac' badBool
 
-        fac = \ => fix fac';
+        fac = \ => fix fac'
 
         main = \ =>
             case fac n of
                 result -> case eq_Int result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
+                    True -> Success
+                    False -> TestFail result
                     badBool -> Error badBool
         |] }

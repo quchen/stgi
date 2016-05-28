@@ -8,8 +8,8 @@ module Test.Prelude.Bool (tests) where
 import Data.Bool
 import Data.Monoid
 
-import qualified Stg.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -36,8 +36,8 @@ testAnd2 = haskellReferenceTest defSpec
         <> [stg|
         main = \ => case and2 b1 b2 of
             result -> case eq_Bool result expectedResult of
-                True    -> Success;
-                False   -> TestFail result;
+                True    -> Success
+                False   -> TestFail result
                 badBool -> Error badBool
         |] }
 
@@ -53,8 +53,8 @@ testOr2 = haskellReferenceTest defSpec
         <> [stg|
         main = \ => case or2 b1 b2 of
             result -> case eq_Bool result expectedResult of
-                True -> Success;
-                False -> TestFail result;
+                True -> Success
+                False -> TestFail result
                 badBool -> Error badBool
         |] }
 
@@ -69,8 +69,8 @@ testNot = haskellReferenceTest defSpec
         <> [stg|
         main = \ => case not b of
             result -> case eq_Bool result expectedResult of
-                True -> Success;
-                False -> TestFail result;
+                True -> Success
+                False -> TestFail result
                 badBool -> Error badBool
         |] }
 
@@ -91,7 +91,7 @@ testBool = haskellReferenceTest defSpec
         <> [stg|
         main = \ => case bool t f p of
             result -> case eq_Int result expectedResult of
-                True -> Success;
-                False -> TestFail result;
+                True -> Success
+                False -> TestFail result
                 badBool -> Error badBool
         |] }

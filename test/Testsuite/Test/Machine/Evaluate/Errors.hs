@@ -38,7 +38,7 @@ functionScrutinee = machineStateTest defSpec
     { testName = "Function scrutinee"
     , failWithInfo = False
     , source = [stg|
-        id = \x -> x;
+        id = \x -> x
         main = \ => case id of
             default -> Success
         |]

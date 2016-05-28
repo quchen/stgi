@@ -67,10 +67,10 @@ nil = [program| nil = \ -> Nil |]
 -- @
 concat2 = [program|
     concat2 = \xs ys -> case xs of
-        Nil -> ys;
+        Nil -> ys
         Cons x xs' ->
             let rest = \(xs' ys) => concat2 xs' ys
-            in Cons x rest;
+            in Cons x rest
         badList -> Error_concat2 badList
     |]
 
@@ -82,10 +82,10 @@ concat2 = [program|
 -- @
 foldl = [program|
     foldl = \f acc xs -> case xs of
-        Nil -> acc;
+        Nil -> acc
         Cons y ys ->
             let acc' = \(f acc y) => case f acc y of v -> v
-            in foldl f acc' ys;
+            in foldl f acc' ys
         badList -> Error_foldl badList
     |]
 
@@ -96,9 +96,9 @@ foldl = [program|
 -- @
 foldl' = [program|
     foldl' = \f acc xs -> case xs of
-        Nil -> acc;
+        Nil -> acc
         Cons y ys -> case f acc y of
-            acc' -> foldl' f acc' ys;
+            acc' -> foldl' f acc' ys
         badList -> Error_foldl' badList
     |]
 
@@ -109,10 +109,10 @@ foldl' = [program|
 -- @
 foldr = [program|
     foldr = \f z xs -> case xs of
-        Nil -> z;
+        Nil -> z
         Cons y ys ->
             let rest = \(f z ys) => foldr f z ys
-            in f y rest;
+            in f y rest
         badList -> Error_foldr badList
     |]
 
@@ -128,7 +128,7 @@ foldr = [program|
 iterate = [program|
     iterate = \f x ->
         letrec
-            fx = \(f x) => f x;
+            fx = \(f x) => f x
             rest = \(f fx) => iterate f fx
         in Cons x rest
     |]
@@ -162,16 +162,16 @@ take = [program|
         letrec
             takePrim = \(takePrim) nPrim xs ->
                 case nPrim of
-                    0# -> Nil;
+                    0# -> Nil
                     default -> case xs of
-                        Nil -> Nil;
+                        Nil -> Nil
                         Cons x xs ->
                             let rest = \(takePrim xs nPrim) => case -# nPrim 1# of
                                     nPrimPred -> takePrim nPrimPred xs
-                            in Cons x rest;
+                            in Cons x rest
                         badList -> Error_take_badList badList
         in case n of
-            Int# nPrim -> takePrim nPrim;
+            Int# nPrim -> takePrim nPrim
             badInt -> Error_take_badInt badInt
     |]
 
@@ -186,13 +186,13 @@ take = [program|
 -- @
 filter = [program|
     filter = \p xs -> case xs of
-        Nil -> Nil;
+        Nil -> Nil
         Cons x xs' -> case p x of
-            False -> filter p xs';
+            False -> filter p xs'
             True ->
                 let rest = \(p xs') => filter p xs'
-                in Cons x rest;
-            badBool -> Error_filter_1 badBool;
+                in Cons x rest
+            badBool -> Error_filter_1 badBool
         badList -> Error_filter_2 badList
     |]
 
@@ -210,10 +210,10 @@ reverse = nil <> [program|
         letrec
             reverse' = \(reverse') xs ys ->
                 case xs of
-                    Nil -> ys;
+                    Nil -> ys
                     Cons x xs ->
                         let yxs = \(x ys) -> Cons x ys
-                        in reverse' xs yxs;
+                        in reverse' xs yxs
                     badList -> Error_reverse badList
         in reverse' xs nil
     |]
@@ -247,14 +247,14 @@ replicate = [program|
         letrec
             replicateXPrim = \(replicateXPrim x) nPrim ->
                 case ># nPrim 0# of
-                    0# -> Nil;
+                    0# -> Nil
                     default ->
                         let rest = \(replicateXPrim nPrim) ->
                                 case -# nPrim 1# of
                                     nPrimPred -> replicateXPrim nPrimPred
                         in Cons x rest
         in case n of
-            Int# nPrim -> replicateXPrim nPrim;
+            Int# nPrim -> replicateXPrim nPrim
             badInt -> Error_replicate badInt
     |]
 
@@ -265,21 +265,21 @@ replicate = [program|
 -- @
 sort = mconcat [leq_Int, gt_Int, filter, concat2] <> [program|
     sort = \xs -> case xs of
-        Nil -> Nil;
+        Nil -> Nil
         Cons pivot xs' ->
             let beforePivotSorted = \(pivot xs') =>
                     letrec
-                        atMostPivot = \(pivot) y -> leq_Int  y pivot;
+                        atMostPivot = \(pivot) y -> leq_Int  y pivot
                         beforePivot = \(xs' atMostPivot) => filter atMostPivot xs'
-                    in sort beforePivot;
+                    in sort beforePivot
 
                 afterPivotSorted = \(pivot xs') =>
                     letrec
-                        moreThanPivot = \(pivot) y -> gt_Int y pivot;
+                        moreThanPivot = \(pivot) y -> gt_Int y pivot
                         afterPivot    = \(xs' moreThanPivot) => filter moreThanPivot  xs'
                     in sort afterPivot
             in  let fromPivotOn = \(pivot afterPivotSorted) -> Cons pivot afterPivotSorted
-                in concat2 beforePivotSorted fromPivotOn;
+                in concat2 beforePivotSorted fromPivotOn
         badList -> Error_sort badList
     |]
 
@@ -290,10 +290,10 @@ sort = mconcat [leq_Int, gt_Int, filter, concat2] <> [program|
 -- @
 map = [program|
     map = \f list -> case list of
-        Nil       -> Nil;
-        Cons x xs -> let fx  = \(f x)  => f x;
+        Nil       -> Nil
+        Cons x xs -> let fx  = \(f x)  => f x
                          fxs = \(f xs) => map f xs
-                     in Cons fx fxs;
+                     in Cons fx fxs
         badList -> Error_map badList
     |]
 
@@ -304,13 +304,13 @@ map = [program|
 -- >>> let ppr ast = T.putStrLn (prettyprintPlain ast)
 -- >>> ppr (listOfNumbers "list" [1, -2, 3])
 -- list = \ => letrec
---                 int_1 = \ -> Int# 1#;
---                 int_3 = \ -> Int# 3#;
---                 int_neg2 = \ -> Int# -2#;
---                 list_ix0_int_1 = \(int_1 list_ix1_int_neg2) -> Cons int_1 list_ix1_int_neg2;
---                 list_ix1_int_neg2 = \(int_neg2 list_ix2_int_3) -> Cons int_neg2 list_ix2_int_3;
+--                 int_1 = \ -> Int# 1#
+--                 int_3 = \ -> Int# 3#
+--                 int_neg2 = \ -> Int# -2#
+--                 list_ix0_int_1 = \(int_1 list_ix1_int_neg2) -> Cons int_1 list_ix1_int_neg2
+--                 list_ix1_int_neg2 = \(int_neg2 list_ix2_int_3) -> Cons int_neg2 list_ix2_int_3
 --                 list_ix2_int_3 = \(int_3) -> Cons int_3 nil
---             in list_ix0_int_1;
+--             in list_ix0_int_1
 -- nil = \ -> Nil
 listOfNumbers
     :: T.Text      -- ^ Name of the list in the STG program
@@ -364,16 +364,16 @@ equals_List_Int = Num.eq_Int <> [program|
     equals_List_Int = \xs ys ->
         case xs of
             Nil -> case ys of
-                Nil -> True;
-                Cons y ys' -> False;
-                badList -> Error_listEquals badList;
+                Nil -> True
+                Cons y ys' -> False
+                badList -> Error_listEquals badList
             Cons x xs' -> case ys of
-                Nil -> False;
+                Nil -> False
                 Cons y ys' -> case eq_Int x y of
-                    True  -> equals_List_Int xs' ys';
-                    False -> False;
-                    badBool -> Error_listEquals_1 badBool;
-                badList -> Error_listEquals_2 badList;
+                    True  -> equals_List_Int xs' ys'
+                    False -> False
+                    badBool -> Error_listEquals_1 badBool
+                badList -> Error_listEquals_2 badList
             badList -> Error_listEquals_3 badList
     |]
 
@@ -386,9 +386,9 @@ length = [program|
     length = \ =>
         letrec
             length' = \(length') n xs -> case xs of
-                Nil -> Int# n;
+                Nil -> Int# n
                 Cons y ys -> case +# n 1# of
-                    n' -> length' n' ys;
+                    n' -> length' n' ys
                 badList -> Error_length badList
         in length' 0#
     |]
@@ -407,14 +407,14 @@ length = [program|
 -- @
 zip = [program|
     zip = \xs ys -> case xs of
-        Nil -> Nil;
+        Nil -> Nil
         Cons x xs' -> case ys of
-            Nil -> Nil;
+            Nil -> Nil
             Cons y ys' ->
-                let tup  = \(x y)     -> Tuple x y;
+                let tup  = \(x y)     -> Tuple x y
                     rest = \(xs' ys') => zip xs' ys'
-                in Cons tup rest;
-            badList -> Error_zip badList;
+                in Cons tup rest
+            badList -> Error_zip badList
         badList -> Error_zip badList
     |]
 
@@ -432,13 +432,13 @@ zip = [program|
 -- @
 zipWith = [program|
     zipWith = \f xs ys -> case xs of
-        Nil -> Nil;
+        Nil -> Nil
         Cons x xs' -> case ys of
-            Nil -> Nil;
+            Nil -> Nil
             Cons y ys' ->
-                let fxy = \(f x y) => f x y;
+                let fxy = \(f x y) => f x y
                     rest = \(f xs' ys') => zipWith f xs' ys'
-                in Cons fxy  rest;
-            badList -> Error_zipWith badList;
+                in Cons fxy  rest
+            badList -> Error_zipWith badList
         badList -> Error_zipWith badList
     |]

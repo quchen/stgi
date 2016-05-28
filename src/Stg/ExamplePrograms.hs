@@ -61,7 +61,7 @@ foldl'Sum list = mconcat
     , Stg.int "zero" 0
     , Stg.listOfNumbers "list" list
     , [program|
-        sum = \ -> foldl' add zero;
+        sum = \ -> foldl' add zero
         main = \ => sum list
     |]]
 
@@ -115,15 +115,15 @@ fibonacciZipWith = mconcat
     , Stg.zipWith
     , [program|
 
-    flipConst = \x y -> y;
+    flipConst = \x y -> y
     main = \ =>
         letrec
             fibo = \ =>
                 letrec
-                    fib0 = \(fib1) -> Cons zero fib1;
+                    fib0 = \(fib1) -> Cons zero fib1
                     fib1 = \(fib2) =>
                         let one = \ -> Int# 1#
-                        in Cons one fib2;
+                        in Cons one fib2
                     fib2 = \(fib0 fib1) => zipWith add fib0 fib1
                 in fib0
         in foldl' flipConst zero fibo
@@ -162,13 +162,13 @@ fibonacciNaive n = mconcat
     main = \ =>
         letrec
             fib = \(fib) n -> case leq_Int n one of
-            True -> n;
-            _False -> case sub n one of
-                nMinusOne -> case fib nMinusOne of
-                    fibNMinusOne -> case sub nMinusOne one of
-                        nMinusTwo -> case fib nMinusTwo of
-                            fibNMinusTwo -> case add fibNMinusOne fibNMinusTwo of
-                                result -> result
+                True -> n
+                _False -> case sub n one of
+                    nMinusOne -> case fib nMinusOne of
+                        fibNMinusOne -> case sub nMinusOne one of
+                            nMinusTwo -> case fib nMinusTwo of
+                                fibNMinusTwo -> case add fibNMinusOne fibNMinusTwo of
+                                    result -> result
         in fib n
     |]]
 
@@ -195,9 +195,9 @@ fibonacciImproved n = mconcat
     , [program|
     main = \ =>
         letrec
-            fib = \(fib') -> fib' zero one;
+            fib = \(fib') -> fib' zero one
             fib' = \(fib') x y n -> case leq_Int n zero of
-                True -> x;
+                True -> x
                 _False -> case add x y of
                     xy -> case sub n one of
                         nMinusOne -> fib' y xy nMinusOne
@@ -230,22 +230,22 @@ listConcatRightAssociated = mconcat
     , [program|
 
     forceList = \xs -> case xs of
-        Nil -> Done;
-        Cons _ xs' -> forceList xs';
-        _ -> BadListError;
+        Nil -> Done
+        Cons _ xs' -> forceList xs'
+        _ -> BadListError
 
     concatenated = \ =>
         letrec
-            list0123456789 = \(list123456789) => concat2 list0 list123456789;
-            list123456789  = \(list23456789)  => concat2 list1 list23456789;
-            list23456789   = \(list3456789)   => concat2 list2 list3456789;
-            list3456789    = \(list456789)    => concat2 list3 list456789;
-            list456789     = \(list56789)     => concat2 list4 list56789;
-            list56789      = \(list6789)      => concat2 list5 list6789;
-            list6789       = \(list789)       => concat2 list6 list789;
-            list789        = \(list89)        => concat2 list7 list89;
+            list0123456789 = \(list123456789) => concat2 list0 list123456789
+            list123456789  = \(list23456789)  => concat2 list1 list23456789
+            list23456789   = \(list3456789)   => concat2 list2 list3456789
+            list3456789    = \(list456789)    => concat2 list3 list456789
+            list456789     = \(list56789)     => concat2 list4 list56789
+            list56789      = \(list6789)      => concat2 list5 list6789
+            list6789       = \(list789)       => concat2 list6 list789
+            list789        = \(list89)        => concat2 list7 list89
             list89         = \                => concat2 list8 list9
-        in list0123456789;
+        in list0123456789
 
     main = \ => case forceList concatenated of
         _ -> concatenated
@@ -265,14 +265,14 @@ listConcatLeftAssociated :: Program
 listConcatLeftAssociated = listConcatRightAssociated <> [program|
     concatenated = \ =>
         letrec
-            list01         = \                => concat2 list0         list1;
-            list012        = \(list01)        => concat2 list01        list2;
-            list0123       = \(list012)       => concat2 list012       list3;
-            list01234      = \(list0123)      => concat2 list0123      list4;
-            list012345     = \(list01234)     => concat2 list01234     list5;
-            list0123456    = \(list012345)    => concat2 list012345    list6;
-            list01234567   = \(list0123456)   => concat2 list0123456   list7;
-            list012345678  = \(list01234567)  => concat2 list01234567  list8;
+            list01         = \                => concat2 list0         list1
+            list012        = \(list01)        => concat2 list01        list2
+            list0123       = \(list012)       => concat2 list012       list3
+            list01234      = \(list0123)      => concat2 list0123      list4
+            list012345     = \(list01234)     => concat2 list01234     list5
+            list0123456    = \(list012345)    => concat2 list012345    list6
+            list01234567   = \(list0123456)   => concat2 list0123456   list7
+            list012345678  = \(list01234567)  => concat2 list01234567  list8
             list0123456789 = \(list012345678) => concat2 list012345678 list9
         in list0123456789
     |]

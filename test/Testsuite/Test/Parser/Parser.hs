@@ -103,13 +103,13 @@ simpleParses = testGroup "Well-written programs"
     , shouldParseTo "factorial"
         "fac = \\n ->                                                        \n\
         \   case n of                                                        \n\
-        \       0#      -> Int# 1#;                                          \n\
+        \       0#      -> Int# 1#                                           \n\
         \       default -> case -# n 1# of                                   \n\
         \           nMinusOne ->                                             \n\
         \                let fac' = \\(nMinusOne) => fac nMinusOne           \n\
         \                in case fac' of                                     \n\
         \                    Int# facNMinusOne -> case *# n facNMinusOne of  \n\
-        \                        result -> Int# result;                      \n\
+        \                        result -> Int# result                       \n\
         \                    err -> Error_fac err                            "
         (Binds
             [(Var "fac",LambdaForm [] NoUpdate [Var "n"]
@@ -136,10 +136,10 @@ simpleParses = testGroup "Well-written programs"
         "-- Taken from the 1992 STG paper, page 21.                          \n\
         \map = \\f xs ->                                                     \n\
         \    case xs of                                                      \n\
-        \        Nil -> Nil;                                                 \n\
-        \        Cons y ys -> let fy = \\(f y) => f y;                       \n\
-        \                           mfy = \\(f ys) => map f ys               \n\
-        \                       in Cons fy mfy;                              \n\
+        \        Nil -> Nil -- Some comment                                  \n\
+        \        Cons y ys -> let fy = \\(f y) => f y                        \n\
+        \  {- Block comment -}    mfy = \\(f ys) => map f ys                 \n\
+        \                     in Cons fy mfy                                 \n\
         \        default -> badListError                                     "
        (Binds
            [ ("map", LambdaForm [] NoUpdate ["f","xs"]
@@ -158,13 +158,14 @@ simpleParses = testGroup "Well-written programs"
     , shouldParseTo "map, differently implemented"
          "-- Taken from the 1992 STG paper, page 22.                         \n\
          \map = \\f ->                                                       \n\
-         \    letrec mf = \\(f mf) xs ->                                     \n\
-         \        case xs of                                                 \n\
-         \            Nil -> Nil;                                            \n\
-         \            Cons y ys -> let fy = \\(f y) => f y;                  \n\
-         \                             mfy = \\(mf ys) => mf ys              \n\
-         \                           in Cons fy mfy;                         \n\
-         \            default -> badListError                                \n\
+         \    letrec                                                         \n\
+         \        mf = \\(f mf) xs ->                                        \n\
+         \            case xs of                                             \n\
+         \                Nil -> Nil                                         \n\
+         \                Cons y ys -> let fy = \\(f y) => f y               \n\
+         \                                 mfy = \\(mf ys) => mf ys          \n\
+         \                             in Cons fy mfy                        \n\
+         \                default -> badListError                            \n\
          \    in mf                                                          "
         (Binds
             [ ("map", LambdaForm [] NoUpdate ["f"]
@@ -205,7 +206,8 @@ badParses = testGroup "Parsers that should fail"
     , shouldFailToParse "Standard constructors are not updatable"
         "x = \\(y) => Con y"
     , shouldFailToParse "Pattern variables have to be unique"
-        "x = \\ -> case x of Tuple x x -> X; _ -> _"
+        "x = \\ -> case x of Tuple x x -> X  \n\
+        \                    _ -> _          "
     ]
 
 stresstest :: TestTree

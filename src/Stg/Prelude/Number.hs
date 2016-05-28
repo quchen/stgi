@@ -69,7 +69,9 @@ binaryOp name op primAlts =
 
 
 primToBool :: Alts
-primToBool = [alts| 1# -> True; default -> False |]
+primToBool = [alts|
+    1#      -> True
+    default -> False |]
 
 eq_Int, lt_Int, leq_Int, gt_Int, geq_Int, neq_Int :: Program
 
@@ -118,9 +120,9 @@ min = [program|
     min = \x y -> case x of
         Int# x' -> case y of
             Int# y' -> case <=# x' y' of
-                1#      -> x;
-                default -> y;
-            badInt -> Error_min badInt;
+                1#      -> x
+                default -> y
+            badInt -> Error_min badInt
         badInt -> Error_min badInt
     |]
 
@@ -129,8 +131,8 @@ max = [program|
     max = \x y -> case x of
         Int# x' -> case y of
             Int# y' -> case >=# x' y' of
-                1# -> x;
-                default -> y;
-            badInt -> Error_min badInt;
+                1# -> x
+                default -> y
+            badInt -> Error_min badInt
         badInt -> Error_min badInt
     |]

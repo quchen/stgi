@@ -11,9 +11,9 @@ import           Data.Monoid
 import           Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Prelude   as Stg
 import           Stg.Machine.Types
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -56,10 +56,10 @@ testFilter = haskellReferenceTest defSpec
 
         main = \ =>
             letrec
-                positive = \x -> gt_Int x threshold;
+                positive = \x -> gt_Int x threshold
                 filtered = \(positive) -> filter positive inputList
             in case equals_List_Int expectedResult filtered of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -76,7 +76,7 @@ testSort = haskellReferenceTest defSpec
         main = \ =>
             let sorted = \ => sort inputList
             in case equals_List_Int expectedResult sorted of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -94,10 +94,10 @@ testMap = haskellReferenceTest defSpec
 
         main = \ =>
             letrec
-                plusOffset = \n -> add n offset;
+                plusOffset = \n -> add n offset
                 actual = \(plusOffset) => map plusOffset inputList
             in case equals_List_Int actual expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -117,11 +117,11 @@ testZip = haskellReferenceTest defSpec
 
         main = \ =>
             letrec
-                zipped   = \ -> zip list1 list2;
-                addTuple = \ -> uncurry add;
+                zipped   = \ -> zip list1 list2
+                addTuple = \ -> uncurry add
                 summed   = \(addTuple zipped) -> map addTuple zipped
             in case equals_List_Int summed expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -140,7 +140,7 @@ testZipWith = haskellReferenceTest defSpec
         main = \ =>
             let zipped = \ -> zipWith add list1 list2
             in case equals_List_Int zipped expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -195,7 +195,7 @@ foldSumTemplate foldName foldF foldStg failP
         main = \ =>
             let actual = \ => fold add z input
             in case eq_Int actual expected of
-                True  -> Success;
+                True  -> Success
                 defau -> TestFail
         |] }
 
@@ -213,7 +213,7 @@ testConcat2 = haskellReferenceTest defSpec
         main = \ =>
             let concatenated = \ -> concat2 list1 list2
             in case equals_List_Int concatenated expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -234,7 +234,7 @@ testReverse = haskellReferenceTest defSpec
         main = \ =>
             let reversed = \ -> reverse input
             in case equals_List_Int reversed expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -253,10 +253,10 @@ testCycle = haskellReferenceTest defSpec
 
         main = \ =>
             letrec
-                cycled = \ -> cycle list;
+                cycled = \ -> cycle list
                 takeCycled = \(cycled) -> take n cycled
             in case equals_List_Int takeCycled expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -274,10 +274,10 @@ testRepeat = haskellReferenceTest defSpec
 
         main = \ =>
             letrec
-                repeated = \ -> repeat item;
+                repeated = \ -> repeat item
                 takeRepeated = \(repeated) -> take n repeated
             in case equals_List_Int takeRepeated expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -302,7 +302,7 @@ testReplicate = haskellReferenceTest defSpec
         main = \ =>
             let replicated = \ -> replicate n item
             in case equals_List_Int replicated expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -323,11 +323,11 @@ testIterate = haskellReferenceTest defSpec
 
         main = \ =>
             letrec
-                addOffset = \ -> add offset;
-                iterated = \(addOffset) -> iterate addOffset seed;
+                addOffset = \ -> add offset
+                iterated = \(addOffset) -> iterate addOffset seed
                 takeIterated = \(iterated) -> take n iterated
             in case equals_List_Int takeIterated expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -345,6 +345,6 @@ testLength = haskellReferenceTest defSpec
         main = \ =>
             let len = \ -> length input
             in case eq_Int len expectedResult of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }

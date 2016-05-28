@@ -53,7 +53,9 @@ instance Arbitrary Binds where
         pure (Binds (M.fromList xs))
     shrink (Binds b) =
           [binds| bind = \ -> Unit |]
-        : [binds| bind1 = \ -> Unit1; bind2 = \ -> Unit2 |]
+        : [binds|
+              bind1 = \ -> Unit1
+              bind2 = \ -> Unit2 |]
         : (map (Binds . M.fromList) . shrinkBut1st . M.toList) b
       where
         -- Bindings have to be non-empty, we ensure at least one element is in

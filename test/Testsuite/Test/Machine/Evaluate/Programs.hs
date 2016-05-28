@@ -16,9 +16,9 @@ import Data.Foldable
 import Data.Monoid
 import Test.Tasty
 
-import qualified Stg.Prelude   as Stg
 import           Stg.Machine.Types
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
 import           Test.Machine.Evaluate.TestTemplates.MachineState
@@ -47,18 +47,18 @@ add3 = machineStateTest defSpec
                 Int# j -> case +# i j of
                     ij -> case z of
                         Int# k -> case +# ij k of
-                            ijk -> Int# ijk;
-                        badInt -> Error_add3_1 badInt;
-                badInt -> Error_add3_2 badInt;
-            badInt -> Error_add3_3 badInt;
+                            ijk -> Int# ijk
+                        badInt -> Error_add3_1 badInt
+                badInt -> Error_add3_2 badInt
+            badInt -> Error_add3_3 badInt
 
-        one   = \ -> Int# 1#;
-        two   = \ -> Int# 2#;
-        three = \ -> Int# 3#;
+        one   = \ -> Int# 1#
+        two   = \ -> Int# 2#
+        three = \ -> Int# 3#
         main = \ => case add3 one two three of
             Int# i -> case i of
-                6# -> Success;
-                wrongResult -> TestFail wrongResult;
+                6# -> Success
+                wrongResult -> TestFail wrongResult
             badInt -> Error badInt
         |] }
 
@@ -72,23 +72,23 @@ takeRepeat = machineStateTest defSpec
             <> Stg.seq
             <> [stg|
 
-        consBang = \x xs -> case xs of v -> Cons x v;
-        nil = \ -> Nil;
-        forceSpine = \xs -> foldr consBang nil xs;
+        consBang = \x xs -> case xs of v -> Cons x v
+        nil = \ -> Nil
+        forceSpine = \xs -> foldr consBang nil xs
 
         twoUnits = \ =>
             letrec
-                repeated = \(unit) => repeat unit;
-                unit = \ -> Unit;
+                repeated = \(unit) => repeat unit
+                unit = \ -> Unit
                 take2 = \(repeated) => take two repeated
-            in forceSpine take2;
+            in forceSpine take2
 
         main = \ => case twoUnits of
             Cons x xs -> case xs of
                 Cons y ys -> case ys of
-                    Nil -> Success;
-                    default -> TestFailure;
-                default -> TestFailure;
+                    Nil -> Success
+                    default -> TestFailure
+                default -> TestFailure
             default -> TestFailure
         |] }
 
@@ -107,15 +107,15 @@ fibonacci = machineStateTest defSpec
 
         main = \ =>
             letrec
-                fibos = \(fibo) -> take numFibos fibo;
+                fibos = \(fibo) -> take numFibos fibo
                 fibo = \ =>
                     letrec
-                        fib0 = \(fib1) -> Cons zero fib1;
-                        fib1 = \(fib2) -> Cons one fib2;
+                        fib0 = \(fib1) -> Cons zero fib1
+                        fib1 = \(fib2) -> Cons one fib2
                         fib2 = \(fib0 fib1) => zipWith add fib0 fib1
                     in fib0
             in case equals_List_Int fibos expectedFibos of
-                True -> Success;
+                True -> Success
                 err -> TestFail err
         |] }
   where
@@ -146,8 +146,8 @@ meanTestTemplate =
             <> [stg|
             main = \ => case mean inputList of
                 actual -> case eq_Int actual expectedOutput of
-                    True -> Success;
-                    False -> TestFailure actual;
+                    True -> Success
+                    False -> TestFailure actual
                     badBool -> Error_badBool badBool
         |] }
 
@@ -160,16 +160,16 @@ meanNaive = HRef.haskellReferenceTest meanTestTemplate
         <> [stg|
         mean = \xs ->
             letrec
-                totals = \(go zeroTuple) -> foldl go zeroTuple;
-                zeroTuple = \ -> Tuple zero zero;
+                totals = \(go zeroTuple) -> foldl go zeroTuple
+                zeroTuple = \ -> Tuple zero zero
                 go = \acc x -> case acc of
                     Tuple t n ->
-                        let tx = \(t x) => add t x;
+                        let tx = \(t x) => add t x
                             n1 = \(n) => add n one
-                        in Tuple tx n1;
+                        in Tuple tx n1
                     badTuple -> Error_mean1 badTuple
             in case totals xs of
-                Tuple t n -> div t n;
+                Tuple t n -> div t n
                 badTuple -> Error_mean2 badTuple
         |] }
 
@@ -181,16 +181,16 @@ meanNaiveWithFoldl' = HRef.haskellReferenceTest meanTestTemplate
         <> [stg|
         mean = \xs ->
             letrec
-                totals = \(go zeroTuple) -> foldl' go zeroTuple;
-                zeroTuple = \ -> Tuple zero zero;
+                totals = \(go zeroTuple) -> foldl' go zeroTuple
+                zeroTuple = \ -> Tuple zero zero
                 go = \acc x -> case acc of
                     Tuple t n ->
-                        let tx = \(t x) => add t x;
+                        let tx = \(t x) => add t x
                             n1 = \(n) => add n one
-                        in Tuple tx n1;
+                        in Tuple tx n1
                     badTuple -> Error_mean1 badTuple
             in case totals xs of
-                Tuple t n -> div t n;
+                Tuple t n -> div t n
                 badTuple -> Error_mean2 badTuple
         |] }
 
@@ -204,17 +204,17 @@ meanGood = HRef.haskellReferenceTest meanTestTemplate
         <> [stg|
         mean = \xs ->
             letrec
-                totals = \(go zeroTuple) -> foldl' go zeroTuple;
-                zeroTuple = \ -> Tuple zero zero;
+                totals = \(go zeroTuple) -> foldl' go zeroTuple
+                zeroTuple = \ -> Tuple zero zero
                 go = \acc x -> case acc of
                     Tuple t n ->
-                        let tx = \(t x) => add t x;
+                        let tx = \(t x) => add t x
                             n1 = \(n) => add n one
                         in case tx of
                             default -> case n1 of
-                                default -> Tuple tx n1;
+                                default -> Tuple tx n1
                     badTuple -> Error_mean1 badTuple
             in case totals xs of
-                Tuple t n -> div t n;
+                Tuple t n -> div t n
                 badTuple -> Error_mean2 badTuple
         |] }

@@ -9,8 +9,8 @@ import Data.Monoid
 import Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -64,8 +64,8 @@ testComparison name  haskellRef stgFuncDef = haskellReferenceTest defSpec
         main = \ =>
             case stgFunc x y of
                 result -> case eq_Bool result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
+                    True -> Success
+                    False -> TestFail result
                     badBool -> Error_testMin badBool
         |] }
 
@@ -95,8 +95,8 @@ testArithmetic name  haskellRef stgFuncDef = haskellReferenceTest defSpec
         main = \ =>
             case stgFunc x y of
                 result -> case eq_Int result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
+                    True -> Success
+                    False -> TestFail result
                     badBool -> Error_testMin badBool
         |] }
 
@@ -114,8 +114,8 @@ testMin = haskellReferenceTest defSpec
         main = \ =>
             case min x y of
                 result -> case eq_Int result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
+                    True -> Success
+                    False -> TestFail result
                     badBool -> Error_testMin badBool
         |] }
 
@@ -133,7 +133,7 @@ testMax = haskellReferenceTest defSpec
         main = \ =>
             case max x y of
                 result -> case eq_Int result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
+                    True -> Success
+                    False -> TestFail result
                     badBool -> Error_testMin badBool
         |] }

@@ -40,7 +40,7 @@ testFst = haskellReferenceTest defSpec
         main = \ =>
             let actualFst = \ -> fst tuple
             in case eq_Int expectedResult actualFst of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -57,7 +57,7 @@ testSnd = haskellReferenceTest defSpec
         main = \ =>
             let actualSnd = \ -> snd tuple
             in case eq_Int expectedResult actualSnd of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -74,13 +74,13 @@ testCurry = haskellReferenceTest defSpec
         <> [stg|
 
         addTuple = \tuple -> case tuple of
-            Tuple a b -> add a b;
-            badTuple  -> Error_addTuple badTuple;
+            Tuple a b -> add a b
+            badTuple  -> Error_addTuple badTuple
 
         main = \ =>
             let actual = \ -> curry addTuple x y
             in case eq_Int expectedResult actual of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -98,7 +98,7 @@ testUncurry = haskellReferenceTest defSpec
         main = \ =>
             let actual = \ -> uncurry add tuple
             in case eq_Int expectedResult actual of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }
 
@@ -115,6 +115,6 @@ testSwap = haskellReferenceTest defSpec
         main = \ =>
             let actual = \ -> swap tuple
             in case eq_Tuple_Int expectedResult actual of
-                True  -> Success;
+                True  -> Success
                 wrong -> TestFail wrong
         |] }

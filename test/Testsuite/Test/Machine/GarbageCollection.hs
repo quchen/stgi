@@ -111,15 +111,15 @@ fibonacciSumTest algorithm = testCase "Long-running program" test
             , Stg.foldl'
             , Stg.zipWith ] <> [stg|
 
-        flipConst = \x y -> y;
+        flipConst = \x y -> y
         main = \ =>
             letrec
                 fibo = \ =>
                     letrec
-                        fib0 = \(fib1) -> Cons zero fib1;
+                        fib0 = \(fib1) -> Cons zero fib1
                         fib1 = \(fib2) =>
                             let one = \ -> Int# 1#
-                            in Cons one fib2;
+                            in Cons one fib2
                         fib2 = \(fib0 fib1) => zipWith add fib0 fib1
                     in fib0
             in foldl' flipConst zero fibo

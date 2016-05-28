@@ -64,8 +64,6 @@ data StgAstStyle = StgAstStyle
         -- ^ Variable style
     , constructor :: Doc -> Doc
         -- ^ Constructor style
-    , semicolon :: Doc -> Doc
-        -- ^ Semicolons separating lists of bindings and alternatives
     }
 
 -- | Colour definitions used by the STG AST.
@@ -75,7 +73,6 @@ style = StgAstStyle
     , prim        = dullgreen
     , variable    = dullyellow
     , constructor = dullmagenta
-    , semicolon   = dullwhite
     }
 
 
@@ -255,18 +252,13 @@ instance Lift Var where
 --------------------------------------------------------------------------------
 -- Pretty instances
 
-semicolonTerminated :: [Doc] -> Doc
-semicolonTerminated = align . vsep . punctuate (semicolon style ";")
-
 instance Pretty Program where
     pretty (Program binds) = pretty binds
 
 instance Pretty Binds where
-    pretty (Binds bs) =
-        (semicolonTerminated . map prettyBinding . M.assocs) bs
+    pretty (Binds bs) = (vsep . map prettyBinding . M.assocs) bs
       where
-        prettyBinding (var, lambda) =
-            pretty var <+> "=" <+> pretty lambda
+        prettyBinding (var, lambda) = pretty var <+> "=" <+> pretty lambda
 
 -- | Prettyprint a 'LambdaForm', given prettyprinters for the free variable
 -- list.
@@ -301,8 +293,8 @@ instance Pretty Expr where
     pretty = \case
         Let rec binds expr -> (align . vsep)
             [ keyword style ("let" <> pretty rec) <+> (case rec of
-                Recursive -> hardline <> indent 4 (pretty binds)
-                NonRecursive -> pretty binds)
+                Recursive -> hardline <> align (indent 4 (pretty binds))
+                NonRecursive -> align (pretty binds))
             , keyword style "in" <+> pretty expr ]
 
         Case expr alts -> vsep [ hsep [ keyword style "case"
@@ -323,9 +315,9 @@ instance Pretty Expr where
 instance Pretty Alts where
     pretty (Alts NoNonDefaultAlts def) = pretty def
     pretty (Alts (AlgebraicAlts alts) def) =
-        semicolonTerminated (map pretty (toList alts) <> [pretty def])
+        vsep (map pretty (toList alts) <> [pretty def])
     pretty (Alts (PrimitiveAlts alts) def) =
-        semicolonTerminated (map pretty (toList alts) <> [pretty def])
+        vsep (map pretty (toList alts) <> [pretty def])
 
 instance Pretty AlgebraicAlt where
     pretty (AlgebraicAlt con [] expr)

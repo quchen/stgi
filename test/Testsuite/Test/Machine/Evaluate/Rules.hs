@@ -78,9 +78,9 @@ nonUpdatableFunctionApplication = machineStateTest defSpec
     { testName = "Function application, enter non-updatable closure (rule 1 and 2)"
     , source = [stg|
         main = \ => case id unit of
-            Unit -> Success;
-            default -> TestFail;
-        id = \x -> x;
+            Unit -> Success
+            default -> TestFail
+        id = \x -> x
         unit = \ -> Unit
         |] }
 
@@ -98,12 +98,12 @@ letMultiBinding = machineStateTest defSpec
     { testName = "Multiple bindings"
     , source = [stg|
         main = \ =>
-            let id = \x -> x;
+            let id = \x -> x
                 one = \ -> Int# 1#
             in case id one of
                 Int# y -> case y of
-                    1# -> Success;
-                    wrong -> TestFail wrong;
+                    1# -> Success
+                    wrong -> TestFail wrong
                 default -> Error
         |] }
 
@@ -112,13 +112,13 @@ letNestedBinding = machineStateTest defSpec
     { testName = "Nested bindings"
     , source = [stg|
         main = \ =>
-            let id = \x -> x;
+            let id = \x -> x
                 one = \ -> Int# 1#
             in let idOne = \(id one) -> case id one of v -> v
                in case idOne of
                    Int# y -> case y of
-                       1# -> Success;
-                       wrong -> TestFail wrong;
+                       1# -> Success
+                       wrong -> TestFail wrong
                    default -> Error
         |] }
 
@@ -132,14 +132,14 @@ letrecMultiBinding = machineStateTest defSpec
     { testName = "Cross-referencing bindings"
     , source = [stg|
         main = \ =>
-            letrec id = \x -> x;
+            letrec id = \x -> x
                    idOne = \(id one) -> case id one of
-                       v -> v;
+                       v -> v
                    one = \ -> Int# 1#
             in case idOne of
                 Int# y -> case y of
-                    1# -> Success;
-                    default -> TestFail;
+                    1# -> Success
+                    default -> TestFail
                 default -> Error
         |] }
 
@@ -148,7 +148,7 @@ defaultOnlyCase_unboundAlgebraic = machineStateTest defSpec
     { testName = "Unbound, algebraic scrutinee (rule 7)"
     , source = [stg|
         main = \ => case x of
-            default -> x;
+            default -> x
         x = \ -> Success
         |] }
 
@@ -157,7 +157,7 @@ defaultOnlyCase_boundAlgebraic = machineStateTest defSpec
     { testName = "Bound, algebraic scrutinee (rule 8)"
     , source = [stg|
         main = \ => case x of
-            x -> x;
+            x -> x
         x = \ -> Success
         |] }
 
@@ -182,7 +182,7 @@ algebraicCase_normalMatch = machineStateTest defSpec
     { testName = "Algebraic, normal match (rule 6)"
     , source = [stg|
         main = \ => case Nothing of
-            Nothing -> Success;
+            Nothing -> Success
             default -> TestFail
         |] }
 
@@ -191,7 +191,7 @@ algebraicCase_defaultUnboundMatch = machineStateTest defSpec
     { testName = "Algebraic, unbound default match (rule 7)"
     , source = [stg|
         main = \ => case Nothing of
-            Just x  -> TestFail x;
+            Just x  -> TestFail x
             default -> Success
         |] }
 
@@ -200,7 +200,7 @@ algebraicCase_defaultBoundMatch = machineStateTest defSpec
     { testName = "Algebraic, bound default match (rule 8)"
     , source = [stg|
         main = \ => case Nothing of
-            Just x -> TestFail;
+            Just x -> TestFail
             v      -> Success
 
         |] }
@@ -210,7 +210,7 @@ primitiveCase_normalMatch = machineStateTest defSpec
     { testName = "Primitive, normal match (rule 11)"
     , source = [stg|
         main = \ => case 1# of
-            1#      -> Success;
+            1#      -> Success
             default -> TestFail
         |] }
 
@@ -219,8 +219,8 @@ primitiveCase_defaultUnboundMatch = machineStateTest defSpec
     { testName = "Primitive, unbound default match (rule 13)"
     , source = [stg|
         main = \ => case 1# of
-            0#      -> TestFail;
-            123#    -> TestFail;
+            0#      -> TestFail
+            123#    -> TestFail
             default -> Success
         |] }
 
@@ -229,9 +229,9 @@ primitiveCase_defaultBoundMatch = machineStateTest defSpec
     { testName = "Primitive, unbound default match (rule 12)"
     , source = [stg|
         main = \ => case 1# of
-            0#   -> TestFail;
-            123# -> TestFail;
-            -1#  -> TestFail;
+            0#   -> TestFail
+            123# -> TestFail
+            -1#  -> TestFail
             x    -> Success
         |] }
 
@@ -240,7 +240,7 @@ constructorApplication = machineStateTest defSpec
     { testName = "Constructor application (rule 5)"
     , source = [stg|
         main = \ => case Just 1# of
-            Just v -> Success;
+            Just v -> Success
             x      -> TestFail x
         |] }
 
@@ -249,7 +249,7 @@ literalEvaluation = machineStateTest defSpec
     { testName = "Literal evaluation (rule 9)"
     , source = [stg|
         main = \ => case 1# of
-            1# -> Success;
+            1# -> Success
             x  -> TestFail x
         |] }
 
@@ -259,7 +259,7 @@ literalApplication = machineStateTest defSpec
     , source = [stg|
         main = \ => case 1# of
             v1 -> case v1 of
-                1# -> Success;
+                1# -> Success
                 x  -> TestFail x
         |] }
 
@@ -312,7 +312,7 @@ algebraicReturnUpdate = machineStateTest defSpec
     { testName = "Update because of missing return frame (rule 16)"
     , source = [stg|
         main = \ => case updateMe of
-            default -> Success;
+            default -> Success
         updateMe = \ => case Unit of default -> Unit
         |]
     , allSatisfied =
@@ -329,12 +329,12 @@ missingArgsUpdate = machineStateTest defSpec
             case flipTuple 1# 2# of
                 Tuple a b -> case a of
                     2# -> case b of
-                        1# -> Success;
-                        bad -> TestFail bad;
-                    bad -> TestFail bad;
-                badTuple -> Error_badTuple badTuple;
-        tuple = \x y -> Tuple x y;
-        flip = \f x y -> f y x;
+                        1# -> Success
+                        bad -> TestFail bad
+                    bad -> TestFail bad
+                badTuple -> Error_badTuple badTuple
+        tuple = \x y -> Tuple x y
+        flip = \f x y -> f y x
         flipTuple = \ => flip tuple
         |]
     , allSatisfied =
@@ -348,8 +348,8 @@ primopShortcut_defaultBound = machineStateTest defSpec
     { testName = "Default bound match shortcut (rule 18)"
     , source = [stg|
         main = \ => case +# 1# 2# of
-            1# -> TestFail 1#;
-            2# -> TestFail 2#;
+            1# -> TestFail 1#
+            2# -> TestFail 2#
             v  -> Success
         |]
     , failPredicate = \state -> case stgCode state of
@@ -364,7 +364,7 @@ primopShortcut_normalMatch = machineStateTest defSpec
     , source = [stg|
         main = \ => case 1# of
             one -> case +# one 2# of
-                3#    -> Success;
+                3#    -> Success
                 wrong -> TestFail wrong
         |]
     , failPredicate = \state -> case stgCode state of
