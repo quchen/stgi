@@ -1,10 +1,9 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE OverloadedLists            #-}
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedLists   #-}
+{-# LANGUAGE OverloadedStrings #-}
 
--- | A parser for the STG language, modeled after the grammar given in the
--- description in the 1992 paper
+-- | A parser for the STG language, modeled after a grammar similar to the one
+-- given in the description in the 1992 paper
 -- <http://research.microsoft.com/apps/pubs/default.aspx?id=67083 (link)>
 -- with a couple of differences to enhance usability:
 --
@@ -47,7 +46,6 @@ module Stg.Parser.Parser (
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.State
-import           Data.Char                    (isSpace)
 import           Data.List                    as L
 import qualified Data.List.NonEmpty           as NonEmpty
 import qualified Data.Map.Strict              as M
@@ -55,14 +53,13 @@ import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
-import           Text.Parser.LookAhead        as Trifecta
 import           Text.Parser.Token.Highlight
 import           Text.PrettyPrint.ANSI.Leijen (Doc)
 import           Text.Trifecta                as Trifecta
-import           Text.Trifecta.Delta          as Trifecta
 
 import Data.Stack
 import Stg.Language
+import Stg.Parser.StgParserType
 
 
 
@@ -78,91 +75,6 @@ parse (StgParser p) input =
     in case parseString trifectaParser initialPos (T.unpack input) of
         Success a -> Right a
         Failure e -> Left e
-
--- | Skip a certain token. Useful to consume, but not otherwise use, certain
--- tokens.
-skipToken :: TokenParsing parser => parser a -> parser ()
-skipToken = void . token
-
--- | A parser for an STG syntax element.
-newtype StgParser ast = StgParser (StateT (Stack Indent) Trifecta.Parser ast)
-    deriving ( Functor, Applicative, Alternative, Monad, MonadPlus
-             , MonadState (Stack Indent)
-             , CharParsing, Parsing, LookAheadParsing, DeltaParsing )
-
-instance TokenParsing StgParser where
-    semi = try (void newline
-             *> many blankLine
-             *> indent
-             *> pure ';' )
-
-    nesting p = do
-        currentIndent <- fmap (Indent . fromIntegral . column) position
-        get >>= \case
-            Empty  -> pure ()
-            i :< _ -> guard (currentIndent > i)
-        pushIndent currentIndent
-        result <- p
-        popIndent
-        someSpace
-        pure result
-
-    someSpace = do
-        void horizontalSpace
-        skipOptional (try (do
-            void (newline *> many blankLine)
-            i <- horizontalSpace
-            get >>= \case
-                j :< _ -> guard (Indent i > j)
-                Empty  -> guard (i > 0) ))
-
--- | An indentation level.
-newtype Indent = Indent Int
-    deriving (Eq, Ord, Show)
-
-pushIndent :: Indent -> StgParser ()
-pushIndent i = modify (i :<)
-
-popIndent :: StgParser ()
-popIndent = do
-    rest <- get >>= \case
-        _ :< is -> pure is
-        Empty -> fail "Tried popping an empty indentation stack;\
-                      \ please report this as a bug"
-    put rest
-
-blankLine :: StgParser ()
-blankLine = void (lineRemainder *> newline)
-
-indent :: StgParser ()
-indent = try (do
-    leadingSpaces <- horizontalSpace
-    get >>= \case
-        Empty         -> guard (leadingSpaces == 0)
-        Indent i :< _ -> guard (leadingSpaces == i) )
-
-lineRemainder :: StgParser ()
-lineRemainder = try (horizontalSpace *> void (lookAhead newline))
-
-blockComment :: TokenParsing parser => parser ()
-blockComment = skipToken (highlight Comment (
-    try (symbol "{-") *> manyTill anyChar (try (symbol "-}")) ))
-    <?> ""
-
-lineComment :: TokenParsing parser => parser ()
-lineComment = skipToken (highlight Comment (
-    try (symbol "--") *> manyTill anyChar newline ))
-    <?> ""
-
--- | Consume all horizontal space and return the change in column.
-horizontalSpace :: StgParser Int
-horizontalSpace = do
-    start <- fmap column position
-    void (many (choice [ void (satisfy (\c -> isSpace c && c /= '\n'))
-                       , blockComment
-                       , lineComment ]))
-    end <- fmap column position
-    pure $! fromIntegral (end - start)
 
 -- | Syntax rules for parsing variable-looking like identifiers.
 varId :: TokenParsing parser => IdentifierStyle parser
@@ -197,12 +109,12 @@ con = highlight Constructor constructor <?> "constructor"
 
 -- | Parse an STG program.
 program :: (Monad parser, TokenParsing parser) => parser Program
-program = fmap Program binds <?> "STG program"
+program = fmap Program binds <?> "STG program (list of top-level bindings)"
 
 -- | Parse a collection of bindings, used by @let(rec)@ expressions and at the
 -- top level of a program.
 binds :: (Monad parser, TokenParsing parser) => parser Binds
-binds = nesting bindings <?> "non-empty list of bindings"
+binds = bindings <?> "non-empty list of bindings"
   where
     bindings = fmap (Binds . M.fromList) (sepEndBy1 binding semi)
     binding = (,) <$> var <* symbol "=" <*> lambdaForm
@@ -241,7 +153,7 @@ lambdaForm = lf >>= validateLambda <?> "lambda form"
 
 -- | Parse an arrow token, @->@.
 arrow :: TokenParsing parser => parser ()
-arrow = skipToken (symbol "->")
+arrow = token (void (symbol "->"))
 
 -- | Parse an expression, which can be
 --
@@ -264,7 +176,7 @@ expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
     letHead = reserved "letrec" *> pure (Let Recursive)
           <|> reserved "let"    *> pure (Let NonRecursive)
     let' = letHead
-        <*> binds
+        <*> nesting binds
         <*  reserved "in"
         <*> expr
         <?> "let(rec)"
@@ -272,7 +184,7 @@ expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
         <$  reserved "case"
         <*> (expr <?> "expression (as case scrutinee)")
         <*  reserved "of"
-        <*> alts
+        <*> nesting alts
         <?> "case expression"
     appF = AppF <$> var <*> many atom <?> "function application"
     appC = AppC <$> con <*> many atom <?> "constructor application"
@@ -281,9 +193,9 @@ expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
 
 -- | Parse the alternatives given in a @case@ expression.
 alts :: (Monad parser, TokenParsing parser) => parser Alts
-alts = nesting (Alts
+alts = Alts
        <$> nonDefaultAlts
-       <*> defaultAlt )
+       <*> defaultAlt
        <?> "case alternatives"
 
 atom :: (Monad parser, TokenParsing parser) => parser Atom
@@ -330,8 +242,8 @@ literal = token (Literal <$> integer' <* char '#') <?> "integer literal"
 -- 2# -> ...
 -- @
 nonDefaultAlts :: (Monad parser, TokenParsing parser) => parser NonDefaultAlts
-nonDefaultAlts = AlgebraicAlts . NonEmpty.fromList <$> some algebraicAlt
-             <|> PrimitiveAlts . NonEmpty.fromList <$> some primitiveAlt
+nonDefaultAlts = AlgebraicAlts . NonEmpty.fromList <$> algebraicAlt `sepEndBy1` semi
+             <|> PrimitiveAlts . NonEmpty.fromList <$> primitiveAlt `sepEndBy1` semi
              <|> pure NoNonDefaultAlts
              <?> "non-default case alternatives"
 
@@ -345,7 +257,6 @@ algebraicAlt = try (AlgebraicAlt <$> con)
            <*> (many var >>= disallowDuplicates)
            <*  arrow
            <*> expr
-           <*  semi
            <?> "algebraic case alternative"
   where
     disallowDuplicates vars = case duplicates vars of
@@ -364,7 +275,7 @@ algebraicAlt = try (AlgebraicAlt <$> con)
 -- 1# -> ...
 -- @
 primitiveAlt :: (Monad parser, TokenParsing parser) => parser PrimitiveAlt
-primitiveAlt = try (PrimitiveAlt <$> literal) <* arrow <*> expr <* semi
+primitiveAlt = try (PrimitiveAlt <$> literal) <* arrow <*> expr
     <?> "primitive case alternative"
 
 -- | Parse the default alternative, taken if none of the other alternatives

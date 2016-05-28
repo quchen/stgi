@@ -72,9 +72,9 @@ instance Arbitrary LambdaForm where
             NoUpdate -> arbitrary
         body <- oneof
             ([ arbitrary3 Let
-            , arbitrary2 Case
+             , arbitrary2 Case
             -- Lambdas cannot have primitive type, so we exclude AppP and Lit
-            , arbitrary2 AppF ]
+             , arbitrary2 AppF ]
             <>
             -- Standard constructors are never updatable, so we exclude those
             [arbitrary2 AppC | updateFlag == NoUpdate] )
@@ -102,13 +102,13 @@ instance Arbitrary Rec where
     shrink = genericShrink
 
 instance Arbitrary Expr where
-    arbitrary = oneof
-        [ arbitrary3 Let
-        , arbitrary2 Case
-        , arbitrary2 AppF
-        , arbitrary2 AppC
-        , arbitrary3 AppP
-        , arbitrary1 Lit ]
+    arbitrary = frequency
+        [ (1, arbitrary3 Let)
+        , (1, arbitrary2 Case)
+        , (5, arbitrary2 AppF)
+        , (5, arbitrary2 AppC)
+        , (5, arbitrary3 AppP)
+        , (2, arbitrary1 Lit) ]
     shrink = genericShrink
 
 instance Arbitrary Alts where

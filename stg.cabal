@@ -35,6 +35,7 @@ library
                      , Stg.Machine.Types
                      , Stg.Parser.Parser
                      , Stg.Parser.QuasiQuoter
+                     , Stg.Parser.StgParserType
                      , Stg.Prelude
                      , Stg.Prelude.Bool
                      , Stg.Prelude.Function

@@ -38,6 +38,7 @@ import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 import           Stg.Language.Prettyprint
 import           Stg.Parser.Parser        (StgParser, parse)
 import qualified Stg.Parser.Parser        as Parser
+import qualified Stg.Parser.StgParserType as Parser
 
 -- $setup
 -- >>> :set -XTemplateHaskell
@@ -146,7 +147,7 @@ expr = stgQQ Parser.expr "expression"
 -- >>> [alts| 0# -> True; default -> False |]
 -- Alts (PrimitiveAlts (PrimitiveAlt (Literal 0) (AppC (Constr "True") []) :| [])) (DefaultNotBound (AppC (Constr "False") []))
 alts :: QuasiQuoter
-alts = stgQQ Parser.alts "alternatives"
+alts = stgQQ (Parser.nesting Parser.alts) "alternatives"
 
 -- | Quasiquoter for 'Stg.Language.Alt'.
 --

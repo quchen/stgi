@@ -25,14 +25,14 @@ import Test.Tasty.SmallCheck as SC
 tests :: TestTree
 tests = localOption (QuickCheckMaxSize 3)
     ( testGroup "Plain prettyprinter is inverse of parser"
-        [ inverseOfParserQC "Full program"      Parser.program
-        , inverseOfParserQC "Bindings"          Parser.binds
-        , inverseOfParserQC "Lambda form"       Parser.lambdaForm
-        , inverseOfParserQC "Expression"        Parser.expr
-        , inverseOfParserQC "Case alternatives" Parser.alts
-        , inverseOfParserSC "Literal"           Parser.literal
-        , inverseOfParserSC "Primop"            Parser.primOp
-        , inverseOfParserQC "Atom"              Parser.atom ])
+        [ localOption (Timeout 5000000 "5 s") $ inverseOfParserQC "Atom"              Parser.atom
+        , localOption (Timeout 5000000 "5 s") $ inverseOfParserSC "Primop"            Parser.primOp
+        , localOption (Timeout 5000000 "5 s") $ inverseOfParserSC "Literal"           Parser.literal
+        , localOption (Timeout 5000000 "5 s") $ inverseOfParserQC "Case alternatives" Parser.alts
+        , localOption (Timeout 5000000 "5 s") $ inverseOfParserQC "Expression"        Parser.expr
+        , localOption (Timeout 5000000 "5 s") $ inverseOfParserQC "Lambda form"       Parser.lambdaForm
+        , localOption (Timeout 5000000 "5 s") $ inverseOfParserQC "Bindings"          Parser.binds
+        , localOption (Timeout 5000000 "5 s") $ inverseOfParserQC "Full program"      Parser.program ])
 
 inverseOfParserQC
     :: (Arbitrary ast, Show ast, Eq ast, Pretty ast)
