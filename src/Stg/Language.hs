@@ -95,9 +95,18 @@ instance Monoid Program where
 newtype Binds = Binds (Map Var LambdaForm)
     deriving (Eq, Ord, Generic)
 
+-- | __Right-biased__ union of binds. This makes it easier to overwrite modify
+-- definitions from other programs. For example, if you have one program that
+-- has a certain definition of 'map', you can write
+--
+-- @
+-- program' = program <> [stg| map = ... |]
+-- @
+--
+-- to make it use your own version.
 instance Monoid Binds where
     mempty = Binds mempty
-    Binds x `mappend` Binds y = Binds (x <> y)
+    Binds x `mappend` Binds y = Binds (y <> x)
 
 instance Show Binds where
     show (Binds binds) = "(Binds " <> show (M.assocs binds) <> ")"
