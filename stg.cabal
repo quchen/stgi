@@ -47,6 +47,7 @@ library
                      , ansi-wl-pprint
                      , containers
                      , deepseq
+                     , mtl
                      , parsers
                      , semigroups
                      , template-haskell
