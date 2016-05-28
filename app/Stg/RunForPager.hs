@@ -49,7 +49,7 @@ runForPager ppr showSteps prog =
         T.putStrLn fatLine
 
 takeFromEnd :: Int -> [a] -> [a]
-takeFromEnd n xs = zipOverflow (drop n xs) xs
+takeFromEnd n list = zipOverflow (drop n list) list
   where
     zipOverflow (_:xs) (_:ys) = zipOverflow xs ys
     zipOverflow xs [] = xs

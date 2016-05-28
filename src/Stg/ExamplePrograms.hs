@@ -6,6 +6,15 @@
 -- during execution.
 module Stg.ExamplePrograms (
 
+    -- * Folds
+
+        -- ** Sum a list via the usual 'foldl''
+        foldl'Sum,
+
+        -- * Sum of a list via 'foldl'' implemented with 'foldr'
+        foldl'ViaFoldrSum,
+
+
     -- * Fibonacci
 
         -- ** Naive implementation (exponential time)
@@ -16,6 +25,7 @@ module Stg.ExamplePrograms (
 
         -- ** zipWith (+) solution
         fibonacciZipWith,
+
 
     -- * List concatenation
 
@@ -32,9 +42,55 @@ module Stg.ExamplePrograms (
 
 
 
+import           Data.Monoid
 import           Stg.Language
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
+
+-- | Sum up a list of 'Integer's using
+--
+-- @
+-- sum = 'foldl'' ('+') 0
+-- @
+--
+-- where 'foldl'' is the usual function known from Haskell.
+foldl'Sum :: [Integer] -> Program
+foldl'Sum list = mconcat
+    [ Stg.foldl'
+    , Stg.add
+    , Stg.int "zero" 0
+    , Stg.listOfNumbers "list" list
+    , [program|
+        sum = \ -> foldl' add zero;
+        main = \ => sum list
+    |]]
+
+-- | Sum up a list of 'Integer's using
+--
+-- @
+-- sum = 'foldl'' ('+') 0
+-- @
+--
+-- where 'foldl'' is implemented via 'foldr' as
+--
+-- @
+-- foldl' f z ys = foldr (\x xs acc -> xs $! f acc x) id ys z
+-- @
+--
+-- which is a standard "'foldl'' in terms of 'foldr'" definition. This
+-- definition is computationally equivalent to the standard 'foldl'', but has
+-- more overhead.
+foldl'ViaFoldrSum :: [Integer] -> Program
+foldl'ViaFoldrSum list = mconcat
+    [ foldl'Sum list
+    , Stg.id
+    , Stg.foldr
+    , [program|
+    foldl' = \f z xs ->
+        let go = \(f) x xs acc -> case f acc x of
+                forced -> xs forced
+        in foldr go id xs z
+    |]]
 
 
 
@@ -148,10 +204,17 @@ fibonacciImproved n = mconcat
         in fib n
     |]]
 
--- | Generic list concatenation program. All that's missing is a STG binding
--- for 'concat' that flattens a list of lists.<
-listConcatTemplate :: Program
-listConcatTemplate = mconcat
+-- | Force the right-associated concatenation
+--
+-- @
+-- [0] '++' ([1] '++' ([2] '++' ([3] '++' ([4] '++' ([5] '++' ([6] '++' ([7] '++' ([8] '++' [9]))))))))
+-- @
+--
+-- and store it in the @main@ closure.
+--
+-- This computation is __linear__ in the number of elements of the sublists.
+listConcatRightAssociated :: Program
+listConcatRightAssociated = mconcat
     [ Stg.listOfNumbers "list0" [0]
     , Stg.listOfNumbers "list1" [1]
     , Stg.listOfNumbers "list2" [2]
@@ -171,24 +234,6 @@ listConcatTemplate = mconcat
         Cons _ xs' -> forceList xs';
         _ -> BadListError;
 
-    main = \ => case forceList concatenated of
-        _ -> concatenated
-    |]]
-
--- | Force the right-associated concatenation
---
--- @
--- [0] '++' ([1] '++' ([2] '++' ([3] '++' ([4] '++' ([5] '++' ([6] '++' ([7] '++' ([8] '++' [9]))))))))
--- @
---
--- and store it in the @main@ closure.
---
--- This computation is __linear__ in the number of elements of the sublists.
-listConcatRightAssociated :: Program
-listConcatRightAssociated = mconcat
-    [ listConcatTemplate
-    , [program|
-
     concatenated = \ =>
         letrec
             list0123456789 = \(list123456789) => concat2 list0 list123456789;
@@ -200,7 +245,11 @@ listConcatRightAssociated = mconcat
             list6789       = \(list789)       => concat2 list6 list789;
             list789        = \(list89)        => concat2 list7 list89;
             list89         = \                => concat2 list8 list9
-        in list0123456789
+        in list0123456789;
+
+    main = \ => case forceList concatenated of
+        _ -> concatenated
+
     |]]
 
 -- | Force the left-associated concatenation
@@ -213,10 +262,7 @@ listConcatRightAssociated = mconcat
 --
 -- This computation is __quadratic__ in the number of elements of the sublists.
 listConcatLeftAssociated :: Program
-listConcatLeftAssociated = mconcat
-    [ listConcatTemplate
-    , [program|
-
+listConcatLeftAssociated = listConcatRightAssociated <> [program|
     concatenated = \ =>
         letrec
             list01         = \                => concat2 list0         list1;
@@ -229,4 +275,4 @@ listConcatLeftAssociated = mconcat
             list012345678  = \(list01234567)  => concat2 list01234567  list8;
             list0123456789 = \(list012345678) => concat2 list012345678 list9
         in list0123456789
-    |]]
+    |]
