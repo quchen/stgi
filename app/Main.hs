@@ -60,7 +60,7 @@ main = do
         Nothing -> hSupportsANSI stdout
     let numStates = optNumStates opts
 
-    let prog = Example.fibonacciZipWith
+    let prog = Example.repeatSharing
     if ansi
         then runForPager prettyprint      numStates prog
         else runForPager prettyprintPlain numStates prog

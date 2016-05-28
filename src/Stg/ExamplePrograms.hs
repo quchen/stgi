@@ -38,6 +38,12 @@ module Stg.ExamplePrograms (
 
         -- ** Left-associated
         listConcatLeftAssociated,
+
+    -- * Sharing
+
+        -- ** Repeat
+        repeatNaive,
+        repeatSharing,
 ) where
 
 
@@ -74,7 +80,7 @@ foldl'Sum list = mconcat
 -- where 'foldl'' is implemented via 'foldr' as
 --
 -- @
--- foldl' f z ys = foldr (\x xs acc -> xs $! f acc x) id ys z
+-- foldl' f z ys = 'foldr' (\x xs acc -> xs '$!' f acc x) id ys z
 -- @
 --
 -- which is a standard "'foldl'' in terms of 'foldr'" definition. This
@@ -276,3 +282,50 @@ listConcatLeftAssociated = listConcatRightAssociated <> [program|
             list0123456789 = \(list012345678) => concat2 list012345678 list9
         in list0123456789
     |]
+
+
+
+-- | This is a naive implementation of the 'repeat' function,
+--
+-- @
+-- 'repeat' x = x : 'repeat' x
+-- @
+--
+-- and it is used to compute the infinite repetition of a number. Run this
+-- program for a couple hundred steps and observe the heap and the garbage
+-- collector. Count the GC invocations, and compare it to the behaviour of
+-- 'repeatSharing'! Also note how long it takes to generate two successive
+-- list elements.
+--
+-- The reason for this behaviour is that the call to @'repeat' x@ is not shared,
+-- but done again for each cons cell, requiring one heap allocation every time.
+-- Cleaning up after this keeps the GC quite busy.
+repeatNaive :: Program
+repeatNaive = repeatSharing <> [program|
+    repeat = \x ->
+        let repeatX = \(x) -> repeat x
+        in Cons x repeatX
+    |]
+
+-- | This uses a much better definition of 'repeat',
+--
+-- @
+-- 'repeat' x = let repeatX = x : repeatX
+--            in repeatX
+-- @
+--
+-- This program does only a total of three heap allocations before continously
+-- running without interruption: one for the @repeated@ value, one for the
+-- self-referencing cons cell, and one beacuse of how 'Stg.forceSpine' works.
+--
+-- Note how much smaller the cycles between the traversal of two neighbouring
+-- list cells is!
+repeatSharing :: Program
+repeatSharing = mconcat
+    [ Stg.forceSpine
+    , Stg.repeat
+    , [program|
+    main = \ =>
+        let repeated = \ -> repeat 1#
+        in case forceSpine repeated of v -> v
+    |]]
