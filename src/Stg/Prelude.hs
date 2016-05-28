@@ -22,6 +22,7 @@ module Stg.Prelude (
     length,
     zip,
     zipWith,
+    forceSpine,
 
     -- * Tuples
     fst,

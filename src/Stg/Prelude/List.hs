@@ -21,6 +21,7 @@ module Stg.Prelude.List (
     length,
     zip,
     zipWith,
+    forceSpine,
 
     -- * Convenience
     listOfNumbers,
@@ -48,9 +49,9 @@ import Stg.Prelude.Number as Num
 
 
 
-nil, concat2, foldl, foldl', foldr, iterate, cycle, take, filter :: Program
-repeat, replicate, sort, map, equals_List_Int, length, zip, zipWith :: Program
-reverse :: Program
+nil, concat2, foldl, foldl', foldr, iterate, cycle, take, filter,
+    repeat, replicate, sort, map, equals_List_Int, length, zip, zipWith,
+    reverse, forceSpine :: Program
 
 
 -- | The empty list as a top-level closure.
@@ -441,4 +442,19 @@ zipWith = [program|
                 in Cons fxy  rest;
             badList -> Error_zipWith badList;
         badList -> Error_zipWith badList
+    |]
+
+-- | Force the spine of a list.
+--
+-- @
+-- forceSpine :: [a] -> [a]
+-- @
+forceSpine = [program|
+    forceSpine = \xs ->
+        letrec
+            go = \(go) ys -> case ys of
+                Nil        -> Done;
+                Cons _ ys' -> go ys';
+                badList    -> Error_forceSpine badList
+        in case go xs of _ -> xs
     |]
