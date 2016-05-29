@@ -8,10 +8,10 @@ module Stg.ExamplePrograms (
 
     -- * Sum of list
 
-        -- ** via 'foldl''
+        -- ** via 'Data.Foldable.foldl''
         sum_foldl',
 
-        -- * via 'foldl'' implemented with 'foldr'
+        -- * via 'Data.Foldable.foldl'' implemented with 'foldr'
         sum_foldl'ViaFoldr,
 
         -- ** via 'foldl'
@@ -72,7 +72,7 @@ sumTemplate list = mconcat
 -- | Sum up a list of 'Integer's using
 --
 -- @
--- sum = 'foldl'' ('+') 0
+-- sum = 'Data.Foldable.foldl'' ('+') 0
 -- @
 --
 -- This is a good way to sum up a list in Haskell.
@@ -85,18 +85,18 @@ sum_foldl' list = mconcat
 -- | Sum up a list of 'Integer's using
 --
 -- @
--- sum = 'foldl'' ('+') 0
+-- sum = 'Data.Foldable.foldl'' ('+') 0
 -- @
 --
--- where 'foldl'' is implemented via 'foldr' as
+-- where 'Data.Foldable.foldl'' is implemented via 'foldr' as
 --
 -- @
 -- foldl' f z ys = 'foldr' (\x xs acc -> xs '$!' f acc x) id ys z
 -- @
 --
--- which is a standard "'foldl'' in terms of 'foldr'" definition. This
--- definition is computationally equivalent to the standard 'foldl'', but has a
--- bit more overhead.
+-- which is a standard "'Data.Foldable.foldl'' in terms of 'foldr'" definition.
+-- This definition is computationally equivalent to the standard
+-- 'Data.Foldable.foldl'', but has a bit more overhead.
 sum_foldl'ViaFoldr :: [Integer] -> Program
 sum_foldl'ViaFoldr list = mconcat
     [ sumTemplate list
