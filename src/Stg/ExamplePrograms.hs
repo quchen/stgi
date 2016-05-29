@@ -11,7 +11,7 @@ module Stg.ExamplePrograms (
         -- ** via 'Data.Foldable.foldl''
         sum_foldl',
 
-        -- * via 'Data.Foldable.foldl'' implemented with 'foldr'
+        -- ** via 'Data.Foldable.foldl'' implemented with 'foldr'
         sum_foldl'ViaFoldr,
 
         -- ** via 'foldl'
@@ -29,7 +29,7 @@ module Stg.ExamplePrograms (
         -- ** Improved implementation (linear time)
         fibonacciImproved,
 
-        -- ** zipWith (+) solution
+        -- ** Infinite list with zipWith (+)
         fibonacciZipWith,
 
 
@@ -75,7 +75,7 @@ sumTemplate list = mconcat
 -- sum = 'Data.Foldable.foldl'' ('+') 0
 -- @
 --
--- This is a good way to sum up a list in Haskell.
+-- This is a good way to sum up a list in Haskell, as it runs in constant space.
 sum_foldl' :: [Integer] -> Program
 sum_foldl' list = mconcat
     [ sumTemplate list
@@ -95,8 +95,8 @@ sum_foldl' list = mconcat
 -- @
 --
 -- which is a standard "'Data.Foldable.foldl'' in terms of 'foldr'" definition.
--- This definition is computationally equivalent to the standard
--- 'Data.Foldable.foldl'', but has a bit more overhead.
+-- This definition is denotationally equivalent to the standard
+-- 'Data.Foldable.foldl'', but has a bit more computational overhead.
 sum_foldl'ViaFoldr :: [Integer] -> Program
 sum_foldl'ViaFoldr list = mconcat
     [ sumTemplate list
