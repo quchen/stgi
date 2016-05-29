@@ -112,7 +112,8 @@ foldr = [program|
     foldr = \f z xs -> case xs of
         Nil -> z;
         Cons y ys ->
-            let rest = \(f z ys) => foldr f z ys
+            -- rest only used once, no need for update
+            let rest = \(f z ys) -> foldr f z ys
             in f y rest;
         badList -> Error_foldr badList
     |]

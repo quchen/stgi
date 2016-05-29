@@ -6,13 +6,19 @@
 -- during execution.
 module Stg.ExamplePrograms (
 
-    -- * Folds
+    -- * Sum of list
 
-        -- ** Sum a list via the usual 'foldl''
-        foldl'Sum,
+        -- ** via 'foldl''
+        sum_foldl',
 
-        -- * Sum of a list via 'foldl'' implemented with 'foldr'
-        foldl'ViaFoldrSum,
+        -- * via 'foldl'' implemented with 'foldr'
+        sum_foldl'ViaFoldr,
+
+        -- ** via 'foldl'
+        sum_foldl,
+
+        -- ** via 'foldr'
+        sum_foldr,
 
 
     -- * Fibonacci
@@ -53,23 +59,28 @@ import           Stg.Language
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
+
+
+-- | Program to sum up a list, but with the @sum@ function left undefined.
+sumTemplate :: [Integer] -> Program
+sumTemplate list = mconcat
+    [ Stg.add
+    , Stg.int "zero" 0
+    , Stg.listOfNumbers "list" list
+    , [program| main = \ => sum list |]]
+
 -- | Sum up a list of 'Integer's using
 --
 -- @
 -- sum = 'foldl'' ('+') 0
 -- @
 --
--- where 'foldl'' is the usual function known from Haskell.
-foldl'Sum :: [Integer] -> Program
-foldl'Sum list = mconcat
-    [ Stg.foldl'
-    , Stg.add
-    , Stg.int "zero" 0
-    , Stg.listOfNumbers "list" list
-    , [program|
-        sum = \ -> foldl' add zero;
-        main = \ => sum list
-    |]]
+-- This is a good way to sum up a list in Haskell.
+sum_foldl' :: [Integer] -> Program
+sum_foldl' list = mconcat
+    [ sumTemplate list
+    , Stg.foldl'
+    , [program| sum = \ -> foldl' add zero |]]
 
 -- | Sum up a list of 'Integer's using
 --
@@ -84,19 +95,55 @@ foldl'Sum list = mconcat
 -- @
 --
 -- which is a standard "'foldl'' in terms of 'foldr'" definition. This
--- definition is computationally equivalent to the standard 'foldl'', but has
--- more overhead.
-foldl'ViaFoldrSum :: [Integer] -> Program
-foldl'ViaFoldrSum list = mconcat
-    [ foldl'Sum list
+-- definition is computationally equivalent to the standard 'foldl'', but has a
+-- bit more overhead.
+sum_foldl'ViaFoldr :: [Integer] -> Program
+sum_foldl'ViaFoldr list = mconcat
+    [ sumTemplate list
     , Stg.id
     , Stg.foldr
     , [program|
+    sum = \ -> foldl' add zero;
     foldl' = \f z xs ->
         let go = \(f) x xs acc -> case f acc x of
                 forced -> xs forced
         in foldr go id xs z
     |]]
+
+-- | Sum up a list of 'Integer's using
+--
+-- @
+-- sum = 'foldl' ('+') 0
+-- @
+--
+-- This is the canonical space leak in Haskell: note how the accumulator is
+-- lazy, resulting in a large thunk buildup of suspended additions, that is only
+-- collapsed to a final value after 'foldl' has terminated. The thunks are
+-- stored on the heap, so it grows linearly with the length of the list. When
+-- that thunk is forced, it will push lots of additions on the stack; in
+-- summary, this produces a heap overflow, and if the heap is not exhausted, it
+-- will try to overflow the stack.
+sum_foldl :: [Integer] -> Program
+sum_foldl list = mconcat
+    [ sumTemplate list
+    , Stg.foldl
+    , [program| sum = \ -> foldl add zero |]]
+
+-- | Sum up a list of 'Integer's using
+--
+-- @
+-- sum = 'foldr' ('+') 0
+-- @
+--
+-- Like the 'foldl' version demonstrated in 'sum_foldl', this is a space-leaking
+-- implementation of the sum of a list. In this case however, the leak spills to
+-- the stack and the heap alike: the stack contains the continuations for the
+-- additions, while the heap contains thunks for the recursive call to @foldr@.
+sum_foldr :: [Integer] -> Program
+sum_foldr list = mconcat
+    [ sumTemplate list
+    , Stg.foldr
+    , [program| sum = \ -> foldr add zero |]]
 
 
 
