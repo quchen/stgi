@@ -12,8 +12,9 @@ module Stg.Prelude.Marshal (
 
 
 
-import Data.Maybe
-import Data.Monoid
+import qualified Data.Map    as M
+import           Data.Maybe
+import           Data.Monoid
 
 import           Stg.Language
 import           Stg.Machine.Env        (globalVal)
@@ -93,84 +94,62 @@ instance ToStg Integer where
     toStg name i = Program (Binds [(name, LambdaForm [] NoUpdate []
         (AppC (Constr "Int#") [AtomLit (Literal i)]) )])
 
+-- FIXME: There's a nil missing on the innermost level when running
+--
+-- >>> T.putStrLn $ prettyprint $ toStg "arf" ([[[1]]] :: [[[Integer]]])
+-- arf = \ => letrec
+--                __0_cons = \(__0_value nil) -> Cons __0_value nil;
+--                __0_value = \ => letrec
+--                                     __0_cons = \(__0_value nil) -> Cons __0_value nil;
+--                                     __0_value = \ => letrec
+--                                                          __0_cons = \(__0_value nil) -> Cons __0_value nil;
+--                                                          __0_value = \ -> Int# 1#
+--                                                      in __0_cons;
+--                                     nil = \ -> Nil
+--                                 in __0_cons;
+--                nil = \ -> Nil
+--            in __0_cons;
+-- nil = \ -> Nil
+--
+-- This nil is redundant, but it's inconsistent to not have it at the innermost
+-- level. (Ideally, we'd like to only have nil bindings at the top level of course.)
+--
+-- >>>let ppr ast = T.putStrLn (prettyprintPlain ast)
+-- >>> ppr (toStg "list" [1, -2, 3 :: Int])
+-- list = FIXME
 instance ToStg a => ToStg [a] where
     toStg name [] = Stg.nil <> Program (Binds [(name, [stg| \ -> nil |])])
-    toStg name _ = _implement_me
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-{-
-
--- | Generate a list of numbers.
---
--- Also demonstrate nicely how much overhead seemingly simple lists have.
---
--- >>> let ppr ast = T.putStrLn (prettyprintPlain ast)
--- >>> ppr (listOfNumbers "list" [1, -2, 3])
--- list = \ => letrec
---                 int_1 = \ -> Int# 1#;
---                 int_3 = \ -> Int# 3#;
---                 int_neg2 = \ -> Int# -2#;
---                 list_ix0_int_1 = \(int_1 list_ix1_int_neg2) -> Cons int_1 list_ix1_int_neg2;
---                 list_ix1_int_neg2 = \(int_neg2 list_ix2_int_3) -> Cons int_neg2 list_ix2_int_3;
---                 list_ix2_int_3 = \(int_3) -> Cons int_3 nil
---             in list_ix0_int_1;
--- nil = \ -> Nil
-listOfNumbers
-    :: T.Text      -- ^ Name of the list in the STG program
-    -> [P.Integer] -- ^ Entries
-    -> Program
--- TODO: The paper mentions a more efficient construction of literal source
--- lists that is "usually superior".
-listOfNumbers name [] = nil <> Program (Binds [(Var name, [lambdaForm| \ -> nil |])])
-listOfNumbers name ints = nil <>
-    Program (Binds [
-        ( Var name
+    toStg name dataValues = Stg.nil <>
+        Program (Binds [
+        ( name
         , LambdaForm [] Update []
             (Let Recursive
-                (Binds (M.fromList (intBinds <> listBinds)))
-                (AppF (Var (listBindName 0 (P.head ints))) []) ))])
-  where
-    intBinds = P.map intBind ints
-    listBinds = P.zipWith3 listBind
-                           [0..]
-                           ints
-                           (P.zipWith listBindName [1..] (P.tail ints) <> ["nil"])
-
-    listBind ix i tailName =
-        ( Var (listBindName ix i)
-        , LambdaForm ([Var (intName i)] <> [ Var tailName | tailName P./= "nil"])
-                     NoUpdate -- Standard constructors are not updatable
-                     []
-                     (AppC (Constr "Cons")
-                           [AtomVar (Var (intName i)), AtomVar (Var tailName)] ))
-    listBindName :: P.Integer -> P.Integer -> Text
-    listBindName ix i = "list_ix" <> show' ix <> "_" <> intName i
-
-    intBind :: P.Integer -> (Var, LambdaForm)
-    intBind i =
-        ( Var (intName i)
-        , LambdaForm [] NoUpdate []
-                     (AppC (Constr "Int#") [AtomLit (Literal i)]))
-
-    intName :: P.Integer -> T.Text
-    intName i = "int_" <> sign <> show' (P.abs i)
+                listBindings
+                (AppF (mkConsVar 0) []) ))])
       where
-        sign | i P.< 0 = "neg"
-             | P.otherwise = ""
+        listBindings :: Binds
+        listBindings = mkIndexedBinds dataValues (\i value nextIsNil ->
 
--}
+            let valueVar = Var ("__" <> show' i <> "_value")
+                Program valueBind = toStg valueVar value
+
+                consVar  = mkConsVar i
+                cons'Var | nextIsNil = Var "nil"
+                         | otherwise = mkConsVar (i+1)
+                consBind = (Binds . M.singleton consVar) (LambdaForm
+                    [valueVar, cons'Var]
+                    NoUpdate -- Standard constructors are not updatable
+                    []
+                    (AppC (Constr "Cons")
+                          [AtomVar valueVar, AtomVar cons'Var] ))
+
+            in valueBind <> consBind )
+
+        mkIndexedBinds :: ToStg val => [val] -> (Int -> val -> Bool -> Binds) -> Binds
+        mkIndexedBinds values mkBinds = mconcat (zipWith3 mkBinds [0..] values nextIsNils)
+
+        nextIsNils :: [Bool]
+        nextIsNils = replicate (length dataValues - 1) False <> [True]
+
+        mkConsVar :: Int -> Var
+        mkConsVar i = Var ("__" <> show' i <> "_cons")
