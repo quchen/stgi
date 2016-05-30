@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Prelude.Number (tests) where
 
@@ -9,8 +10,8 @@ import Data.Monoid
 import Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -54,9 +55,9 @@ testComparison
 testComparison name  haskellRef stgFuncDef = haskellReferenceTest defSpec
     { testName = name
     , source = \(x, y) ->
-           Stg.int "x" x
-        <> Stg.int "y" y
-        <> Stg.boolValue "expectedResult" (haskellRef x y)
+           Stg.toStg "x" x
+        <> Stg.toStg "y" y
+        <> Stg.toStg "expectedResult" (haskellRef x y)
         <> Stg.eq_Bool
         <> stgFuncDef
         <> [stg|
@@ -85,9 +86,9 @@ testArithmetic
 testArithmetic name  haskellRef stgFuncDef = haskellReferenceTest defSpec
     { testName = name
     , source = \(x, NonZero y) ->
-           Stg.int "x" x
-        <> Stg.int "y" y
-        <> Stg.int "expectedResult" (haskellRef x y)
+           Stg.toStg "x" x
+        <> Stg.toStg "y" y
+        <> Stg.toStg "expectedResult" (haskellRef x y)
         <> Stg.eq_Int
         <> stgFuncDef
         <> [stg|
@@ -103,10 +104,10 @@ testArithmetic name  haskellRef stgFuncDef = haskellReferenceTest defSpec
 testMin :: TestTree
 testMin = haskellReferenceTest defSpec
     { testName = "min"
-    , source = \(x, y) ->
-           Stg.int "x" x
-        <> Stg.int "y" y
-        <> Stg.int "expectedResult" (min x y)
+    , source = \(x, y :: Int) ->
+           Stg.toStg "x" x
+        <> Stg.toStg "y" y
+        <> Stg.toStg "expectedResult" (min x y)
         <> Stg.min
         <> Stg.eq_Int
         <> [stg|
@@ -122,10 +123,10 @@ testMin = haskellReferenceTest defSpec
 testMax :: TestTree
 testMax = haskellReferenceTest defSpec
     { testName = "max"
-    , source = \(x, y) ->
-           Stg.int "x" x
-        <> Stg.int "y" y
-        <> Stg.int "expectedResult" (max x y)
+    , source = \(x, y :: Int) ->
+           Stg.toStg "x" x
+        <> Stg.toStg "y" y
+        <> Stg.toStg "expectedResult" (max x y)
         <> Stg.max
         <> Stg.eq_Int
         <> [stg|

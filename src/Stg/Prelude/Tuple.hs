@@ -9,7 +9,7 @@ module Stg.Prelude.Tuple (
     uncurry,
     swap,
 
-    equals_Tuple_Int,
+    equals_Pair_Int,
 ) where
 
 
@@ -25,7 +25,7 @@ import Stg.Prelude.Number
 
 
 fst, snd, curry, uncurry, swap :: Program
-equals_Tuple_Int :: Program
+equals_Pair_Int :: Program
 
 
 
@@ -37,8 +37,8 @@ equals_Tuple_Int :: Program
 fst = [program|
     fst = \tuple ->
         case tuple of
-            Tuple a b -> a;
-            badTuple -> Error_fst badTuple
+            Pair a b -> a;
+            badPair  -> Error_fst badPair
     |]
 
 -- | Second element of a tuple.
@@ -49,8 +49,8 @@ fst = [program|
 snd = [program|
     snd = \tuple ->
         case tuple of
-            Tuple a b -> b;
-            badTuple -> Error_snd badTuple
+            Pair a b -> b;
+            badPair  -> Error_snd badPair
     |]
 
 -- | Convert an uncurried function to a curried one.
@@ -60,7 +60,7 @@ snd = [program|
 -- @
 curry = [program|
     curry = \f x y ->
-        let tuple = \(x y) -> Tuple x y
+        let tuple = \(x y) -> Pair x y
         in f tuple
     |]
 
@@ -84,18 +84,18 @@ uncurry = fst <> snd <> [program|
 swap = [program|
     swap = \tuple ->
         case tuple of
-            Tuple a b -> Tuple b a;
-            badTuple -> Error_snd badTuple |]
+            Pair a b -> Pair b a;
+            badPair  -> Error_snd badPair |]
 
 
-equals_Tuple_Int = eq_Int <> [program|
-    eq_Tuple_Int = \tup1 tup2 ->
+equals_Pair_Int = eq_Int <> [program|
+    eq_Pair_Int = \tup1 tup2 ->
         case tup1 of
-            Tuple a b -> case tup2 of
-                Tuple x y -> case eq_Int a x of
+            Pair a b -> case tup2 of
+                Pair x y -> case eq_Int a x of
                     True -> eq_Int b y;
                     False -> False;
-                    badBool -> Error_eq_Tuple badBool;
-                badTuple -> Error_eq_Tuple badTuple;
-            badTuple -> Error_eq_Tuple badTuple
+                    badBool -> Error_eq_Pair badBool;
+                badPair -> Error_eq_Pair badPair;
+            badPair -> Error_eq_Pair badPair
     |]

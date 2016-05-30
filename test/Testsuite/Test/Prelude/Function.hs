@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Prelude.Function (tests) where
 
@@ -8,8 +9,8 @@ module Test.Prelude.Function (tests) where
 import Data.Function
 import Data.Monoid
 
-import qualified Stg.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -28,8 +29,8 @@ tests = testGroup "Function"
 testId :: TestTree
 testId = haskellReferenceTest defSpec
     { testName = "id"
-    , source = \x ->
-           Stg.int "x" x
+    , source = \(x :: Integer) ->
+           Stg.toStg "x" x
         <> Stg.eq_Int
         <> Stg.id
         <> [stg|
@@ -44,9 +45,9 @@ testId = haskellReferenceTest defSpec
 testConst :: TestTree
 testConst = haskellReferenceTest defSpec
     { testName = "const"
-    , source = \(x,y) ->
-           Stg.int "x" x
-        <> Stg.int "y" y
+    , source = \(x :: Integer, y :: Integer) ->
+           Stg.toStg "x" x
+        <> Stg.toStg "y" y
         <> Stg.eq_Int
         <> Stg.const
         <> [stg|
@@ -63,10 +64,10 @@ testCompose :: TestTree
 testCompose = haskellReferenceTest defSpec
     { testName = "compose (.)"
     , source = \x ->
-           Stg.int "x" x
-        <> Stg.int "two" 2
-        <> Stg.int "three" 3
-        <> Stg.int "expectedResult" (((*3) . (+2)) x)
+           Stg.toStg "x"     (x :: Integer)
+        <> Stg.toStg "two"   (2 :: Integer)
+        <> Stg.toStg "three" (3 :: Integer)
+        <> Stg.toStg "expectedResult" (((*3) . (+2)) x)
         <> Stg.eq_Int
         <> Stg.add
         <> Stg.mul
@@ -88,11 +89,11 @@ testCompose = haskellReferenceTest defSpec
 testFix :: TestTree
 testFix = haskellReferenceTest defSpec
     { testName = "fix"
-    , source = \(NonNegative n) ->
-           Stg.int "n" n
-        <> Stg.int "zero" 0
-        <> Stg.int "one" 1
-        <> Stg.int "expectedResult"
+    , source = \(NonNegative (n :: Integer)) ->
+           Stg.toStg "n" n
+        <> Stg.toStg "zero" (0 :: Integer)
+        <> Stg.toStg "one" (1 :: Integer)
+        <> Stg.toStg "expectedResult"
                    (let fac' = \rec m -> if m == 0 then 1 else m * rec (m-1)
                         fac = fix fac'
                     in fac n )

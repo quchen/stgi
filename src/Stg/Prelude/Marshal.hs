@@ -27,7 +27,8 @@ import qualified Stg.Prelude.List       as Stg
 import           Stg.Util
 
 -- $setup
--- >>> let ppr ast = T.putStrLn (prettyprintPlain ast)
+-- >>> :set -XOverloadedStrings
+-- >>> let ppr = Data.Text.IO.putStrLn . Stg.Language.Prettyprint.prettyprintPlain
 
 
 
@@ -118,17 +119,32 @@ class ToStg value where
 
     {-# MINIMAL toStg | toStgWithGlobals #-}
 
--- | >>> ppr (toStg "one" (1 :: Integer))
--- one = \ -> Int# 1#
+-- | >>> ppr (toStg "int" (1 :: Integer))
+-- int = \ -> Int# 1#
 instance ToStg Integer where
     toStg name i = Program (Binds [(name, LambdaForm [] NoUpdate []
         (AppC (Constr "Int#") [AtomLit (Literal i)]) )])
 
+-- | Same as the 'Integer' instance, but makes for shorter type annotations
 instance ToStg Int where
     toStg name i = toStg name (fromIntegral i :: Integer)
 
--- | >>> ppr (toStg "list" [1, -2, 3 :: Int])
--- list = FIXME
+-- | >>> ppr (toStg "bool" True)
+-- bool = \ -> True
+instance ToStg Bool where
+    toStg name b = Program (Binds [(name, LambdaForm [] NoUpdate []
+        (AppC (Constr (show' b)) []) )])
+
+-- | >>> ppr (toStg "list" [1, 2, 3 :: Int])
+-- list = \ => letrec
+--                 __0_cons = \(__0_value __1_cons) -> Cons __0_value __1_cons;
+--                 __0_value = \ -> Int# 1#;
+--                 __1_cons = \(__1_value __2_cons) -> Cons __1_value __2_cons;
+--                 __1_value = \ -> Int# 2#;
+--                 __2_cons = \(__2_value) -> Cons __2_value nil;
+--                 __2_value = \ -> Int# 3#
+--             in __0_cons;
+-- nil = \ -> Nil
 instance ToStg a => ToStg [a] where
     toStgWithGlobals name dataValues = do
         tell Stg.nil
@@ -195,8 +211,10 @@ tupleBinds name tupleCon binds entryBindVars =
                 binds
                 (AppC tupleCon (map AtomVar entryBindVars)) ))]
 
--- | >>> ppr (toStg "one" (1 :: Int, 23 :: Int))
--- FIXME
+-- | >>> ppr (toStg "pair" (1::Int, 2::Int))
+-- pair = \ => let __fst = \ -> Int# 1#;
+--                 __snd = \ -> Int# 2#
+--             in Pair __fst __snd
 instance (ToStg a, ToStg b) => ToStg (a,b) where
     toStgWithGlobals name (x,y) = do
         (fstBindName, fstBind) <- tupleEntry "fst" x
@@ -205,6 +223,11 @@ instance (ToStg a, ToStg b) => ToStg (a,b) where
             allBindNames = [fstBindName, sndBindName]
         pure (Program (tupleBinds name (Constr "Pair") allBinds allBindNames))
 
+-- | >>> ppr (toStg "triple" (1::Int, 2::Int, 3::Int))
+-- triple = \ => let __fst3 = \ -> Int# 1#;
+--                   __snd3 = \ -> Int# 2#;
+--                   __trd3 = \ -> Int# 3#
+--               in Triple __fst3 __snd3 __trd3
 instance (ToStg a, ToStg b, ToStg c) => ToStg (a,b,c) where
     toStgWithGlobals name (x,y,z) = do
         (fstBindName, fstBind) <- tupleEntry "fst3" x
@@ -214,6 +237,12 @@ instance (ToStg a, ToStg b, ToStg c) => ToStg (a,b,c) where
             allBindNames = [fstBindName, sndBindName, trdBindName]
         pure (Program (tupleBinds name (Constr "Triple") allBinds allBindNames))
 
+-- | >>> ppr (toStg "quadruple" (1::Int, 2::Int, 3::Int, 4::Int))
+-- quadruple = \ => let __fou4 = \ -> Int# 4#;
+--                      __fst4 = \ -> Int# 1#;
+--                      __snd4 = \ -> Int# 2#;
+--                      __trd4 = \ -> Int# 3#
+--                  in Quadruple __fst4 __snd4 __trd4 __fou4
 instance (ToStg a, ToStg b, ToStg c, ToStg d) => ToStg (a,b,c,d) where
     toStgWithGlobals name (x,y,z,w) = do
         (fstBindName, fstBind) <- tupleEntry "fst4" x
@@ -222,8 +251,15 @@ instance (ToStg a, ToStg b, ToStg c, ToStg d) => ToStg (a,b,c,d) where
         (fouBindName, fouBind) <- tupleEntry "fou4" w
         let allBinds = fstBind <> sndBind <> trdBind <> fouBind
             allBindNames = [fstBindName, sndBindName, trdBindName, fouBindName]
-        pure (Program (tupleBinds name (Constr "Quad") allBinds allBindNames))
+        pure (Program (tupleBinds name (Constr "Quadruple") allBinds allBindNames))
 
+-- | >>> ppr (toStg "quintuple" (1::Int, 2::Int, 3::Int, 4::Int, 5::Int))
+-- quintuple = \ => let __fif5 = \ -> Int# 5#;
+--                      __fou5 = \ -> Int# 4#;
+--                      __fst5 = \ -> Int# 1#;
+--                      __snd5 = \ -> Int# 2#;
+--                      __trd5 = \ -> Int# 3#
+--                  in Quintuple __fst5 __snd5 __trd5 __fou5 __fif5
 instance (ToStg a, ToStg b, ToStg c, ToStg d, ToStg e) => ToStg (a,b,c,d,e) where
     toStgWithGlobals name (x,y,z,w,v) = do
         (fstBindName, fstBind) <- tupleEntry "fst5" x
@@ -233,4 +269,4 @@ instance (ToStg a, ToStg b, ToStg c, ToStg d, ToStg e) => ToStg (a,b,c,d,e) wher
         (fifBindName, fifBind) <- tupleEntry "fif5" v
         let allBinds = fstBind <> sndBind <> trdBind <> fouBind <> fifBind
             allBindNames = [fstBindName, sndBindName, trdBindName, fouBindName, fifBindName]
-        pure (Program (tupleBinds name (Constr "Quin") allBinds allBindNames))
+        pure (Program (tupleBinds name (Constr "Quintuple") allBinds allBindNames))

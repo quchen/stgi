@@ -107,7 +107,7 @@ fibonacciSumTest algorithm = testCase "Long-running program" test
     -- minimal example displaying the actual issue, however.
     source = mconcat
             [ Stg.add
-            , Stg.int "zero" 0
+            , Stg.toStg "zero" (0 :: Int)
             , Stg.foldl'
             , Stg.zipWith ] <> [stg|
 

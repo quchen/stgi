@@ -35,7 +35,7 @@ module Stg.Prelude (
     curry,
     uncurry,
     swap,
-    equals_Tuple_Int,
+    equals_Pair_Int,
 
     -- * Boolean
     and2,
@@ -43,7 +43,6 @@ module Stg.Prelude (
     not,
     bool,
     eq_Bool,
-    boolValue,
 
     -- * Numbers
     -- ** Arithmetic

@@ -1,6 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Prelude.List (tests) where
 
@@ -11,9 +12,9 @@ import           Data.Monoid
 import           Data.Text   (Text)
 
 import           Stg.Language
-import qualified Stg.Prelude   as Stg
 import           Stg.Machine.Types
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -45,10 +46,10 @@ tests = testGroup "List"
 testFilter :: TestTree
 testFilter = haskellReferenceTest defSpec
     { testName = "filter"
-    , source = \(xs, threshold) ->
-           Stg.listOfNumbers "inputList" xs
-        <> Stg.listOfNumbers "expectedResult" (filter (> threshold) xs)
-        <> Stg.int "threshold" threshold
+    , source = \(xs, threshold :: Int) ->
+           Stg.toStg "inputList" xs
+        <> Stg.toStg "expectedResult" (filter (> threshold) xs)
+        <> Stg.toStg "threshold" threshold
         <> Stg.gt_Int
         <> Stg.equals_List_Int
         <> Stg.filter
@@ -66,9 +67,9 @@ testFilter = haskellReferenceTest defSpec
 testSort :: TestTree
 testSort = haskellReferenceTest defSpec
     { testName = "sort"
-    , source = \xs ->
-           Stg.listOfNumbers "inputList" xs
-        <> Stg.listOfNumbers "expectedResult" (L.sort xs)
+    , source = \(xs :: [Int]) ->
+           Stg.toStg "inputList" xs
+        <> Stg.toStg "expectedResult" (L.sort xs)
         <> Stg.equals_List_Int
         <> Stg.sort
         <> [stg|
@@ -83,12 +84,12 @@ testSort = haskellReferenceTest defSpec
 testMap :: TestTree
 testMap = haskellReferenceTest defSpec
     { testName = "map"
-    , source = \(xs, offset) ->
+    , source = \(xs, offset :: Int) ->
            Stg.add
         <> Stg.map
-        <> Stg.int "offset" offset
-        <> Stg.listOfNumbers "inputList" xs
-        <> Stg.listOfNumbers "expectedResult" (map (+offset) xs)
+        <> Stg.toStg "offset" offset
+        <> Stg.toStg "inputList" xs
+        <> Stg.toStg "expectedResult" (map (+offset) xs)
         <> Stg.equals_List_Int
         <> [stg|
 
@@ -104,11 +105,11 @@ testMap = haskellReferenceTest defSpec
 testZip :: TestTree
 testZip = haskellReferenceTest defSpec
     { testName = "zip, map"
-    , source = \(list1, list2) ->
+    , source = \(list1, list2 :: [Int]) ->
            Stg.equals_List_Int
-        <> Stg.listOfNumbers "list1" list1
-        <> Stg.listOfNumbers "list2" list2
-        <> Stg.listOfNumbers "expectedResult" (zipWith (+) list1 list2)
+        <> Stg.toStg "list1" list1
+        <> Stg.toStg "list2" list2
+        <> Stg.toStg "expectedResult" (zipWith (+) list1 list2)
         <> Stg.add
         <> Stg.map
         <> Stg.uncurry
@@ -128,11 +129,11 @@ testZip = haskellReferenceTest defSpec
 testZipWith :: TestTree
 testZipWith = haskellReferenceTest defSpec
     { testName = "zipWith (+)"
-    , source = \(list1, list2) ->
+    , source = \(list1, list2 :: [Int]) ->
            Stg.equals_List_Int
-        <> Stg.listOfNumbers "list1" list1
-        <> Stg.listOfNumbers "list2" list2
-        <> Stg.listOfNumbers "expectedResult" (zipWith (+) list1 list2)
+        <> Stg.toStg "list1" list1
+        <> Stg.toStg "list2" list2
+        <> Stg.toStg "expectedResult" (zipWith (+) list1 list2)
         <> Stg.add
         <> Stg.zipWith
         <> [stg|
@@ -184,13 +185,13 @@ foldSumTemplate foldName foldF foldStg failP
     , failWithInfo = False
     , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = failP
-    , source = \(z, xs) ->
+    , source = \(z :: Int, xs) ->
            foldStg
         <> Stg.add
         <> Stg.eq_Int
-        <> Stg.int "z" z
-        <> Stg.listOfNumbers "input" xs
-        <> Stg.int "expected" (foldF (+) z xs)
+        <> Stg.toStg "z" z
+        <> Stg.toStg "input" xs
+        <> Stg.toStg "expected" (foldF (+) z xs)
         <> [stg|
         main = \ =>
             let actual = \ => fold add z input
@@ -202,11 +203,11 @@ foldSumTemplate foldName foldF foldStg failP
 testConcat2 :: TestTree
 testConcat2 = haskellReferenceTest defSpec
     { testName = "(++)"
-    , source = \(list1, list2) ->
+    , source = \(list1, list2 :: [Int]) ->
            Stg.equals_List_Int
-        <> Stg.listOfNumbers "list1" list1
-        <> Stg.listOfNumbers "list2" list2
-        <> Stg.listOfNumbers "expectedResult" (list1 ++ list2)
+        <> Stg.toStg "list1" list1
+        <> Stg.toStg "list2" list2
+        <> Stg.toStg "expectedResult" (list1 ++ list2)
         <> Stg.concat2
         <> [stg|
 
@@ -224,10 +225,10 @@ testReverse = haskellReferenceTest defSpec
     , failWithInfo = True
     , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = const False
-    , source = \xs ->
+    , source = \(xs :: [Int]) ->
            Stg.equals_List_Int
-        <> Stg.listOfNumbers "input" xs
-        <> Stg.listOfNumbers "expectedResult" (reverse xs)
+        <> Stg.toStg "input" xs
+        <> Stg.toStg "expectedResult" (reverse xs)
         <> Stg.reverse
         <> [stg|
 
@@ -241,12 +242,11 @@ testReverse = haskellReferenceTest defSpec
 testCycle :: TestTree
 testCycle = haskellReferenceTest defSpec
     { testName = "cycle (+take)"
-    , source = \(NonEmpty list, NonNegative n) ->
+    , source = \(NonEmpty (list :: [Int]), NonNegative n) ->
            Stg.equals_List_Int
-        <> Stg.int "n" n
-        <> Stg.listOfNumbers "list" list
-        <> Stg.listOfNumbers "expectedResult" (take (fromInteger n)
-                                                    (cycle list) )
+        <> Stg.toStg "n" n
+        <> Stg.toStg "list" list
+        <> Stg.toStg "expectedResult" (take n (cycle list))
         <> Stg.take
         <> Stg.cycle
         <> [stg|
@@ -263,11 +263,11 @@ testCycle = haskellReferenceTest defSpec
 testRepeat :: TestTree
 testRepeat = haskellReferenceTest defSpec
     { testName = "repeat (+take)"
-    , source = \(item, NonNegative n) ->
+    , source = \(item :: Int, NonNegative n) ->
            Stg.equals_List_Int
-        <> Stg.int "n" n
-        <> Stg.int "item" item
-        <> Stg.listOfNumbers "expectedResult" (replicate (fromInteger n) item)
+        <> Stg.toStg "n" n
+        <> Stg.toStg "item" item
+        <> Stg.toStg "expectedResult" (replicate n item)
         <> Stg.take
         <> Stg.repeat
         <> [stg|
@@ -290,11 +290,11 @@ testReplicate = haskellReferenceTest defSpec
     , failPredicate = \stgState -> case stgCode stgState of
         Eval AppP {} _ -> True
         _ -> False
-    , source = \(item, n) ->
+    , source = \(item :: Int, n) ->
            Stg.equals_List_Int
-        <> Stg.int "n" n
-        <> Stg.int "item" item
-        <> Stg.listOfNumbers "expectedResult" (replicate (fromInteger n) item)
+        <> Stg.toStg "n" n
+        <> Stg.toStg "item" item
+        <> Stg.toStg "expectedResult" (replicate n item)
         <> Stg.take
         <> Stg.replicate
         <> [stg|
@@ -309,13 +309,12 @@ testReplicate = haskellReferenceTest defSpec
 testIterate :: TestTree
 testIterate = haskellReferenceTest defSpec
     { testName = "iterate (+take)"
-    , source = \(seed, offset, NonNegative n) ->
+    , source = \(seed, offset :: Int, NonNegative n) ->
            Stg.equals_List_Int
-        <> Stg.int "n" n
-        <> Stg.int "offset" offset
-        <> Stg.int "seed" seed
-        <> Stg.listOfNumbers "expectedResult" (take (fromInteger n)
-                                                    (iterate (+offset) seed) )
+        <> Stg.toStg "n" n
+        <> Stg.toStg "offset" offset
+        <> Stg.toStg "seed" seed
+        <> Stg.toStg "expectedResult" (take n (iterate (+offset) seed) )
         <> Stg.add
         <> Stg.take
         <> Stg.iterate
@@ -335,10 +334,10 @@ testIterate = haskellReferenceTest defSpec
 testLength :: TestTree
 testLength = haskellReferenceTest defSpec
     { testName = "length"
-    , source = \xs ->
+    , source = \(xs :: [Int]) ->
            Stg.eq_Int
-        <> Stg.int "expectedResult" (fromIntegral (length xs))
-        <> Stg.listOfNumbers "input" xs
+        <> Stg.toStg "expectedResult" (length xs)
+        <> Stg.toStg "input" xs
         <> Stg.length
         <> [stg|
 

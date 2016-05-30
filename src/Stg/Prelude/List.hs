@@ -335,7 +335,7 @@ length = [program|
 -- @
 -- zip [1,2,3,4,5] [10,20,30] ==> [(1,10),(2,20),(3,30)]
 --
--- zip xs ys = zipWith Tuple xs ys
+-- zip xs ys = zipWith Pair xs ys
 -- @
 --
 -- @
@@ -347,7 +347,7 @@ zip = [program|
         Cons x xs' -> case ys of
             Nil -> Nil;
             Cons y ys' ->
-                let tup  = \(x y)     -> Tuple x y;
+                let tup  = \(x y)     -> Pair x y;
                     rest = \(xs' ys') => zip xs' ys'
                 in Cons tup rest;
             badList -> Error_zip badList;
