@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -80,9 +79,9 @@ instance FromStg Integer where
                 -> Left TypeMismatch
 
 lengthEquals :: [a] -> Int -> Bool
-lengthEquals [] 0 = True
-lengthEquals (_:xs) !n = lengthEquals xs n
-lengthEquals _ _ = False
+lengthEquals [] 0     = True
+lengthEquals (_:xs) n = lengthEquals xs $! n-1
+lengthEquals _ _      = False
 
 
 
