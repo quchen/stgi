@@ -22,7 +22,7 @@ import           Stg.Language
 import           Stg.Machine.Env        (globalVal)
 import qualified Stg.Machine.Heap       as H
 import           Stg.Machine.Types
-import           Stg.Parser.QuasiQuoter
+import qualified Stg.Parser.QuasiQuoter as QQ
 import qualified Stg.Prelude.List       as Stg
 import           Stg.Util
 
@@ -84,11 +84,19 @@ lengthEquals _ _ = False
 
 
 
+-- | Prefix for all generated variables
+genPrefix :: Text
+genPrefix = "__"
+
 -- | Convert a Haskell value to an STG binding.
 --
 -- Instances of this class should have a corresponding 'FromStg' instance to
 -- retrieve a value fom the program, with the two being inverse to each other
 -- (up to forcing the generated thunks).
+--
+-- This class contains a helper function, 'toStgWithGlobals', this is hidden
+-- from the outside. If you want to write your own instance, have a look at the
+-- source for documentation.
 class ToStg value where
     toStg
         :: Var -- ^ Name of the binding
@@ -98,19 +106,19 @@ class ToStg value where
         let (globals, actualDef) = runWriter (toStgWithGlobals var val)
         in globals <> actualDef
 
-    -- | 'toStg' has the problem that it invokes itself recursively. Some
-    -- converters, such as the one for lists, require certain global values to
-    -- be present (such as nil).
-    --
-    -- This function is used to create the actual binding, and keep track of the
-    -- global definitions required to make it work.
+    -- | Some definitions, such as the one for lists, require certain global
+    -- values to be present (such as nil). In order to avoid duplicate
+    -- definitions, this function allows defining top-level elements using
+    -- 'Writer's 'tell' function.
     toStgWithGlobals
-        :: Var
+        :: Var -- ^ Name of the binding
         -> value
-        -> Writer Program Program
+        -> Writer Program Program -- ^ Log: globals; value: value definition itself
     toStgWithGlobals var val = pure (toStg var val)
 
--- | >>> ppr (toStg "one" 1)
+    {-# MINIMAL toStg | toStgWithGlobals #-}
+
+-- | >>> ppr (toStg "one" (1 :: Integer))
 -- one = \ -> Int# 1#
 instance ToStg Integer where
     toStg name i = Program (Binds [(name, LambdaForm [] NoUpdate []
@@ -125,7 +133,7 @@ instance ToStg a => ToStg [a] where
     toStgWithGlobals name dataValues = do
         tell Stg.nil
         if null dataValues
-            then pure (Program (Binds [(name, [stg| \ -> nil |])]))
+            then pure (Program (Binds [(name, [QQ.stg| \ -> nil |])]))
             else do
                 letBindings <- listBindings
                 pure (Program (Binds [
@@ -166,6 +174,63 @@ instance ToStg a => ToStg [a] where
         mkConsVar :: Int -> Var
         mkConsVar i = Var (genPrefix <> show' i <> "_cons")
 
--- | Prefix for all generated variables
-genPrefix :: Text
-genPrefix = "__"
+tupleEntry :: ToStg value => Text -> value -> Writer Program (Var, Binds)
+tupleEntry name val = do
+    let bindName = Var (genPrefix <> name)
+    Program bind <- toStgWithGlobals bindName val
+    pure (bindName, bind)
+
+-- | This definition unifies the creation of tuple bindings to reduce code
+-- duplication between the tuple instances.
+tupleBinds
+    :: Var    -- ^ Name of the tuple binding
+    -> Constr -- ^ Name of the tuple constructor, e.g. \"Pair"
+    -> Binds  -- ^ Bindings of the entries
+    -> [Var]  -- ^ Names of the bindings of the entries
+    -> Binds
+tupleBinds name tupleCon binds entryBindVars =
+    Binds [(name,
+        LambdaForm [] Update []
+            (Let NonRecursive
+                binds
+                (AppC tupleCon (map AtomVar entryBindVars)) ))]
+
+-- | >>> ppr (toStg "one" (1 :: Int, 23 :: Int))
+-- FIXME
+instance (ToStg a, ToStg b) => ToStg (a,b) where
+    toStgWithGlobals name (x,y) = do
+        (fstBindName, fstBind) <- tupleEntry "fst" x
+        (sndBindName, sndBind) <- tupleEntry "snd" y
+        let allBinds = fstBind <> sndBind
+            allBindNames = [fstBindName, sndBindName]
+        pure (Program (tupleBinds name (Constr "Pair") allBinds allBindNames))
+
+instance (ToStg a, ToStg b, ToStg c) => ToStg (a,b,c) where
+    toStgWithGlobals name (x,y,z) = do
+        (fstBindName, fstBind) <- tupleEntry "fst3" x
+        (sndBindName, sndBind) <- tupleEntry "snd3" y
+        (trdBindName, trdBind) <- tupleEntry "trd3" z
+        let allBinds = fstBind <> sndBind <> trdBind
+            allBindNames = [fstBindName, sndBindName, trdBindName]
+        pure (Program (tupleBinds name (Constr "Triple") allBinds allBindNames))
+
+instance (ToStg a, ToStg b, ToStg c, ToStg d) => ToStg (a,b,c,d) where
+    toStgWithGlobals name (x,y,z,w) = do
+        (fstBindName, fstBind) <- tupleEntry "fst4" x
+        (sndBindName, sndBind) <- tupleEntry "snd4" y
+        (trdBindName, trdBind) <- tupleEntry "trd4" z
+        (fouBindName, fouBind) <- tupleEntry "fou4" w
+        let allBinds = fstBind <> sndBind <> trdBind <> fouBind
+            allBindNames = [fstBindName, sndBindName, trdBindName, fouBindName]
+        pure (Program (tupleBinds name (Constr "Quad") allBinds allBindNames))
+
+instance (ToStg a, ToStg b, ToStg c, ToStg d, ToStg e) => ToStg (a,b,c,d,e) where
+    toStgWithGlobals name (x,y,z,w,v) = do
+        (fstBindName, fstBind) <- tupleEntry "fst5" x
+        (sndBindName, sndBind) <- tupleEntry "snd5" y
+        (trdBindName, trdBind) <- tupleEntry "trd5" z
+        (fouBindName, fouBind) <- tupleEntry "fou5" w
+        (fifBindName, fifBind) <- tupleEntry "fif5" v
+        let allBinds = fstBind <> sndBind <> trdBind <> fouBind <> fifBind
+            allBindNames = [fstBindName, sndBindName, trdBindName, fouBindName, fifBindName]
+        pure (Program (tupleBinds name (Constr "Quin") allBinds allBindNames))

@@ -46,8 +46,6 @@ module Stg.Prelude (
     boolValue,
 
     -- * Numbers
-    -- ** Convenience
-    int,
     -- ** Arithmetic
     add,
     sub,
