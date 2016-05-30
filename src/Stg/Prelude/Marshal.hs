@@ -6,15 +6,17 @@
 
 -- | Convert Haskell values to STG values and back.
 module Stg.Prelude.Marshal (
-    ToStg(..),
+    ToStg(toStg),
     FromStg(..),
 ) where
 
 
 
-import qualified Data.Map    as M
+import           Control.Monad.Trans.Writer
+import qualified Data.Map                   as M
 import           Data.Maybe
 import           Data.Monoid
+import           Data.Text                  (Text)
 
 import           Stg.Language
 import           Stg.Machine.Env        (globalVal)
@@ -23,6 +25,9 @@ import           Stg.Machine.Types
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude.List       as Stg
 import           Stg.Util
+
+-- $setup
+-- >>> let ppr ast = T.putStrLn (prettyprintPlain ast)
 
 
 
@@ -77,6 +82,8 @@ lengthEquals [] 0 = True
 lengthEquals (_:xs) !n = lengthEquals xs n
 lengthEquals _ _ = False
 
+
+
 -- | Convert a Haskell value to an STG binding.
 --
 -- Instances of this class should have a corresponding 'FromStg' instance to
@@ -87,69 +94,78 @@ class ToStg value where
         :: Var -- ^ Name of the binding
         -> value
         -> Program
+    toStg var val =
+        let (globals, actualDef) = runWriter (toStgWithGlobals var val)
+        in globals <> actualDef
 
--- | >>> prettyprintPlain (toStg "one" 1)
--- "one = \\ -> Int# 1#"
+    -- | 'toStg' has the problem that it invokes itself recursively. Some
+    -- converters, such as the one for lists, require certain global values to
+    -- be present (such as nil).
+    --
+    -- This function is used to create the actual binding, and keep track of the
+    -- global definitions required to make it work.
+    toStgWithGlobals
+        :: Var
+        -> value
+        -> Writer Program Program
+    toStgWithGlobals var val = pure (toStg var val)
+
+-- | >>> ppr (toStg "one" 1)
+-- one = \ -> Int# 1#
 instance ToStg Integer where
     toStg name i = Program (Binds [(name, LambdaForm [] NoUpdate []
         (AppC (Constr "Int#") [AtomLit (Literal i)]) )])
 
--- FIXME: There's a nil missing on the innermost level when running
---
--- >>> T.putStrLn $ prettyprint $ toStg "arf" ([[[1]]] :: [[[Integer]]])
--- arf = \ => letrec
---                __0_cons = \(__0_value nil) -> Cons __0_value nil;
---                __0_value = \ => letrec
---                                     __0_cons = \(__0_value nil) -> Cons __0_value nil;
---                                     __0_value = \ => letrec
---                                                          __0_cons = \(__0_value nil) -> Cons __0_value nil;
---                                                          __0_value = \ -> Int# 1#
---                                                      in __0_cons;
---                                     nil = \ -> Nil
---                                 in __0_cons;
---                nil = \ -> Nil
---            in __0_cons;
--- nil = \ -> Nil
---
--- This nil is redundant, but it's inconsistent to not have it at the innermost
--- level. (Ideally, we'd like to only have nil bindings at the top level of course.)
---
--- >>>let ppr ast = T.putStrLn (prettyprintPlain ast)
--- >>> ppr (toStg "list" [1, -2, 3 :: Int])
+instance ToStg Int where
+    toStg name i = toStg name (fromIntegral i :: Integer)
+
+-- | >>> ppr (toStg "list" [1, -2, 3 :: Int])
 -- list = FIXME
 instance ToStg a => ToStg [a] where
-    toStg name [] = Stg.nil <> Program (Binds [(name, [stg| \ -> nil |])])
-    toStg name dataValues = Stg.nil <>
-        Program (Binds [
-        ( name
-        , LambdaForm [] Update []
-            (Let Recursive
-                listBindings
-                (AppF (mkConsVar 0) []) ))])
+    toStgWithGlobals name dataValues = do
+        tell Stg.nil
+        if null dataValues
+            then pure (Program (Binds [(name, [stg| \ -> nil |])]))
+            else do
+                letBindings <- listBindings
+                pure (Program (Binds [
+                    ( name
+                    , LambdaForm [] Update []
+                        (Let Recursive
+                            letBindings
+                            (AppF (mkConsVar 0) []) ))]))
       where
-        listBindings :: Binds
-        listBindings = mkIndexedBinds dataValues (\i value nextIsNil ->
+        listBindings :: Writer Program Binds
+        listBindings = mkIndexedBinds dataValues (\i value nextIsNil -> do
 
-            let valueVar = Var ("__" <> show' i <> "_value")
-                Program valueBind = toStg valueVar value
+            let valueVar = Var (genPrefix <> show' i <> "_value")
+            Program valueBind <- toStgWithGlobals valueVar value
 
-                consVar  = mkConsVar i
+            let consVar  = mkConsVar i
                 cons'Var | nextIsNil = Var "nil"
                          | otherwise = mkConsVar (i+1)
                 consBind = (Binds . M.singleton consVar) (LambdaForm
-                    [valueVar, cons'Var]
+                    (valueVar : if nextIsNil then [] else [cons'Var])
                     NoUpdate -- Standard constructors are not updatable
                     []
                     (AppC (Constr "Cons")
                           [AtomVar valueVar, AtomVar cons'Var] ))
 
-            in valueBind <> consBind )
+            pure (valueBind <> consBind) )
 
-        mkIndexedBinds :: ToStg val => [val] -> (Int -> val -> Bool -> Binds) -> Binds
-        mkIndexedBinds values mkBinds = mconcat (zipWith3 mkBinds [0..] values nextIsNils)
+        mkIndexedBinds
+            :: ToStg val
+            => [val]
+            -> (Int -> val -> Bool -> Writer Program Binds)
+            -> Writer Program Binds
+        mkIndexedBinds values mkBinds = fmap mconcat (sequence (zipWith3 mkBinds [0..] values nextIsNils))
 
         nextIsNils :: [Bool]
         nextIsNils = replicate (length dataValues - 1) False <> [True]
 
         mkConsVar :: Int -> Var
-        mkConsVar i = Var ("__" <> show' i <> "_cons")
+        mkConsVar i = Var (genPrefix <> show' i <> "_cons")
+
+-- | Prefix for all generated variables
+genPrefix :: Text
+genPrefix = "__"
