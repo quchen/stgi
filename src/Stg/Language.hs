@@ -299,11 +299,11 @@ instance Pretty Rec where
 
 instance Pretty Expr where
     pretty = \case
-        Let rec binds expr -> (align . vsep)
-            [ keyword style ("let" <> pretty rec) <+> (case rec of
-                Recursive -> hardline <> indent 4 (pretty binds)
-                NonRecursive -> pretty binds)
-            , keyword style "in" <+> pretty expr ]
+        Let rec binds expr ->
+            let inBlock = indent 4 (keyword style "in" <+> pretty expr)
+                bindingBlock = line <> indent 4 (
+                    keyword style ("let" <> pretty rec) <+> pretty binds )
+            in vsep [bindingBlock, inBlock]
 
         Case expr alts -> vsep [ hsep [ keyword style "case"
                                       , pretty expr

@@ -305,14 +305,14 @@ map = [program|
 --
 -- >>> let ppr ast = T.putStrLn (prettyprintPlain ast)
 -- >>> ppr (listOfNumbers "list" [1, -2, 3])
--- list = \ => letrec
---                 int_1 = \ -> Int# 1#;
---                 int_3 = \ -> Int# 3#;
---                 int_neg2 = \ -> Int# -2#;
---                 list_ix0_int_1 = \(int_1 list_ix1_int_neg2) -> Cons int_1 list_ix1_int_neg2;
---                 list_ix1_int_neg2 = \(int_neg2 list_ix2_int_3) -> Cons int_neg2 list_ix2_int_3;
---                 list_ix2_int_3 = \(int_3) -> Cons int_3 nil
---             in list_ix0_int_1;
+-- list = \ =>
+--     letrec int_1 = \ -> Int# 1#;
+--            int_3 = \ -> Int# 3#;
+--            int_neg2 = \ -> Int# -2#;
+--            list_ix0_int_1 = \(int_1 list_ix1_int_neg2) -> Cons int_1 list_ix1_int_neg2;
+--            list_ix1_int_neg2 = \(int_neg2 list_ix2_int_3) -> Cons int_neg2 list_ix2_int_3;
+--            list_ix2_int_3 = \(int_3) -> Cons int_3 nil
+--     in list_ix0_int_1;
 -- nil = \ -> Nil
 listOfNumbers
     :: T.Text      -- ^ Name of the list in the STG program
