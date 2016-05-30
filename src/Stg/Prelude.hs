@@ -8,6 +8,9 @@ module Stg.Prelude (
     ToStg(..),
     FromStg(..),
 
+    -- * Maybe
+    nothing,
+
     -- * Lists
     nil,
     concat2,
@@ -79,5 +82,6 @@ import Stg.Prelude.Bool
 import Stg.Prelude.Function
 import Stg.Prelude.List
 import Stg.Prelude.Marshal
+import Stg.Prelude.Maybe
 import Stg.Prelude.Number
 import Stg.Prelude.Tuple

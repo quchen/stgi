@@ -24,6 +24,7 @@ import qualified Stg.Machine.Heap       as H
 import           Stg.Machine.Types
 import qualified Stg.Parser.QuasiQuoter as QQ
 import qualified Stg.Prelude.List       as Stg
+import qualified Stg.Prelude.Maybe      as Stg
 import           Stg.Util
 
 -- $setup
@@ -119,6 +120,12 @@ class ToStg value where
 
     {-# MINIMAL toStg | toStgWithGlobals #-}
 
+-- | >>> ppr (toStg "unit" ())
+-- unit = \ -> Unit
+instance ToStg () where
+    toStg name _ = Program (Binds [(name, LambdaForm [] NoUpdate []
+        (AppC (Constr "Unit") []) )])
+
 -- | >>> ppr (toStg "int" (1 :: Integer))
 -- int = \ -> Int# 1#
 instance ToStg Integer where
@@ -135,7 +142,57 @@ instance ToStg Bool where
     toStg name b = Program (Binds [(name, LambdaForm [] NoUpdate []
         (AppC (Constr (show' b)) []) )])
 
--- | >>> ppr (toStg "list" [1, 2, 3 :: Int])
+-- | >>> ppr (toStg "maybe" (Nothing :: Maybe Int))
+-- maybe = \ -> nothing;
+-- nothing = \ -> Nothing
+--
+-- >>> ppr (toStg "maybe" (Just 1 :: Maybe Int))
+-- maybe = \ => let __justVal = \ -> Int# 1#
+--              in Just __justVal
+instance ToStg a => ToStg (Maybe a) where
+    toStgWithGlobals name Nothing = do
+        tell Stg.nothing
+        pure (Program (Binds [(name, [QQ.stg| \ -> nothing |])]))
+    toStgWithGlobals name (Just x) = do
+        Program xBinding <- toStgWithGlobals justBindName x
+        pure (Program (Binds [
+            ( name
+            , LambdaForm [] Update []
+                (Let NonRecursive
+                    xBinding
+                    (AppC "Just" [AtomVar justBindName]) ))]))
+      where
+        justBindName :: Var
+        justBindName = Var (genPrefix <> "justVal")
+
+-- | >>> ppr (toStg "either" (Left 1 :: Either Int [Int]))
+-- either = \ => let __leftval = \ -> Int# 1#
+--               in Left __leftval
+--
+-- >>> ppr (toStg "either" (Right 2 :: Either [Int] Int))
+-- either = \ => let __rightval = \ -> Int# 2#
+--               in Right __rightval
+instance (ToStg a, ToStg b) => ToStg (Either a b) where
+    toStgWithGlobals name x = do
+        let bindName = Var (genPrefix <> chooseEither "left" "right" x <> "val")
+        Program xBinding <- case x of
+            Left l  -> toStgWithGlobals bindName l
+            Right r -> toStgWithGlobals bindName r
+        pure (Program (Binds [
+            ( name
+            , LambdaForm [] Update []
+                (Let NonRecursive
+                    xBinding
+                    (AppC (chooseEither "Left" "Right" x) [AtomVar bindName]) ))]))
+          where
+            chooseEither l _ (Left  _) = l
+            chooseEither _ r (Right _) = r
+
+-- | >>> ppr (toStg "list" ([] :: [Int]))
+-- list = \ -> nil;
+-- nil = \ -> Nil
+--
+-- >>> ppr (toStg "list" [1, 2, 3 :: Int])
 -- list = \ => letrec
 --                 __0_cons = \(__0_value __1_cons) -> Cons __0_value __1_cons;
 --                 __0_value = \ -> Int# 1#;

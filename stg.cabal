@@ -40,6 +40,7 @@ library
                      , Stg.Prelude.Function
                      , Stg.Prelude.List
                      , Stg.Prelude.Marshal
+                     , Stg.Prelude.Maybe
                      , Stg.Prelude.Number
                      , Stg.Prelude.Tuple
                      , Stg.Util
