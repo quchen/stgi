@@ -22,25 +22,17 @@ module Stg.Prelude.List (
     zip,
     zipWith,
     forceSpine,
-
-    -- * Convenience
-    listOfNumbers,
 ) where
 
 
 
-import qualified Prelude as P
+import Prelude ()
 
-import qualified Data.Map    as M
-import           Data.Monoid
-import           Data.Text   (Text)
-import qualified Data.Text   as T
+import Data.Monoid
 
 import Stg.Language
 import Stg.Parser.QuasiQuoter
-import Stg.Util
-
-import Stg.Prelude.Number as Num
+import Stg.Prelude.Number     as Num
 
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -298,64 +290,6 @@ map = [program|
                      in Cons fx fxs;
         badList -> Error_map badList
     |]
-
--- | Generate a list of numbers.
---
--- Also demonstrate nicely how much overhead seemingly simple lists have.
---
--- >>> let ppr ast = T.putStrLn (prettyprintPlain ast)
--- >>> ppr (listOfNumbers "list" [1, -2, 3])
--- list = \ =>
---     letrec int_1 = \ -> Int# 1#;
---            int_3 = \ -> Int# 3#;
---            int_neg2 = \ -> Int# -2#;
---            list_ix0_int_1 = \(int_1 list_ix1_int_neg2) -> Cons int_1 list_ix1_int_neg2;
---            list_ix1_int_neg2 = \(int_neg2 list_ix2_int_3) -> Cons int_neg2 list_ix2_int_3;
---            list_ix2_int_3 = \(int_3) -> Cons int_3 nil
---     in list_ix0_int_1;
--- nil = \ -> Nil
-listOfNumbers
-    :: T.Text      -- ^ Name of the list in the STG program
-    -> [P.Integer] -- ^ Entries
-    -> Program
--- TODO: The paper mentions a more efficient construction of literal source
--- lists that is "usually superior".
-listOfNumbers name [] = nil <> Program (Binds [(Var name, [lambdaForm| \ -> nil |])])
-listOfNumbers name ints = nil <>
-    Program (Binds [
-        ( Var name
-        , LambdaForm [] Update []
-            (Let Recursive
-                (Binds (M.fromList (intBinds <> listBinds)))
-                (AppF (Var (listBindName 0 (P.head ints))) []) ))])
-  where
-    intBinds = P.map intBind ints
-    listBinds = P.zipWith3 listBind
-                           [0..]
-                           ints
-                           (P.zipWith listBindName [1..] (P.tail ints) <> ["nil"])
-
-    listBind ix i tailName =
-        ( Var (listBindName ix i)
-        , LambdaForm ([Var (intName i)] <> [ Var tailName | tailName P./= "nil"])
-                     NoUpdate -- Standard constructors are not updatable
-                     []
-                     (AppC (Constr "Cons")
-                           [AtomVar (Var (intName i)), AtomVar (Var tailName)] ))
-    listBindName :: P.Integer -> P.Integer -> Text
-    listBindName ix i = "list_ix" <> show' ix <> "_" <> intName i
-
-    intBind :: P.Integer -> (Var, LambdaForm)
-    intBind i =
-        ( Var (intName i)
-        , LambdaForm [] NoUpdate []
-                     (AppC (Constr "Int#") [AtomLit (Literal i)]))
-
-    intName :: P.Integer -> T.Text
-    intName i = "int_" <> sign <> show' (P.abs i)
-      where
-        sign | i P.< 0 = "neg"
-             | P.otherwise = ""
 
 -- | Equality of lists of integers.
 --
