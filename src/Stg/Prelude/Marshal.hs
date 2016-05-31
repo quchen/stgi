@@ -7,6 +7,7 @@
 module Stg.Prelude.Marshal (
     ToStg(toStg),
     FromStg(..),
+    FromStgError(..),
 ) where
 
 

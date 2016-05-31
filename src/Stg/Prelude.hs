@@ -7,6 +7,7 @@ module Stg.Prelude (
     -- * Value injection and extraction
     ToStg(..),
     FromStg(..),
+    FromStgError(..),
 
     -- * Maybe
     nothing,
