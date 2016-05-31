@@ -95,22 +95,30 @@ atomVal stgState locals var = case Env.val locals (stgGlobals stgState) var of
     Success (Addr addr) -> fromStgAddr stgState addr
     Success (PrimInt i)  -> fromStgPrim i
 
+-- | Inspect whether a closure at a certain memory address matches the desired
+-- criteria.
+inspect
+    :: FromStg value
+    => StgState
+    -> (Closure -> Either FromStgError value)
+    -> MemAddr
+    -> Either FromStgError value
+inspect stgState inspectClosure addr = case H.lookup addr (stgHeap stgState) of
+    Nothing -> Left AddrNotOnHeap
+    Just heapObject -> case heapObject of
+        Blackhole{} -> Left IsBlackhole
+        HClosure closure -> inspectClosure closure
+
 instance FromStg () where
-    fromStgAddr stgState addr = case H.lookup addr (stgHeap stgState) of
-        Nothing -> Left AddrNotOnHeap
-        Just heapObject -> case heapObject of
-            Blackhole{} -> Left IsBlackhole
-            HClosure closure -> inspectClosure closure
-      where
-        inspectClosure = \case
-            Closure (LambdaForm _ _ args _) _
-                | not (null args) -> Left BadConstructor
-            Closure (LambdaForm _ _ _ (AppC "Unit" [])) _
-                -> pure ()
-            Closure (LambdaForm _ _ _ (AppC "Unit" _)) _
-                -> Left BadConstructor
-            Closure _ _
-                -> Left TypeMismatch
+    fromStgAddr stgState = inspect stgState (\case
+        Closure (LambdaForm _ _ args _) _
+            | not (null args) -> Left BadConstructor
+        Closure (LambdaForm _ _ _ (AppC "Unit" [])) _
+            -> pure ()
+        Closure (LambdaForm _ _ _ (AppC "Unit" _)) _
+            -> Left BadConstructor
+        Closure _ _
+            -> Left TypeMismatch )
 
 instance FromStg Integer where
     fromStg stgState = globalVal stgState (\case
@@ -137,44 +145,32 @@ instance FromStg Integer where
     fromStgPrim i = Right i
 
 instance (FromStg a, FromStg b) => FromStg (a,b) where
-    fromStgAddr stgState addr = case H.lookup addr (stgHeap stgState) of
-        Nothing -> Left AddrNotOnHeap
-        Just heapObject -> case heapObject of
-            Blackhole{} -> Left IsBlackhole
-            HClosure closure -> inspectClosure closure
-      where
-        inspectClosure = \case
-            Closure (LambdaForm _ _ args _) _
-                | not (null args) -> Left BadConstructor
-            Closure (LambdaForm _ _ _ (AppC "Pair" args)) _
-                | not (args `lengthEquals` 2) -> Left BadConstructor
-            Closure (LambdaForm freeVars _ _ (AppC "Pair" [x, y])) freeVals
-                -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
-                   in liftA2 (,) (atomVal stgState locals x)
-                                 (atomVal stgState locals y)
-            Closure _ _
-                -> Left TypeMismatch
+    fromStgAddr stgState = inspect stgState (\case
+        Closure (LambdaForm _ _ args _) _
+            | not (null args) -> Left BadConstructor
+        Closure (LambdaForm _ _ _ (AppC "Pair" args)) _
+            | not (args `lengthEquals` 2) -> Left BadConstructor
+        Closure (LambdaForm freeVars _ _ (AppC "Pair" [x, y])) freeVals
+            -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+               in liftA2 (,) (atomVal stgState locals x)
+                             (atomVal stgState locals y)
+        Closure _ _
+            -> Left TypeMismatch )
 
 instance (FromStg a, FromStg b) => FromStg (Either a b) where
-    fromStgAddr stgState addr = case H.lookup addr (stgHeap stgState) of
-        Nothing -> Left AddrNotOnHeap
-        Just heapObject -> case heapObject of
-            Blackhole{} -> Left IsBlackhole
-            HClosure closure -> inspectClosure closure
-      where
-        inspectClosure = \case
-            Closure (LambdaForm _ _ args _) _
-                | not (null args) -> Left BadConstructor
-            Closure (LambdaForm _ _ _ (AppC con args)) _
-                | not (args `lengthEquals` 2 && (con == "Left" || con == "Right")) -> Left BadConstructor
-            Closure (LambdaForm freeVars _ _ (AppC "Left" [l])) freeVals
-                -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
-                   in fmap Left (atomVal stgState locals l)
-            Closure (LambdaForm freeVars _ _ (AppC "Right" [r])) freeVals
-                -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
-                   in fmap Right (atomVal stgState locals r)
-            Closure _ _
-                -> Left TypeMismatch
+    fromStgAddr stgState = inspect stgState (\case
+        Closure (LambdaForm _ _ args _) _
+            | not (null args) -> Left BadConstructor
+        Closure (LambdaForm _ _ _ (AppC con args)) _
+            | not (args `lengthEquals` 2 && (con == "Left" || con == "Right")) -> Left BadConstructor
+        Closure (LambdaForm freeVars _ _ (AppC "Left" [l])) freeVals
+            -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+               in fmap Left (atomVal stgState locals l)
+        Closure (LambdaForm freeVars _ _ (AppC "Right" [r])) freeVals
+            -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+               in fmap Right (atomVal stgState locals r)
+        Closure _ _
+            -> Left TypeMismatch )
 
 lengthEquals :: [a] -> Int -> Bool
 lengthEquals [] 0     = True
