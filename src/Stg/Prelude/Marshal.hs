@@ -12,14 +12,14 @@ module Stg.Prelude.Marshal (
 
 
 
+import           Control.Applicative
 import           Control.Monad.Trans.Writer
 import qualified Data.Map                   as M
-import           Data.Maybe
 import           Data.Monoid
 import           Data.Text                  (Text)
 
 import           Stg.Language
-import           Stg.Machine.Env        (globalVal)
+import qualified Stg.Machine.Env        as Env
 import qualified Stg.Machine.Heap       as H
 import           Stg.Machine.Types
 import qualified Stg.Parser.QuasiQuoter as QQ
@@ -39,43 +39,140 @@ import           Stg.Util
 -- inject a value into the program, with the two being inverse to each other (up
 -- to forcing the generated thunks).
 class FromStg value where
+
+    -- | Retrieve the value of a global variable.
     fromStg
         :: StgState
         -> Var -- ^ Name of the global, e.g. @main@
         -> Either FromStgError value
+    fromStg stgState = globalVal stgState (\case
+        PrimInt{} -> Left TypeMismatch
+        Addr addr -> fromStgAddr stgState addr )
+
+    -- | Retrieve the value of a heap address.
+    fromStgAddr
+        :: StgState
+        -> MemAddr
+        -> Either FromStgError value
+
+    -- | Used only for looking up primitive integers.
+    fromStgPrim
+        :: Integer
+        -> Either FromStgError value
+    fromStgPrim _ = Left TypeMismatch
+
+    {-# MINIMAL fromStgAddr #-}
 
 data FromStgError =
       TypeMismatch        -- ^ e.g. asking for an @Int#@ at an address
                           --   that contains a @Cons@
     | NotInNormalForm     -- ^ Tried retrieving a thunk
-    | BadConstructor      -- ^ e.g. @Cons x y z@, @Int#@ not applied
-                          --   to a primitive int
+    | IsBlackhole         -- ^ Tried retrieving a thunk
+    | BadConstructor      -- ^ e.g. @Cons x y z@
     | NotFound NotInScope -- ^ A variable lookup unsuccessful
     | AddrNotOnHeap
 
+-- | Look up the global of a variable and handle the result.
+globalVal
+    :: FromStg value
+    => StgState
+    -> (Value -> Either FromStgError value) -- ^ What to do with the value if found
+    -> Var                                  -- ^ Name of the global value to inspect
+    -> Either FromStgError value
+globalVal stgState f var = case Env.globalVal (stgGlobals stgState) (AtomVar var) of
+    Failure _ -> Left (NotFound (NotInScope [var]))
+    Success v -> f v
+
+-- | Look up the value of an 'Atom' in a state, given a local environment.
+atomVal
+    :: FromStg value
+    => StgState
+    -> Locals
+    -> Atom
+    -> Either FromStgError value
+atomVal stgState locals var = case Env.val locals (stgGlobals stgState) var of
+    Failure notInScope -> Left (NotFound notInScope)
+    Success (Addr addr) -> fromStgAddr stgState addr
+    Success (PrimInt i)  -> fromStgPrim i
+
+instance FromStg () where
+    fromStgAddr stgState addr = case H.lookup addr (stgHeap stgState) of
+        Nothing -> Left AddrNotOnHeap
+        Just heapObject -> case heapObject of
+            Blackhole{} -> Left IsBlackhole
+            HClosure closure -> inspectClosure closure
+      where
+        inspectClosure = \case
+            Closure (LambdaForm _ _ args _) _
+                | not (null args) -> Left BadConstructor
+            Closure (LambdaForm _ _ _ (AppC "Unit" [])) _
+                -> pure ()
+            Closure (LambdaForm _ _ _ (AppC "Unit" _)) _
+                -> Left BadConstructor
+            Closure _ _
+                -> Left TypeMismatch
+
 instance FromStg Integer where
-    fromStg stgState var = case globalVal (stgGlobals stgState) (AtomVar var) of
-        Failure _ -> Left (NotFound (NotInScope [var]))
-        Success val -> case val of
-            PrimInt i -> Right i
-            Addr addr -> case H.lookup addr (stgHeap stgState) of
-                Nothing -> Left AddrNotOnHeap
-                Just heapObject -> case heapObject of
-                    Blackhole{}      -> Left NotInNormalForm
-                    HClosure closure -> inspectClosure closure
+    fromStg stgState = globalVal stgState (\case
+        PrimInt i -> Right i
+        Addr addr -> fromStgAddr stgState addr )
+
+    fromStgAddr stgState addr = case H.lookup addr (stgHeap stgState) of
+        Nothing -> Left AddrNotOnHeap
+        Just heapObject -> case heapObject of
+            Blackhole{} -> Left IsBlackhole
+            HClosure closure -> inspectClosure closure
       where
         inspectClosure = \case
             Closure (LambdaForm _ _ args _) _
                 | not (null args) -> Left BadConstructor
             Closure (LambdaForm _ _ _ (AppC "Int#" intArgs)) _
                 | not (intArgs `lengthEquals` 1) -> Left BadConstructor
-            Closure (LambdaForm [] _ _ (AppC "Int#" [AtomLit (Literal i)])) []
-                -> Right i
-            Closure (LambdaForm freeVars _ _ (AppC "Int#" [AtomVar x])) freeVals
-                -> case listToMaybe [ fVal | (fVar,fVal) <- zip freeVars freeVals, fVar == x ] of
-                    Just (PrimInt i) -> Right i
-                    Just (Addr _)    -> Left BadConstructor
-                    Nothing          -> Left (NotFound (NotInScope [x]))
+            Closure (LambdaForm freeVars _ _ (AppC "Int#" [arg])) freeVals
+                -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+                   in atomVal stgState locals arg
+            Closure _ _
+                -> Left TypeMismatch
+
+    fromStgPrim i = Right i
+
+instance (FromStg a, FromStg b) => FromStg (a,b) where
+    fromStgAddr stgState addr = case H.lookup addr (stgHeap stgState) of
+        Nothing -> Left AddrNotOnHeap
+        Just heapObject -> case heapObject of
+            Blackhole{} -> Left IsBlackhole
+            HClosure closure -> inspectClosure closure
+      where
+        inspectClosure = \case
+            Closure (LambdaForm _ _ args _) _
+                | not (null args) -> Left BadConstructor
+            Closure (LambdaForm _ _ _ (AppC "Pair" args)) _
+                | not (args `lengthEquals` 2) -> Left BadConstructor
+            Closure (LambdaForm freeVars _ _ (AppC "Pair" [x, y])) freeVals
+                -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+                   in liftA2 (,) (atomVal stgState locals x)
+                                 (atomVal stgState locals y)
+            Closure _ _
+                -> Left TypeMismatch
+
+instance (FromStg a, FromStg b) => FromStg (Either a b) where
+    fromStgAddr stgState addr = case H.lookup addr (stgHeap stgState) of
+        Nothing -> Left AddrNotOnHeap
+        Just heapObject -> case heapObject of
+            Blackhole{} -> Left IsBlackhole
+            HClosure closure -> inspectClosure closure
+      where
+        inspectClosure = \case
+            Closure (LambdaForm _ _ args _) _
+                | not (null args) -> Left BadConstructor
+            Closure (LambdaForm _ _ _ (AppC con args)) _
+                | not (args `lengthEquals` 2 && (con == "Left" || con == "Right")) -> Left BadConstructor
+            Closure (LambdaForm freeVars _ _ (AppC "Left" [l])) freeVals
+                -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+                   in fmap Left (atomVal stgState locals l)
+            Closure (LambdaForm freeVars _ _ (AppC "Right" [r])) freeVals
+                -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+                   in fmap Right (atomVal stgState locals r)
             Closure _ _
                 -> Left TypeMismatch
 
