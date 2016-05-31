@@ -6,7 +6,7 @@
 -- | Convert Haskell values to STG values and back.
 module Stg.Prelude.Marshal (
     ToStg(toStg),
-    FromStg(..),
+    FromStg(fromStg),
     FromStgError(..),
 ) where
 
@@ -14,6 +14,7 @@ module Stg.Prelude.Marshal (
 
 import           Control.Applicative
 import           Control.Monad.Trans.Writer
+import           Data.Bifunctor
 import           Data.List.NonEmpty         (NonEmpty (..))
 import qualified Data.List.NonEmpty         as NonEmpty
 import qualified Data.Map                   as M
@@ -68,11 +69,14 @@ class FromStg value where
 data FromStgError =
       TypeMismatch        -- ^ e.g. asking for an @Int#@ at an address
                           --   that contains a @Cons@
-    | NotInNormalForm     -- ^ Tried retrieving a thunk
-    | IsBlackhole         -- ^ Tried retrieving a thunk
-    | BadConstructor      -- ^ e.g. @Cons x y z@
+    | IsNotCon            -- ^ Tried retrieving a thunk
+    | IsBlackhole         -- ^ Tried retrieving a black hole
+    | BadConArity         -- ^ e.g. @Cons x y z@
     | NotFound NotInScope -- ^ A variable lookup unsuccessful
     | AddrNotOnHeap
+    | NoConstructorMatch  -- ^ None of the given alternatives matched the given
+                          -- constructor, e.g. when trying to receive a 'Left'
+                          -- as a 'Just'
 
 -- | Look up the global of a variable and handle the result.
 --
@@ -112,82 +116,170 @@ atomVal stgState locals var = case Env.val locals (stgGlobals stgState) var of
 inspect
     :: FromStg value
     => StgState
-    -> (Closure -> Either FromStgError value)
+    -> (Closure -> [Either (Maybe FromStgError) value])
+        -- ^ List of possible matches, e.g. Nil and Cons in the list case.
+        -- See e.g. 'matchCon2' in order to implement these matchers.
     -> MemAddr
     -> Either FromStgError value
 inspect stgState inspectClosure addr = case H.lookup addr (stgHeap stgState) of
     Nothing -> Left AddrNotOnHeap
     Just heapObject -> case heapObject of
         Blackhole{} -> Left IsBlackhole
-        HClosure closure -> inspectClosure closure
+        HClosure closure -> firstMatch (inspectClosure closure)
+
+  where
+    firstMatch :: [Either (Maybe FromStgError) b] -> Either FromStgError b
+    firstMatch (Right r : _)         = Right r
+    firstMatch (Left Nothing : rest) = firstMatch rest
+    firstMatch (Left (Just err) : _) = Left err
+    firstMatch []                    = Left NoConstructorMatch
+    firstMatch _ghc7_10_3 = error "Default to silence GHC's broken exhaustiveness checker"
 
 instance FromStg () where
-    fromStgAddr stgState = inspect stgState (\case
-        Closure (LambdaForm _ _ args _) _
-            | not (null args) -> Left BadConstructor
-        Closure (LambdaForm _ _ _ (AppC "Unit" [])) _
-            -> pure ()
-        Closure (LambdaForm _ _ _ (AppC "Unit" _)) _
-            -> Left BadConstructor
-        Closure _ _
-            -> Left TypeMismatch )
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [matchCon0 "Unit" closure])
 
+instance FromStg Bool where
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ True  <$ matchCon0 "True"  closure
+        , False <$ matchCon0 "False" closure ])
+
+-- | Boxed (@Int\# 1\#@) or unboxed (@1#@)
 instance FromStg Integer where
-    fromStg stgState = globalVal stgState (\case
-        PrimInt i -> Right i
-        Addr addr -> fromStgAddr stgState addr )
-
-    fromStgAddr stgState addr = case H.lookup addr (stgHeap stgState) of
-        Nothing -> Left AddrNotOnHeap
-        Just heapObject -> case heapObject of
-            Blackhole{} -> Left IsBlackhole
-            HClosure closure -> inspectClosure closure
-      where
-        inspectClosure = \case
-            Closure (LambdaForm _ _ args _) _
-                | not (null args) -> Left BadConstructor
-            Closure (LambdaForm _ _ _ (AppC "Int#" intArgs)) _
-                | not (intArgs `lengthEquals` 1) -> Left BadConstructor
-            Closure (LambdaForm freeVars _ _ (AppC "Int#" [arg])) freeVals
-                -> let locals = makeLocals freeVars freeVals
-                   in atomVal stgState locals arg
-            Closure _ _
-                -> Left TypeMismatch
-
+    fromStg stgState var = case Env.globalVal (stgGlobals stgState) (AtomVar var) of
+        Failure _ -> Left (NotFound (NotInScope [var]))
+        Success val -> case val of
+            PrimInt i -> Right i
+            Addr addr -> fromStgAddr stgState addr
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ matchCon1 "Int#" closure >>= \(x, locals) ->
+            liftToMatcher (atomVal stgState locals x) ])
     fromStgPrim i = Right i
 
 instance (FromStg a, FromStg b) => FromStg (a,b) where
-    fromStgAddr stgState = inspect stgState (\case
-        Closure (LambdaForm _ _ args _) _
-            | not (null args) -> Left BadConstructor
-        Closure (LambdaForm _ _ _ (AppC "Pair" args)) _
-            | not (args `lengthEquals` 2) -> Left BadConstructor
-        Closure (LambdaForm freeVars _ _ (AppC "Pair" [x, y])) freeVals
-            -> let locals = makeLocals freeVars freeVals
-               in liftA2 (,) (atomVal stgState locals x)
-                             (atomVal stgState locals y)
-        Closure _ _
-            -> Left TypeMismatch )
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ matchCon2 "Pair" closure >>= \((x,y), locals) ->
+            (,) <$> liftToMatcher (atomVal stgState locals x)
+                <*> liftToMatcher (atomVal stgState locals y) ])
+
+instance (FromStg a, FromStg b, FromStg c) => FromStg (a,b,c) where
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ matchCon3 "Triple" closure >>= \((x,y,z), locals) ->
+            (,,) <$> liftToMatcher (atomVal stgState locals x)
+                 <*> liftToMatcher (atomVal stgState locals y)
+                 <*> liftToMatcher (atomVal stgState locals z) ])
+
+instance (FromStg a, FromStg b, FromStg c, FromStg d) => FromStg (a,b,c,d) where
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ matchCon4 "Quadruple" closure >>= \((x,y,z,w), locals) ->
+            (,,,) <$> liftToMatcher (atomVal stgState locals x)
+                  <*> liftToMatcher (atomVal stgState locals y)
+                  <*> liftToMatcher (atomVal stgState locals z)
+                  <*> liftToMatcher (atomVal stgState locals w) ])
+
+instance (FromStg a, FromStg b, FromStg c, FromStg d, FromStg e) => FromStg (a,b,c,d,e) where
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ matchCon5 "Quintuple" closure >>= \((x,y,z,w,v), locals) ->
+            (,,,,) <$> liftToMatcher (atomVal stgState locals x)
+                   <*> liftToMatcher (atomVal stgState locals y)
+                   <*> liftToMatcher (atomVal stgState locals z)
+                   <*> liftToMatcher (atomVal stgState locals w)
+                   <*> liftToMatcher (atomVal stgState locals v) ])
+
+instance FromStg a => FromStg (Maybe a) where
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ Nothing <$ matchCon0 "Nothing" closure
+        , matchCon1 "Just" closure >>= \(arg, locals) ->
+            Just <$> liftToMatcher (atomVal stgState locals arg) ])
 
 instance (FromStg a, FromStg b) => FromStg (Either a b) where
-    fromStgAddr stgState = inspect stgState (\case
-        Closure (LambdaForm _ _ args _) _
-            | not (null args) -> Left BadConstructor
-        Closure (LambdaForm _ _ _ (AppC con args)) _
-            | not (args `lengthEquals` 2 && (con == "Left" || con == "Right")) -> Left BadConstructor
-        Closure (LambdaForm freeVars _ _ (AppC "Left" [l])) freeVals
-            -> let locals = makeLocals freeVars freeVals
-               in fmap Left (atomVal stgState locals l)
-        Closure (LambdaForm freeVars _ _ (AppC "Right" [r])) freeVals
-            -> let locals = makeLocals freeVars freeVals
-               in fmap Right (atomVal stgState locals r)
-        Closure _ _
-            -> Left TypeMismatch )
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ matchCon1 "Left" closure >>= \(arg, locals) ->
+            Left  <$> liftToMatcher (atomVal stgState locals arg)
+        , matchCon1 "Right" closure >>= \(arg, locals) ->
+            Right <$> liftToMatcher (atomVal stgState locals arg) ])
 
-lengthEquals :: [a] -> Int -> Bool
-lengthEquals [] 0     = True
-lengthEquals (_:xs) n = lengthEquals xs $! n-1
-lengthEquals _ _      = False
+instance FromStg a => FromStg [a] where
+    fromStgAddr stgState = inspect stgState (\closure ->
+        [ [] <$ matchCon0 "Nil" closure
+        , matchCon2 "Cons" closure >>= \((x,xs), locals) ->
+             (:) <$> liftToMatcher (atomVal stgState locals x)
+                 <*> liftToMatcher (atomVal stgState locals xs) ])
+
+-- | Lift an errable value into a context where the specific error is not
+-- necessarily present.
+liftToMatcher :: Either e a -> Either (Maybe e) a
+liftToMatcher = first Just
+
+isNotCon :: Closure -> Bool
+isNotCon (Closure lf _) = case lf of
+    LambdaForm _ _ [] AppC{} -> False
+    LambdaForm{}             -> True
+
+-- | Like 'matchCon2', but for nullary 'Constr'uctors.
+matchCon0 :: Constr -> Closure -> Either (Maybe FromStgError) ()
+matchCon0 _ closure
+    | isNotCon closure = Left (Just IsNotCon)
+matchCon0 wantedCon (Closure (LambdaForm _ _ _ (AppC actualCon args)) _)
+    | wantedCon == actualCon = case args of
+        []  -> Right ()
+        _xs -> Left (Just BadConArity)
+matchCon0 _ _ = Left Nothing
+
+-- | Like 'matchCon2', but for unary 'Constr'uctors.
+matchCon1 :: Constr -> Closure -> Either (Maybe FromStgError) (Atom, Locals)
+matchCon1 _ closure
+    | isNotCon closure = Left (Just IsNotCon)
+matchCon1 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
+    | wantedCon == actualCon = case args of
+        [x] -> Right (x, makeLocals freeVars freeVals)
+        _xs -> Left (Just BadConArity)
+matchCon1 _ _ = Left Nothing
+
+-- | Match a 'Closure' for a binary 'Constr'uctor.
+--
+-- * If the constructor matches, return its arguments, and the local environment
+--   stored in the closure.
+-- * If the constructor does not match, the generated error.
+-- * If the constructor does not match, return 'Nothing' as error.
+matchCon2 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom), Locals)
+matchCon2 _ closure
+    | isNotCon closure = Left (Just IsNotCon)
+matchCon2 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
+    | wantedCon == actualCon = case args of
+        [x,y] -> Right ((x,y), makeLocals freeVars freeVals)
+        _xs   -> Left (Just BadConArity)
+matchCon2 _ _ = Left Nothing
+
+-- | Like 'matchCon2', but for ternary 'Constr'uctors.
+matchCon3 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom), Locals)
+matchCon3 _ closure
+    | isNotCon closure = Left (Just IsNotCon)
+matchCon3 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
+    | wantedCon == actualCon = case args of
+        [x,y,z] -> Right ((x,y,z), makeLocals freeVars freeVals)
+        _xs     -> Left (Just BadConArity)
+matchCon3 _ _ = Left Nothing
+
+-- | Like 'matchCon2', but for 4-ary 'Constr'uctors.
+matchCon4 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom, Atom), Locals)
+matchCon4 _ closure
+    | isNotCon closure = Left (Just IsNotCon)
+matchCon4 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
+    | wantedCon == actualCon = case args of
+        [x,y,z,w] -> Right ((x,y,z,w), makeLocals freeVars freeVals)
+        _xs       -> Left (Just BadConArity)
+matchCon4 _ _ = Left Nothing
+
+-- | Like 'matchCon2', but for 5-ary 'Constr'uctors.
+matchCon5 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom, Atom, Atom), Locals)
+matchCon5 _ closure
+    | isNotCon closure = Left (Just IsNotCon)
+matchCon5 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
+    | wantedCon == actualCon = case args of
+        [x,y,z,w,v] -> Right ((x,y,z,w,v), makeLocals freeVars freeVals)
+        _xs         -> Left (Just BadConArity)
+matchCon5 _ _ = Left Nothing
 
 
 
