@@ -109,6 +109,7 @@ test-suite testsuite
                      , Test.Prelude.Bool
                      , Test.Prelude.Function
                      , Test.Prelude.List
+                     , Test.Prelude.Maybe
                      , Test.Prelude.Number
                      , Test.Prelude.Tuple
                      , Test.Stack

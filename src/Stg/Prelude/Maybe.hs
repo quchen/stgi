@@ -4,6 +4,7 @@
 
 module Stg.Prelude.Maybe (
     nothing,
+    maybe,
 ) where
 
 
@@ -15,7 +16,7 @@ import Stg.Parser.QuasiQuoter
 
 
 
-nothing :: Program
+nothing, maybe :: Program
 
 
 
@@ -25,3 +26,14 @@ nothing :: Program
 -- nothing : Maybe a
 -- @
 nothing = [program| nothing = \ -> Nothing |]
+
+-- | Deconstructor of the 'Maybe' type.
+--
+-- @
+-- maybe : b -> (a -> b) -> Maybe a -> b
+-- @
+maybe = [program|
+    maybe = \nothing just x -> case x of
+        Just j   -> just j;
+        Nothing  -> nothing;
+        badMaybe -> Error_badMaybe badMaybe |]

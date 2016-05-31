@@ -10,6 +10,7 @@ module Stg.Prelude (
     FromStgError(..),
 
     -- * Maybe
+    maybe,
     nothing,
 
     -- * Lists

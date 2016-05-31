@@ -213,9 +213,9 @@ Expressions can, in general, be one of a couple of alternatives.
 For example, Haskell's `maybe` function could be implemented in STG like this:
 
 ```haskell
-maybe = \just nothing x -> case x of
+maybe = \nothing just x -> case x of
     Just j   -> just j;
-    Nothing  -> nothing
+    Nothing  -> nothing;
     badMaybe -> Error_badMaybe badMaybe
 ```
 
