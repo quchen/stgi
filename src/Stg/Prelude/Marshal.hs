@@ -14,6 +14,8 @@ module Stg.Prelude.Marshal (
 
 import           Control.Applicative
 import           Control.Monad.Trans.Writer
+import           Data.List.NonEmpty         (NonEmpty (..))
+import qualified Data.List.NonEmpty         as NonEmpty
 import qualified Data.Map                   as M
 import           Data.Monoid
 import           Data.Text                  (Text)
@@ -308,47 +310,54 @@ instance (ToStg a, ToStg b) => ToStg (Either a b) where
 instance ToStg a => ToStg [a] where
     toStgWithGlobals name dataValues = do
         tell Stg.nil
-        if null dataValues
-            then pure (Program (Binds [(name, [QQ.stg| \ -> nil |])]))
-            else do
-                letBindings <- listBindings
-                pure (Program (Binds [
-                    ( name
-                    , LambdaForm [] Update []
-                        (Let Recursive
-                            letBindings
-                            (AppF (mkConsVar 0) []) ))]))
+        case dataValues of
+            (x:xs) -> do
+                (Just inExpression, letBindings)
+                    <- mkListBinds Nothing (NonEmpty.zip [0..] (x :| xs))
+                pure (Program (Binds [(name, LambdaForm [] Update []
+                    (Let Recursive letBindings inExpression) )]))
+            _nil -> pure (Program (Binds [(name, [QQ.stg| \ -> nil |])]))
+            -- ^ Wildcard pattern becasue GHC 7.10.3's
+            -- exhaustiveness checker is broken
       where
-        listBindings :: Writer Program Binds
-        listBindings = mkIndexedBinds dataValues (\i value nextIsNil -> do
+
+        mkConsVar :: Int -> Var
+        mkConsVar i = Var (genPrefix <> show' i <> "_cons")
+
+        mkListBinds
+            :: ToStg value
+            => Maybe Expr -- ^ Has the 'in' part of the @let@ already been
+                          -- set, and if yes to what? Used to avoid allocating
+                          -- the first cons cell, avoiding an immediate GC.
+            -> NonEmpty (Int, value) -- ^ Index and value of the cells
+            -> Writer Program (Maybe Expr, Binds)
+        mkListBinds inExpression ((i, value) :| rest) = do
 
             let valueVar = Var (genPrefix <> show' i <> "_value")
             Program valueBind <- toStgWithGlobals valueVar value
 
-            let consVar  = mkConsVar i
-                cons'Var | nextIsNil = Var "nil"
-                         | otherwise = mkConsVar (i+1)
-                consBind = (Binds . M.singleton consVar) (LambdaForm
-                    (valueVar : if nextIsNil then [] else [cons'Var])
-                    NoUpdate -- Standard constructors are not updatable
-                    []
-                    (AppC (Constr "Cons")
-                          [AtomVar valueVar, AtomVar cons'Var] ))
+            (inExpression', restBinds) <- do
+                let consVar = mkConsVar i
+                    nextConsVar = if null rest then Var "nil"
+                                               else mkConsVar (i+1)
+                    consBind = case inExpression of
+                        Nothing -> mempty
+                        Just _ -> (Binds . M.singleton consVar) (LambdaForm
+                            (valueVar : [nextConsVar | not (null rest)])
+                            NoUpdate -- Standard constructors are not updatable
+                            []
+                            consExpr )
+                    consExpr = AppC (Constr "Cons") (map AtomVar [valueVar, nextConsVar])
 
-            pure (valueBind <> consBind) )
+                    inExpression' = inExpression <|> Just consExpr
 
-        mkIndexedBinds
-            :: ToStg val
-            => [val]
-            -> (Int -> val -> Bool -> Writer Program Binds)
-            -> Writer Program Binds
-        mkIndexedBinds values mkBinds = fmap mconcat (sequence (zipWith3 mkBinds [0..] values nextIsNils))
+                recursiveBinds <- case rest of
+                    (i',v') : isvs -> fmap snd (mkListBinds inExpression' ((i',v') :| isvs))
+                    _nil           -> pure mempty
 
-        nextIsNils :: [Bool]
-        nextIsNils = replicate (length dataValues - 1) False <> [True]
+                pure (inExpression', consBind <> recursiveBinds)
 
-        mkConsVar :: Int -> Var
-        mkConsVar i = Var (genPrefix <> show' i <> "_cons")
+            pure (inExpression', valueBind <> restBinds)
 
 tupleEntry :: ToStg value => Text -> value -> Writer Program (Var, Binds)
 tupleEntry name val = do
