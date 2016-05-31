@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Prelude.Bool (tests) where
 
@@ -8,8 +9,8 @@ module Test.Prelude.Bool (tests) where
 import Data.Bool
 import Data.Monoid
 
-import qualified Stg.Prelude   as Stg
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import Test.Machine.Evaluate.TestTemplates.HaskellReference
 import Test.Orphans                                         ()
@@ -28,9 +29,9 @@ testAnd2 :: TestTree
 testAnd2 = haskellReferenceTest defSpec
     { testName = "and2 (&&)"
     , source = \(b1, b2) ->
-           Stg.boolValue "b1" b1
-        <> Stg.boolValue "b2" b2
-        <> Stg.boolValue "expectedResult" (b1 && b2)
+           Stg.toStg "b1" b1
+        <> Stg.toStg "b2" b2
+        <> Stg.toStg "expectedResult" (b1 && b2)
         <> Stg.eq_Bool
         <> Stg.and2
         <> [stg|
@@ -45,9 +46,9 @@ testOr2 :: TestTree
 testOr2 = haskellReferenceTest defSpec
     { testName = "or2 (||)"
     , source = \(b1, b2) ->
-           Stg.boolValue "b1" b1
-        <> Stg.boolValue "b2" b2
-        <> Stg.boolValue "expectedResult" (b1 || b2)
+           Stg.toStg "b1" b1
+        <> Stg.toStg "b2" b2
+        <> Stg.toStg "expectedResult" (b1 || b2)
         <> Stg.eq_Bool
         <> Stg.or2
         <> [stg|
@@ -62,8 +63,8 @@ testNot :: TestTree
 testNot = haskellReferenceTest defSpec
     { testName = "not"
     , source = \b ->
-           Stg.boolValue "b" b
-        <> Stg.boolValue "expectedResult" (not b)
+           Stg.toStg "b" b
+        <> Stg.toStg "expectedResult" (not b)
         <> Stg.eq_Bool
         <> Stg.not
         <> [stg|
@@ -81,11 +82,11 @@ testBool = haskellReferenceTest defSpec
     , failWithInfo = True
     , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = const False
-    , source = \(t,f,p) ->
-           Stg.boolValue "p" p
-        <> Stg.int "t" t
-        <> Stg.int "f" f
-        <> Stg.int "expectedResult" (bool t f p)
+    , source = \(t :: Integer, f, p) ->
+           Stg.toStg "p" p
+        <> Stg.toStg "t" t
+        <> Stg.toStg "f" f
+        <> Stg.toStg "expectedResult" (bool t f p)
         <> Stg.eq_Int
         <> Stg.bool
         <> [stg|

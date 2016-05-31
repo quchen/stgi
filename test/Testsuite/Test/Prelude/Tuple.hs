@@ -1,6 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Prelude.Tuple (tests) where
 
@@ -31,9 +32,9 @@ testFst :: TestTree
 testFst = haskellReferenceTest defSpec
     { testName = "fst"
     , failWithInfo = True
-    , source = \tuple ->
-           Stg.tupleOfNumbers "tuple" tuple
-        <> Stg.int "expectedResult" (fst tuple)
+    , source = \(tuple :: (Int, Int)) ->
+           Stg.toStg "tuple" tuple
+        <> Stg.toStg "expectedResult" (fst tuple)
         <> Stg.fst
         <> Stg.eq_Int
         <> [stg|
@@ -47,9 +48,9 @@ testFst = haskellReferenceTest defSpec
 testSnd :: TestTree
 testSnd = haskellReferenceTest defSpec
     { testName = "snd"
-    , source = \tuple ->
-           Stg.tupleOfNumbers "tuple" tuple
-        <> Stg.int "expectedResult" (snd tuple)
+    , source = \(tuple :: (Int, Int)) ->
+           Stg.toStg "tuple" tuple
+        <> Stg.toStg "expectedResult" (snd tuple)
         <> Stg.snd
         <> Stg.eq_Int
         <> [stg|
@@ -64,21 +65,21 @@ testSnd = haskellReferenceTest defSpec
 testCurry :: TestTree
 testCurry = haskellReferenceTest defSpec
     { testName = "curry"
-    , source = \(x,y) ->
-           Stg.int "x" x
-        <> Stg.int "y" y
-        <> Stg.int "expectedResult" (x+y)
+    , source = \(x,y :: Int) ->
+           Stg.toStg "x" x
+        <> Stg.toStg "y" y
+        <> Stg.toStg "expectedResult" (x+y)
         <> Stg.curry
         <> Stg.add
         <> Stg.eq_Int
         <> [stg|
 
-        addTuple = \tuple -> case tuple of
-            Tuple a b -> add a b;
-            badTuple  -> Error_addTuple badTuple;
+        addPair = \tuple -> case tuple of
+            Pair a b -> add a b;
+            badPair  -> Error_addPair badTuple;
 
         main = \ =>
-            let actual = \ -> curry addTuple x y
+            let actual = \ -> curry addPair x y
             in case eq_Int expectedResult actual of
                 True  -> Success;
                 wrong -> TestFail wrong
@@ -87,9 +88,9 @@ testCurry = haskellReferenceTest defSpec
 testUncurry :: TestTree
 testUncurry = haskellReferenceTest defSpec
     { testName = "uncurry"
-    , source = \tuple ->
-           Stg.tupleOfNumbers "tuple" tuple
-        <> Stg.int "expectedResult" (uncurry (+) tuple)
+    , source = \(tuple :: (Int, Int)) ->
+           Stg.toStg "tuple" tuple
+        <> Stg.toStg "expectedResult" (uncurry (+) tuple)
         <> Stg.uncurry
         <> Stg.add
         <> Stg.eq_Int
@@ -105,16 +106,16 @@ testUncurry = haskellReferenceTest defSpec
 testSwap :: TestTree
 testSwap = haskellReferenceTest defSpec
     { testName = "swap"
-    , source = \tuple ->
-           Stg.tupleOfNumbers "tuple" tuple
-        <> Stg.tupleOfNumbers "expectedResult" (T.swap tuple)
+    , source = \(tuple :: (Int, Int)) ->
+           Stg.toStg "tuple" tuple
+        <> Stg.toStg "expectedResult" (T.swap tuple)
         <> Stg.swap
-        <> Stg.equals_Tuple_Int
+        <> Stg.equals_Pair_Int
         <> [stg|
 
         main = \ =>
             let actual = \ -> swap tuple
-            in case eq_Tuple_Int expectedResult actual of
+            in case eq_Pair_Int expectedResult actual of
                 True  -> Success;
                 wrong -> TestFail wrong
         |] }

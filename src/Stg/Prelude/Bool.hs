@@ -8,18 +8,14 @@ module Stg.Prelude.Bool (
     not,
     bool,
     eq_Bool,
-    boolValue,
 ) where
 
 
 
-import Prelude (Bool)
-
-import Data.Text (Text)
+import Prelude ()
 
 import Stg.Language
 import Stg.Parser.QuasiQuoter
-import Stg.Util
 
 
 
@@ -92,10 +88,3 @@ bool = [program|
         False   -> f;
         badBool -> Error_bool badBool
     |]
-
--- | Inject a boolean value into an STG program.
-boolValue
-    :: Text -- ^ Name
-    -> Bool -- ^ Value
-    -> Program
-boolValue name b = Program (Binds [(Var name,LambdaForm [] NoUpdate [] (AppC (Constr (show' b)) []))])

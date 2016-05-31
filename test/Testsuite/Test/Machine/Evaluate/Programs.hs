@@ -16,9 +16,9 @@ import Data.Foldable
 import Data.Monoid
 import Test.Tasty
 
-import qualified Stg.Prelude   as Stg
 import           Stg.Machine.Types
 import           Stg.Parser.QuasiQuoter
+import qualified Stg.Prelude            as Stg
 
 import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
 import           Test.Machine.Evaluate.TestTemplates.MachineState
@@ -65,7 +65,7 @@ add3 = machineStateTest defSpec
 takeRepeat :: TestTree
 takeRepeat = machineStateTest defSpec
     { testName = "take 2 (repeat ())"
-    , source = Stg.int "two" 2
+    , source = Stg.toStg "two" (2 :: Integer)
             <> Stg.take
             <> Stg.repeat
             <> Stg.foldr
@@ -96,10 +96,10 @@ fibonacci :: TestTree
 fibonacci = machineStateTest defSpec
     { testName = "Fibonacci sequence"
     , source = Stg.equals_List_Int
-            <> Stg.int "zero" 0
-            <> Stg.int "one" 1
-            <> Stg.int "numFibos" numFibos
-            <> Stg.listOfNumbers "expectedFibos" (take numFibos fibo)
+            <> Stg.toStg "zero" (0 :: Int)
+            <> Stg.toStg "one" (1 :: Int)
+            <> Stg.toStg "numFibos" (numFibos :: Int)
+            <> Stg.toStg "expectedFibos" (take numFibos fibo)
             <> Stg.add
             <> Stg.take
             <> Stg.zipWith
@@ -119,6 +119,7 @@ fibonacci = machineStateTest defSpec
                 err -> TestFail err
         |] }
   where
+    fibo :: [Integer]
     fibo = 0 : 1 : zipWith (+) fibo (tail fibo)
     numFibos :: Num a => a
     numFibos = 10
@@ -139,10 +140,10 @@ meanTestTemplate =
                 [ Stg.eq_Int
                 , Stg.add
                 , Stg.div
-                , Stg.int "zero" 0
-                , Stg.int "one" 1
-                , Stg.listOfNumbers "inputList" inputList
-                , Stg.int "expectedOutput" (mean inputList) ]
+                , Stg.toStg "zero" (0 :: Int)
+                , Stg.toStg "one"  (1 :: Int)
+                , Stg.toStg "inputList" inputList
+                , Stg.toStg "expectedOutput" (mean inputList) ]
             <> [stg|
             main = \ => case mean inputList of
                 actual -> case eq_Int actual expectedOutput of

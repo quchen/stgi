@@ -4,6 +4,14 @@
 -- This module should be imported qualified, since it heavily conflicts with the
 -- standard Haskell "Prelude".
 module Stg.Prelude (
+    -- * Value injection and extraction
+    ToStg(..),
+    FromStg(..),
+    FromStgError(..),
+
+    -- * Maybe
+    nothing,
+
     -- * Lists
     nil,
     concat2,
@@ -23,6 +31,7 @@ module Stg.Prelude (
     zip,
     zipWith,
     forceSpine,
+    equals_List_Int,
 
     -- * Tuples
     fst,
@@ -30,6 +39,7 @@ module Stg.Prelude (
     curry,
     uncurry,
     swap,
+    equals_Pair_Int,
 
     -- * Boolean
     and2,
@@ -37,17 +47,8 @@ module Stg.Prelude (
     not,
     bool,
     eq_Bool,
-    boolValue,
-
-    -- ** Convenience
-    listOfNumbers,
-    equals_List_Int,
-    tupleOfNumbers,
-    equals_Tuple_Int,
 
     -- * Numbers
-    -- ** Convenience
-    int,
     -- ** Arithmetic
     add,
     sub,
@@ -81,5 +82,7 @@ import Prelude ()
 import Stg.Prelude.Bool
 import Stg.Prelude.Function
 import Stg.Prelude.List
+import Stg.Prelude.Marshal
+import Stg.Prelude.Maybe
 import Stg.Prelude.Number
 import Stg.Prelude.Tuple
