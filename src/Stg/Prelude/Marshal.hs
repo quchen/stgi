@@ -73,6 +73,9 @@ data FromStgError =
     | AddrNotOnHeap
 
 -- | Look up the global of a variable and handle the result.
+--
+-- Slighly bent version of 'Env.globalVal' to fit the types in this module
+-- better.
 globalVal
     :: FromStg value
     => StgState
@@ -82,6 +85,13 @@ globalVal
 globalVal stgState f var = case Env.globalVal (stgGlobals stgState) (AtomVar var) of
     Failure _ -> Left (NotFound (NotInScope [var]))
     Success v -> f v
+
+-- | Create a local environment.
+--
+-- Slighly bent version of 'Env.makeLocals' to fit the types in this module
+-- better.
+makeLocals :: [Var] -> [Value] -> Locals
+makeLocals freeVars freeVals = Env.makeLocals (zipWith Mapping freeVars freeVals)
 
 -- | Look up the value of an 'Atom' in a state, given a local environment.
 atomVal
@@ -137,7 +147,7 @@ instance FromStg Integer where
             Closure (LambdaForm _ _ _ (AppC "Int#" intArgs)) _
                 | not (intArgs `lengthEquals` 1) -> Left BadConstructor
             Closure (LambdaForm freeVars _ _ (AppC "Int#" [arg])) freeVals
-                -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+                -> let locals = makeLocals freeVars freeVals
                    in atomVal stgState locals arg
             Closure _ _
                 -> Left TypeMismatch
@@ -151,7 +161,7 @@ instance (FromStg a, FromStg b) => FromStg (a,b) where
         Closure (LambdaForm _ _ _ (AppC "Pair" args)) _
             | not (args `lengthEquals` 2) -> Left BadConstructor
         Closure (LambdaForm freeVars _ _ (AppC "Pair" [x, y])) freeVals
-            -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+            -> let locals = makeLocals freeVars freeVals
                in liftA2 (,) (atomVal stgState locals x)
                              (atomVal stgState locals y)
         Closure _ _
@@ -164,10 +174,10 @@ instance (FromStg a, FromStg b) => FromStg (Either a b) where
         Closure (LambdaForm _ _ _ (AppC con args)) _
             | not (args `lengthEquals` 2 && (con == "Left" || con == "Right")) -> Left BadConstructor
         Closure (LambdaForm freeVars _ _ (AppC "Left" [l])) freeVals
-            -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+            -> let locals = makeLocals freeVars freeVals
                in fmap Left (atomVal stgState locals l)
         Closure (LambdaForm freeVars _ _ (AppC "Right" [r])) freeVals
-            -> let locals = Env.makeLocals (zipWith Mapping freeVars freeVals)
+            -> let locals = makeLocals freeVars freeVals
                in fmap Right (atomVal stgState locals r)
         Closure _ _
             -> Left TypeMismatch )

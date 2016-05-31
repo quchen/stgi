@@ -28,13 +28,13 @@ result of the program.
 
 The STG is
   - **spineless** because the graph is not represented as a single data
-    structure in memory, but as a set of small parts of the graph that reference
-    each other. An important part of the evaluation mechanism is how to follow
-    these references.
+    structure in memory, but as a set of small, individual parts of the graph
+    that reference each other. An important part of the evaluation mechanism is
+    how to follow these references.
   - **tagless** because all heap values - unevaluated values, functions, already
     evaluated values - are represented alike on the heap, in form of closures.
-    Tag*ful* would mean these closures have to be annotated with things type
-    information, or whether they were previously evaluated already.
+    Tag*ful* would mean these closures have to be annotated with things like
+    type information, or whether they were previously evaluated already.
   - **graph reducing** because heap objects can be overwritten by simpler values
     the machine has found out to be equivalent. For example, the computation
     `1+1` on the heap might be overwritten by a constant `2` once that result
@@ -158,13 +158,16 @@ Expressions can, in general, be one of a couple of alternatives.
     1# -> <expression>                 -- primitive
     ```
 
-    and can be either all algebraic or all primitive. Each list of alts must
-    include a default alternative at the end, which can optinally bind a
-    variable.
+    and can be either all algebraic or all primitive. In case of algebraic
+    alternatives, the constructor's arguments are in scope in the following
+    expression, just like in Haskell's pattern matching.
+
+    Each list of alts must include a default alternative at the end, which can
+    optinally bind a variable.
 
     ```haskell
-    v -> <expression; v is in scope> -- bound default
-    default -> <expression>          -- unbound default
+    v -> <expression>       -- bound default; v is in scope in the expression
+    default -> <expression> -- unbound default
     ```
 
   - **Function application**

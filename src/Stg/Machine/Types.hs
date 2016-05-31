@@ -4,7 +4,6 @@
 {-# LANGUAGE MultiWayIf                 #-}
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeFamilies               #-}
 
 -- | Types used in the execution of the STG machine.
