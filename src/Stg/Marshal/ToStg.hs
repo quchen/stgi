@@ -220,7 +220,7 @@ tupleBinds name tupleCon binds entryBindVars =
                 binds
                 (AppC tupleCon (map AtomVar entryBindVars)) ))]
 
--- | >>> ppr (toStg "pair" (1::Int, 2::Int))
+-- | >>> ppr (toStg "pair" ((1,2) :: (Int,Int)))
 -- pair = \ =>
 --     let __fst = \ -> Int# 1#;
 --         __snd = \ -> Int# 2#
@@ -233,53 +233,53 @@ instance (ToStg a, ToStg b) => ToStg (a,b) where
             allBindNames = [fstBindName, sndBindName]
         pure (Program (tupleBinds name (Constr "Pair") allBinds allBindNames))
 
--- | >>> ppr (toStg "triple" (1::Int, 2::Int, 3::Int))
+-- | >>> ppr (toStg "triple" ((1,2,3) :: (Int,Int,Int)))
 -- triple = \ =>
---     let __fst3 = \ -> Int# 1#;
---         __snd3 = \ -> Int# 2#;
---         __trd3 = \ -> Int# 3#
---     in Triple __fst3 __snd3 __trd3
+--     let __x = \ -> Int# 1#;
+--         __y = \ -> Int# 2#;
+--         __z = \ -> Int# 3#
+--     in Triple __x __y __z
 instance (ToStg a, ToStg b, ToStg c) => ToStg (a,b,c) where
-    toStgWithGlobals name (x,y,z) = do
-        (fstBindName, fstBind) <- tupleEntry "fst3" x
-        (sndBindName, sndBind) <- tupleEntry "snd3" y
-        (trdBindName, trdBind) <- tupleEntry "trd3" z
-        let allBinds = fstBind <> sndBind <> trdBind
-            allBindNames = [fstBindName, sndBindName, trdBindName]
+    toStgWithGlobals name (x3,y3,z3) = do
+        (xBindName, xBind) <- tupleEntry "x" x3
+        (yBindName, yBind) <- tupleEntry "y" y3
+        (zBindName, zBind) <- tupleEntry "z" z3
+        let allBinds = xBind <> yBind <> zBind
+            allBindNames = [xBindName, yBindName, zBindName]
         pure (Program (tupleBinds name (Constr "Triple") allBinds allBindNames))
 
--- | >>> ppr (toStg "quadruple" (1::Int, 2::Int, 3::Int, 4::Int))
+-- | >>> ppr (toStg "quadruple" ((1,2,3,4) :: (Int,Int,Int,Int)))
 -- quadruple = \ =>
---     let __fou4 = \ -> Int# 4#;
---         __fst4 = \ -> Int# 1#;
---         __snd4 = \ -> Int# 2#;
---         __trd4 = \ -> Int# 3#
---     in Quadruple __fst4 __snd4 __trd4 __fou4
+--     let __w = \ -> Int# 1#;
+--         __x = \ -> Int# 2#;
+--         __y = \ -> Int# 3#;
+--         __z = \ -> Int# 4#
+--     in Quadruple __w __x __y __z
 instance (ToStg a, ToStg b, ToStg c, ToStg d) => ToStg (a,b,c,d) where
-    toStgWithGlobals name (x,y,z,w) = do
-        (fstBindName, fstBind) <- tupleEntry "fst4" x
-        (sndBindName, sndBind) <- tupleEntry "snd4" y
-        (trdBindName, trdBind) <- tupleEntry "trd4" z
-        (fouBindName, fouBind) <- tupleEntry "fou4" w
-        let allBinds = fstBind <> sndBind <> trdBind <> fouBind
-            allBindNames = [fstBindName, sndBindName, trdBindName, fouBindName]
+    toStgWithGlobals name (w4,x4,y4,z4) = do
+        (wBindName, wBind) <- tupleEntry "w" w4
+        (xBindName, xBind) <- tupleEntry "x" x4
+        (yBindName, yBind) <- tupleEntry "y" y4
+        (zBindName, zBind) <- tupleEntry "z" z4
+        let allBinds = wBind <> xBind <> yBind <> zBind
+            allBindNames = [wBindName, xBindName, yBindName, zBindName]
         pure (Program (tupleBinds name (Constr "Quadruple") allBinds allBindNames))
 
--- | >>> ppr (toStg "quintuple" (1::Int, 2::Int, 3::Int, 4::Int, 5::Int))
+-- | >>> ppr (toStg "quintuple" ((1,2,3,4,5) :: (Int,Int,Int,Int,Int)))
 -- quintuple = \ =>
---     let __fif5 = \ -> Int# 5#;
---         __fou5 = \ -> Int# 4#;
---         __fst5 = \ -> Int# 1#;
---         __snd5 = \ -> Int# 2#;
---         __trd5 = \ -> Int# 3#
---     in Quintuple __fst5 __snd5 __trd5 __fou5 __fif5
+--     let __v = \ -> Int# 1#;
+--         __w = \ -> Int# 2#;
+--         __x = \ -> Int# 3#;
+--         __y = \ -> Int# 4#;
+--         __z = \ -> Int# 5#
+--     in Quintuple __v __w __x __y __z
 instance (ToStg a, ToStg b, ToStg c, ToStg d, ToStg e) => ToStg (a,b,c,d,e) where
-    toStgWithGlobals name (x,y,z,w,v) = do
-        (fstBindName, fstBind) <- tupleEntry "fst5" x
-        (sndBindName, sndBind) <- tupleEntry "snd5" y
-        (trdBindName, trdBind) <- tupleEntry "trd5" z
-        (fouBindName, fouBind) <- tupleEntry "fou5" w
-        (fifBindName, fifBind) <- tupleEntry "fif5" v
-        let allBinds = fstBind <> sndBind <> trdBind <> fouBind <> fifBind
-            allBindNames = [fstBindName, sndBindName, trdBindName, fouBindName, fifBindName]
+    toStgWithGlobals name (v5,w5,x5,y5,z5) = do
+        (vBindName, vBind) <- tupleEntry "v" v5
+        (wBindName, wBind) <- tupleEntry "w" w5
+        (xBindName, xBind) <- tupleEntry "x" x5
+        (yBindName, yBind) <- tupleEntry "y" y5
+        (zBindName, zBind) <- tupleEntry "z" z5
+        let allBinds = vBind <> wBind <> xBind <> yBind <> zBind
+            allBindNames = [vBindName, wBindName, xBindName, yBindName, zBindName]
         pure (Program (tupleBinds name (Constr "Quintuple") allBinds allBindNames))
