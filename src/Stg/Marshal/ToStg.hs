@@ -11,6 +11,7 @@ module Stg.Marshal.ToStg (
 
 
 import           Control.Applicative
+import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Writer
 import           Data.List.NonEmpty         (NonEmpty (..))
 import qualified Data.List.NonEmpty         as NonEmpty
@@ -199,11 +200,15 @@ instance ToStg a => ToStg [a] where
 
             pure (inExpression', valueBind <> restBinds)
 
-tupleEntry :: ToStg value => Text -> value -> Writer Program (Var, Binds)
+tupleEntry
+    :: ToStg value
+    => Text
+    -> value
+    -> WriterT Binds (Writer Program) ()
 tupleEntry name val = do
     let bindName = Var (genPrefix <> name)
-    Program bind <- toStgWithGlobals bindName val
-    pure (bindName, bind)
+    Program bind <- lift (toStgWithGlobals bindName val)
+    tell bind
 
 -- | This definition unifies the creation of tuple bindings to reduce code
 -- duplication between the tuple instances.
@@ -211,14 +216,16 @@ tupleBinds
     :: Var    -- ^ Name of the tuple binding
     -> Constr -- ^ Name of the tuple constructor, e.g. \"Pair"
     -> Binds  -- ^ Bindings of the entries
-    -> [Var]  -- ^ Names of the bindings of the entries
     -> Binds
-tupleBinds name tupleCon binds entryBindVars =
-    Binds [(name,
+tupleBinds name tupleCon binds  =
+    let bindVars =
+            let Binds b = binds
+            in M.keys b
+    in Binds [(name,
         LambdaForm [] Update []
             (Let NonRecursive
                 binds
-                (AppC tupleCon (map AtomVar entryBindVars)) ))]
+                (AppC tupleCon (map AtomVar bindVars)) ))]
 
 -- | >>> ppr (toStg "pair" ((1,2) :: (Int,Int)))
 -- pair = \ =>
@@ -227,11 +234,10 @@ tupleBinds name tupleCon binds entryBindVars =
 --     in Pair __fst __snd
 instance (ToStg a, ToStg b) => ToStg (a,b) where
     toStgWithGlobals name (x,y) = do
-        (fstBindName, fstBind) <- tupleEntry "fst" x
-        (sndBindName, sndBind) <- tupleEntry "snd" y
-        let allBinds = fstBind <> sndBind
-            allBindNames = [fstBindName, sndBindName]
-        pure (Program (tupleBinds name (Constr "Pair") allBinds allBindNames))
+        binds <- execWriterT (do
+            tupleEntry "fst" x
+            tupleEntry "snd" y )
+        pure (Program (tupleBinds name (Constr "Pair") binds))
 
 -- | >>> ppr (toStg "triple" ((1,2,3) :: (Int,Int,Int)))
 -- triple = \ =>
@@ -240,13 +246,12 @@ instance (ToStg a, ToStg b) => ToStg (a,b) where
 --         __z = \ -> Int# 3#
 --     in Triple __x __y __z
 instance (ToStg a, ToStg b, ToStg c) => ToStg (a,b,c) where
-    toStgWithGlobals name (x3,y3,z3) = do
-        (xBindName, xBind) <- tupleEntry "x" x3
-        (yBindName, yBind) <- tupleEntry "y" y3
-        (zBindName, zBind) <- tupleEntry "z" z3
-        let allBinds = xBind <> yBind <> zBind
-            allBindNames = [xBindName, yBindName, zBindName]
-        pure (Program (tupleBinds name (Constr "Triple") allBinds allBindNames))
+    toStgWithGlobals name (x,y,z) = do
+        binds <- execWriterT (do
+            tupleEntry "x" x
+            tupleEntry "y" y
+            tupleEntry "z" z )
+        pure (Program (tupleBinds name (Constr "Triple") binds))
 
 -- | >>> ppr (toStg "quadruple" ((1,2,3,4) :: (Int,Int,Int,Int)))
 -- quadruple = \ =>
@@ -257,13 +262,12 @@ instance (ToStg a, ToStg b, ToStg c) => ToStg (a,b,c) where
 --     in Quadruple __w __x __y __z
 instance (ToStg a, ToStg b, ToStg c, ToStg d) => ToStg (a,b,c,d) where
     toStgWithGlobals name (w4,x4,y4,z4) = do
-        (wBindName, wBind) <- tupleEntry "w" w4
-        (xBindName, xBind) <- tupleEntry "x" x4
-        (yBindName, yBind) <- tupleEntry "y" y4
-        (zBindName, zBind) <- tupleEntry "z" z4
-        let allBinds = wBind <> xBind <> yBind <> zBind
-            allBindNames = [wBindName, xBindName, yBindName, zBindName]
-        pure (Program (tupleBinds name (Constr "Quadruple") allBinds allBindNames))
+        binds <- execWriterT (do
+            tupleEntry "w" w4
+            tupleEntry "x" x4
+            tupleEntry "y" y4
+            tupleEntry "z" z4 )
+        pure (Program (tupleBinds name (Constr "Quadruple") binds))
 
 -- | >>> ppr (toStg "quintuple" ((1,2,3,4,5) :: (Int,Int,Int,Int,Int)))
 -- quintuple = \ =>
@@ -275,11 +279,10 @@ instance (ToStg a, ToStg b, ToStg c, ToStg d) => ToStg (a,b,c,d) where
 --     in Quintuple __v __w __x __y __z
 instance (ToStg a, ToStg b, ToStg c, ToStg d, ToStg e) => ToStg (a,b,c,d,e) where
     toStgWithGlobals name (v5,w5,x5,y5,z5) = do
-        (vBindName, vBind) <- tupleEntry "v" v5
-        (wBindName, wBind) <- tupleEntry "w" w5
-        (xBindName, xBind) <- tupleEntry "x" x5
-        (yBindName, yBind) <- tupleEntry "y" y5
-        (zBindName, zBind) <- tupleEntry "z" z5
-        let allBinds = vBind <> wBind <> xBind <> yBind <> zBind
-            allBindNames = [vBindName, wBindName, xBindName, yBindName, zBindName]
-        pure (Program (tupleBinds name (Constr "Quintuple") allBinds allBindNames))
+        binds <- execWriterT (do
+            tupleEntry "v" v5
+            tupleEntry "w" w5
+            tupleEntry "x" x5
+            tupleEntry "y" y5
+            tupleEntry "z" z5 )
+        pure (Program (tupleBinds name (Constr "Quintuple") binds))
