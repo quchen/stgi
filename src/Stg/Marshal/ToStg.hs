@@ -155,8 +155,9 @@ instance ToStg a => ToStg [a] where
             (x:xs) -> do
                 (Just inExpression, letBindings)
                     <- mkListBinds Nothing (NonEmpty.zip [0..] (x :| xs))
+                let rec = if null xs then NonRecursive else Recursive
                 pure (Program (Binds [(name, LambdaForm [] Update []
-                    (Let Recursive letBindings inExpression) )]))
+                    (Let rec letBindings inExpression) )]))
             _nil -> pure (Program (Binds [(name, [QQ.stg| \ => nil |])]))
       where
 
