@@ -4,11 +4,6 @@
 -- This module should be imported qualified, since it heavily conflicts with the
 -- standard Haskell "Prelude".
 module Stg.Prelude (
-    -- * Value injection and extraction
-    ToStg(..),
-    FromStg(..),
-    FromStgError(..),
-
     -- * Maybe
     maybe,
     nothing,
@@ -83,7 +78,6 @@ import Prelude ()
 import Stg.Prelude.Bool
 import Stg.Prelude.Function
 import Stg.Prelude.List
-import Stg.Prelude.Marshal
 import Stg.Prelude.Maybe
 import Stg.Prelude.Number
 import Stg.Prelude.Tuple

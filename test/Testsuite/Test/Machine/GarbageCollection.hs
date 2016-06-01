@@ -18,6 +18,7 @@ import           Stg.Language.Prettyprint
 import           Stg.Machine
 import           Stg.Machine.GarbageCollection.Common
 import           Stg.Machine.Types
+import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude                          as Stg
 
@@ -29,7 +30,7 @@ import Test.Tasty.HUnit
 
 tests :: TestTree
 tests = testGroup "Garbage collection"
-    [ gcTests "Tri-state tracing"       triStateTracing ]
+    [ gcTests "Tri-state tracing" triStateTracing ]
 
 gcTests :: Text -> GarbageCollectionAlgorithm -> TestTree
 gcTests name algorithm = testGroup (T.unpack name)
@@ -107,7 +108,7 @@ fibonacciSumTest algorithm = testCase "Long-running program" test
     -- minimal example displaying the actual issue, however.
     source = mconcat
             [ Stg.add
-            , Stg.toStg "zero" (0 :: Int)
+            , toStg "zero" (0 :: Int)
             , Stg.foldl'
             , Stg.zipWith ] <> [stg|
 

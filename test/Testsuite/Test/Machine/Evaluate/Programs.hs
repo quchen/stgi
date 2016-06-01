@@ -17,6 +17,7 @@ import Data.Monoid
 import Test.Tasty
 
 import           Stg.Machine.Types
+import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
@@ -65,7 +66,7 @@ add3 = machineStateTest defSpec
 takeRepeat :: TestTree
 takeRepeat = machineStateTest defSpec
     { testName = "take 2 (repeat ())"
-    , source = Stg.toStg "two" (2 :: Integer)
+    , source = toStg "two" (2 :: Integer)
             <> Stg.take
             <> Stg.repeat
             <> Stg.foldr
@@ -96,10 +97,10 @@ fibonacci :: TestTree
 fibonacci = machineStateTest defSpec
     { testName = "Fibonacci sequence"
     , source = Stg.equals_List_Int
-            <> Stg.toStg "zero" (0 :: Int)
-            <> Stg.toStg "one" (1 :: Int)
-            <> Stg.toStg "numFibos" (numFibos :: Int)
-            <> Stg.toStg "expectedFibos" (take numFibos fibo)
+            <> toStg "zero" (0 :: Int)
+            <> toStg "one" (1 :: Int)
+            <> toStg "numFibos" (numFibos :: Int)
+            <> toStg "expectedFibos" (take numFibos fibo)
             <> Stg.add
             <> Stg.take
             <> Stg.zipWith
@@ -140,10 +141,10 @@ meanTestTemplate =
                 [ Stg.eq_Int
                 , Stg.add
                 , Stg.div
-                , Stg.toStg "zero" (0 :: Int)
-                , Stg.toStg "one"  (1 :: Int)
-                , Stg.toStg "inputList" inputList
-                , Stg.toStg "expectedOutput" (mean inputList) ]
+                , toStg "zero" (0 :: Int)
+                , toStg "one"  (1 :: Int)
+                , toStg "inputList" inputList
+                , toStg "expectedOutput" (mean inputList) ]
             <> [stg|
             main = \ => case mean inputList of
                 actual -> case eq_Int actual expectedOutput of

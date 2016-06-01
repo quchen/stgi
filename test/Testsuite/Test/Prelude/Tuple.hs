@@ -10,6 +10,7 @@ module Test.Prelude.Tuple (tests) where
 import           Data.Monoid
 import qualified Data.Tuple  as T
 
+import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
@@ -33,8 +34,8 @@ testFst = haskellReferenceTest defSpec
     { testName = "fst"
     , failWithInfo = True
     , source = \(tuple :: (Int, Int)) ->
-           Stg.toStg "tuple" tuple
-        <> Stg.toStg "expectedResult" (fst tuple)
+           toStg "tuple" tuple
+        <> toStg "expectedResult" (fst tuple)
         <> Stg.fst
         <> Stg.eq_Int
         <> [stg|
@@ -49,8 +50,8 @@ testSnd :: TestTree
 testSnd = haskellReferenceTest defSpec
     { testName = "snd"
     , source = \(tuple :: (Int, Int)) ->
-           Stg.toStg "tuple" tuple
-        <> Stg.toStg "expectedResult" (snd tuple)
+           toStg "tuple" tuple
+        <> toStg "expectedResult" (snd tuple)
         <> Stg.snd
         <> Stg.eq_Int
         <> [stg|
@@ -66,9 +67,9 @@ testCurry :: TestTree
 testCurry = haskellReferenceTest defSpec
     { testName = "curry"
     , source = \(x,y :: Int) ->
-           Stg.toStg "x" x
-        <> Stg.toStg "y" y
-        <> Stg.toStg "expectedResult" (x+y)
+           toStg "x" x
+        <> toStg "y" y
+        <> toStg "expectedResult" (x+y)
         <> Stg.curry
         <> Stg.add
         <> Stg.eq_Int
@@ -89,8 +90,8 @@ testUncurry :: TestTree
 testUncurry = haskellReferenceTest defSpec
     { testName = "uncurry"
     , source = \(tuple :: (Int, Int)) ->
-           Stg.toStg "tuple" tuple
-        <> Stg.toStg "expectedResult" (uncurry (+) tuple)
+           toStg "tuple" tuple
+        <> toStg "expectedResult" (uncurry (+) tuple)
         <> Stg.uncurry
         <> Stg.add
         <> Stg.eq_Int
@@ -107,8 +108,8 @@ testSwap :: TestTree
 testSwap = haskellReferenceTest defSpec
     { testName = "swap"
     , source = \(tuple :: (Int, Int)) ->
-           Stg.toStg "tuple" tuple
-        <> Stg.toStg "expectedResult" (T.swap tuple)
+           toStg "tuple" tuple
+        <> toStg "expectedResult" (T.swap tuple)
         <> Stg.swap
         <> Stg.equals_Pair_Int
         <> [stg|

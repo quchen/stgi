@@ -9,6 +9,7 @@ module Test.Prelude.Function (tests) where
 import Data.Function
 import Data.Monoid
 
+import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
@@ -30,7 +31,7 @@ testId :: TestTree
 testId = haskellReferenceTest defSpec
     { testName = "id"
     , source = \(x :: Integer) ->
-           Stg.toStg "x" x
+           toStg "x" x
         <> Stg.eq_Int
         <> Stg.id
         <> [stg|
@@ -46,8 +47,8 @@ testConst :: TestTree
 testConst = haskellReferenceTest defSpec
     { testName = "const"
     , source = \(x :: Integer, y :: Integer) ->
-           Stg.toStg "x" x
-        <> Stg.toStg "y" y
+           toStg "x" x
+        <> toStg "y" y
         <> Stg.eq_Int
         <> Stg.const
         <> [stg|
@@ -64,10 +65,10 @@ testCompose :: TestTree
 testCompose = haskellReferenceTest defSpec
     { testName = "compose (.)"
     , source = \x ->
-           Stg.toStg "x"     (x :: Integer)
-        <> Stg.toStg "two"   (2 :: Integer)
-        <> Stg.toStg "three" (3 :: Integer)
-        <> Stg.toStg "expectedResult" (((*3) . (+2)) x)
+           toStg "x"     (x :: Integer)
+        <> toStg "two"   (2 :: Integer)
+        <> toStg "three" (3 :: Integer)
+        <> toStg "expectedResult" (((*3) . (+2)) x)
         <> Stg.eq_Int
         <> Stg.add
         <> Stg.mul
@@ -90,10 +91,10 @@ testFix :: TestTree
 testFix = haskellReferenceTest defSpec
     { testName = "fix"
     , source = \(NonNegative (n :: Integer)) ->
-           Stg.toStg "n" n
-        <> Stg.toStg "zero" (0 :: Integer)
-        <> Stg.toStg "one" (1 :: Integer)
-        <> Stg.toStg "expectedResult"
+           toStg "n" n
+        <> toStg "zero" (0 :: Integer)
+        <> toStg "one" (1 :: Integer)
+        <> toStg "expectedResult"
                    (let fac' = \rec m -> if m == 0 then 1 else m * rec (m-1)
                         fac = fix fac'
                     in fac n )

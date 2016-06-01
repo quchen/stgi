@@ -33,13 +33,15 @@ library
                      , Stg.Machine.GarbageCollection.TriStateTracing
                      , Stg.Machine.Heap
                      , Stg.Machine.Types
+                     , Stg.Marshal
+                     , Stg.Marshal.FromStg
+                     , Stg.Marshal.ToStg
                      , Stg.Parser.Parser
                      , Stg.Parser.QuasiQuoter
                      , Stg.Prelude
                      , Stg.Prelude.Bool
                      , Stg.Prelude.Function
                      , Stg.Prelude.List
-                     , Stg.Prelude.Marshal
                      , Stg.Prelude.Maybe
                      , Stg.Prelude.Number
                      , Stg.Prelude.Tuple

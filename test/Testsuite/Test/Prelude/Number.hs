@@ -10,6 +10,7 @@ import Data.Monoid
 import Data.Text   (Text)
 
 import           Stg.Language
+import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
@@ -55,9 +56,9 @@ testComparison
 testComparison name  haskellRef stgFuncDef = haskellReferenceTest defSpec
     { testName = name
     , source = \(x, y) ->
-           Stg.toStg "x" x
-        <> Stg.toStg "y" y
-        <> Stg.toStg "expectedResult" (haskellRef x y)
+           toStg "x" x
+        <> toStg "y" y
+        <> toStg "expectedResult" (haskellRef x y)
         <> Stg.eq_Bool
         <> stgFuncDef
         <> [stg|
@@ -86,9 +87,9 @@ testArithmetic
 testArithmetic name  haskellRef stgFuncDef = haskellReferenceTest defSpec
     { testName = name
     , source = \(x, NonZero y) ->
-           Stg.toStg "x" x
-        <> Stg.toStg "y" y
-        <> Stg.toStg "expectedResult" (haskellRef x y)
+           toStg "x" x
+        <> toStg "y" y
+        <> toStg "expectedResult" (haskellRef x y)
         <> Stg.eq_Int
         <> stgFuncDef
         <> [stg|
@@ -105,9 +106,9 @@ testMin :: TestTree
 testMin = haskellReferenceTest defSpec
     { testName = "min"
     , source = \(x, y :: Int) ->
-           Stg.toStg "x" x
-        <> Stg.toStg "y" y
-        <> Stg.toStg "expectedResult" (min x y)
+           toStg "x" x
+        <> toStg "y" y
+        <> toStg "expectedResult" (min x y)
         <> Stg.min
         <> Stg.eq_Int
         <> [stg|
@@ -124,9 +125,9 @@ testMax :: TestTree
 testMax = haskellReferenceTest defSpec
     { testName = "max"
     , source = \(x, y :: Int) ->
-           Stg.toStg "x" x
-        <> Stg.toStg "y" y
-        <> Stg.toStg "expectedResult" (max x y)
+           toStg "x" x
+        <> toStg "y" y
+        <> toStg "expectedResult" (max x y)
         <> Stg.max
         <> Stg.eq_Int
         <> [stg|

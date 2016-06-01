@@ -7,6 +7,7 @@ module Test.Prelude.Maybe (tests) where
 
 
 
+import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
@@ -24,10 +25,10 @@ testMaybe :: TestTree
 testMaybe = haskellReferenceTest defSpec
     { testName = "maybe"
     , source = \(nothingCase, maybeInt :: Maybe Int, offset) -> mconcat
-        [ Stg.toStg "nothingCase" nothingCase
-        , Stg.toStg "maybeInt" maybeInt
-        , Stg.toStg "offset" offset
-        , Stg.toStg "expectedResult" (maybe nothingCase (+offset) maybeInt)
+        [ toStg "nothingCase" nothingCase
+        , toStg "maybeInt" maybeInt
+        , toStg "offset" offset
+        , toStg "expectedResult" (maybe nothingCase (+offset) maybeInt)
         , Stg.maybe
         , Stg.add
         , Stg.eq_Int

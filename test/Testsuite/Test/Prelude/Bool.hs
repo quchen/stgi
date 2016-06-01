@@ -9,6 +9,7 @@ module Test.Prelude.Bool (tests) where
 import Data.Bool
 import Data.Monoid
 
+import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
@@ -29,9 +30,9 @@ testAnd2 :: TestTree
 testAnd2 = haskellReferenceTest defSpec
     { testName = "and2 (&&)"
     , source = \(b1, b2) ->
-           Stg.toStg "b1" b1
-        <> Stg.toStg "b2" b2
-        <> Stg.toStg "expectedResult" (b1 && b2)
+           toStg "b1" b1
+        <> toStg "b2" b2
+        <> toStg "expectedResult" (b1 && b2)
         <> Stg.eq_Bool
         <> Stg.and2
         <> [stg|
@@ -46,9 +47,9 @@ testOr2 :: TestTree
 testOr2 = haskellReferenceTest defSpec
     { testName = "or2 (||)"
     , source = \(b1, b2) ->
-           Stg.toStg "b1" b1
-        <> Stg.toStg "b2" b2
-        <> Stg.toStg "expectedResult" (b1 || b2)
+           toStg "b1" b1
+        <> toStg "b2" b2
+        <> toStg "expectedResult" (b1 || b2)
         <> Stg.eq_Bool
         <> Stg.or2
         <> [stg|
@@ -63,8 +64,8 @@ testNot :: TestTree
 testNot = haskellReferenceTest defSpec
     { testName = "not"
     , source = \b ->
-           Stg.toStg "b" b
-        <> Stg.toStg "expectedResult" (not b)
+           toStg "b" b
+        <> toStg "expectedResult" (not b)
         <> Stg.eq_Bool
         <> Stg.not
         <> [stg|
@@ -83,10 +84,10 @@ testBool = haskellReferenceTest defSpec
     , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = const False
     , source = \(t :: Integer, f, p) ->
-           Stg.toStg "p" p
-        <> Stg.toStg "t" t
-        <> Stg.toStg "f" f
-        <> Stg.toStg "expectedResult" (bool t f p)
+           toStg "p" p
+        <> toStg "t" t
+        <> toStg "f" f
+        <> toStg "expectedResult" (bool t f p)
         <> Stg.eq_Int
         <> Stg.bool
         <> [stg|

@@ -56,6 +56,7 @@ module Stg.ExamplePrograms (
 
 import           Data.Monoid
 import           Stg.Language
+import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
@@ -65,8 +66,8 @@ import qualified Stg.Prelude            as Stg
 sumTemplate :: [Integer] -> Program
 sumTemplate list = mconcat
     [ Stg.add
-    , Stg.toStg "zero" (0 :: Integer)
-    , Stg.toStg "list" list
+    , toStg "zero" (0 :: Integer)
+    , toStg "list" list
     , [program| main = \ => sum list |]]
 
 -- | Sum up a list of 'Integer's using
@@ -163,7 +164,7 @@ sum_foldr list = mconcat
 fibonacciZipWith :: Program
 fibonacciZipWith = mconcat
     [ Stg.add
-    , Stg.toStg "zero" (0 :: Integer)
+    , toStg "zero" (0 :: Integer)
     , Stg.foldl'
     , Stg.zipWith
     , [program|
@@ -209,8 +210,8 @@ fibonacciNaive n = mconcat
     [ Stg.add
     , Stg.leq_Int
     , Stg.sub
-    , Stg.toStg "one" (1 :: Integer)
-    , Stg.toStg "n" n
+    , toStg "one" (1 :: Integer)
+    , toStg "n" n
     , [program|
     main = \ =>
         letrec
@@ -242,9 +243,9 @@ fibonacciImproved n = mconcat
     [ Stg.add
     , Stg.leq_Int
     , Stg.sub
-    , Stg.toStg "zero" (0 :: Integer)
-    , Stg.toStg "one" (1 :: Integer)
-    , Stg.toStg "n" n
+    , toStg "zero" (0 :: Integer)
+    , toStg "one" (1 :: Integer)
+    , toStg "n" n
     , [program|
     main = \ =>
         letrec
@@ -268,16 +269,16 @@ fibonacciImproved n = mconcat
 -- This computation is __linear__ in the number of elements of the sublists.
 listConcatRightAssociated :: Program
 listConcatRightAssociated = mconcat
-    [ Stg.toStg "list0" [0 :: Integer]
-    , Stg.toStg "list1" [1 :: Integer]
-    , Stg.toStg "list2" [2 :: Integer]
-    , Stg.toStg "list3" [3 :: Integer]
-    , Stg.toStg "list4" [4 :: Integer]
-    , Stg.toStg "list5" [5 :: Integer]
-    , Stg.toStg "list6" [6 :: Integer]
-    , Stg.toStg "list7" [7 :: Integer]
-    , Stg.toStg "list8" [8 :: Integer]
-    , Stg.toStg "list9" [9 :: Integer]
+    [ toStg "list0" [0 :: Integer]
+    , toStg "list1" [1 :: Integer]
+    , toStg "list2" [2 :: Integer]
+    , toStg "list3" [3 :: Integer]
+    , toStg "list4" [4 :: Integer]
+    , toStg "list5" [5 :: Integer]
+    , toStg "list6" [6 :: Integer]
+    , toStg "list7" [7 :: Integer]
+    , toStg "list8" [8 :: Integer]
+    , toStg "list9" [9 :: Integer]
     , Stg.concat2
     , Stg.nil
     , [program|
