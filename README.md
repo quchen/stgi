@@ -1,10 +1,12 @@
-STG interpreter [![](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
-===============
+STGi - STG interpreter
+======================
 
-A user-centric visual STG implementation to help understand Haskell's execution
+STGi is a visual STG implementation to help understand Haskell's execution
 model.
 
 ![](screenshot.png)
+
+[![](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
 
 
 About the machine
@@ -44,63 +46,48 @@ The STG is
 Useful applications
 -------------------
 
-These are some of the questions the STG answers:
+These are some of the questions STGi answers:
 
 1. Does this leak memory? If yes, then on the heap or on the stack, and why?
 2. I heard GHC doesn't have a call stack. How does that work?
 3. Why is this value not garbage collected?
+4. Do linked lists have bad performance?
 
 
-Differences from the 1992 paper
--------------------------------
-
-### Grammar
-
-- Function application uses no parentheses or commas like in Haskell `f x y z`,
-  not with curly parentheses and commas like in the paper `f {x,y,z}`.
-- Comment syntax like in Haskell
-- Constructors can end with a `#` to allow labelling primitive boxes
-  e.g. with `Int#`.
-- A lambda's head is written `\(free) bound -> body`, where `free` and
-  `bound` are space-separated variable lists, instead of the paper's
-  `{free} \n {bound} -> body`, which uses comma-separated lists. The
-  update flag `\u` is signified using a double arrow `=>` instead of the
-  normal arrow `->`.
-
-### Evaluation
-
-- The three stacks from the operational semantics given in the paper - argument,
-  return, and update - are unified into a single one, since they run
-  synchronously anyway. This makes the current location in the evaluation much
-  clearer, since the stack is always popped from the top. For example, having a
-  return frame at the top means the program is close to a `case` expression.
-- There are different objects on the heap, not just closures:
-    - Closures are all represented alike, but classified for the user in the
-      visual output:
-        - Constructors are closures with a constructor application body, and
-          only free variables.
-        - Other closures with only free variables are thunks.
-        - Closures with non-empty argument lists are functions.
-    - Black holes overwrite updatable closures upon entering, allowing for
-      `<<loop>>` detection and avoiding certain space leaks (... apparently,
-      at least the 1992 paper says so).
-
-
-GHC's current STG
------------------
-
-Since 1992, the STG has undergone one notable revision, documented in [the 2004
-paper *How to make a fast curry*][fastcurry], which treats function application
-a bit different. I don't have plans to support this evaluation model right now,
-but it's on my list of long-term goals (alongside the current push/enter).
-
-
-Short language introduction
----------------------------
+Language introduction
+---------------------
 
 The STG language can be seen as a mostly simplified version of Haskell with a
-couple of lower level additions. Most importantly, STG is a wholly untyped
-language.
+couple of lower level additions. The largest difference is probably that STG is
+an untyped language.
+
+The syntax will be discussed below. For now, as an appetizer, the familiar
+Haskell code
+
+```haskell
+foldl' f acc xs = case xs of
+    [] -> acc
+    y:ys -> case f acc y of
+        !acc' -> foldl' f acc' ys
+
+sum = foldl' add 0
+```
+
+could be translated to
+
+```haskell
+foldl' = \f acc xs -> case xs of
+    Nil -> acc;
+    Cons y ys -> case f acc y of
+        acc' -> foldl' f acc' ys;
+    badList -> Error_foldl' badList;
+
+sum = \ -> foldl' add zero;
+
+zero = \ -> Int# 0#
+```
+
+
 
 
 ### Top-level
@@ -366,6 +353,17 @@ navigate through the execution.
 
 
 
+### Marshalling values
+
+The `Stg.Marshal` module provides functions to inject Haskell values into the
+STG (`toStg`), and extract them from a machine state again (`toStg`). These
+functions are tremendously useful in practice, make use of them! After chasing a
+list value on the heap manually, you'll know the value of `fromStg`, and in
+order to get data structures into the STG you have to write a lot of code, and
+be careful doing it at that.
+
+
+
 ### Special conditions
 
 #### Unhelpful error?
@@ -402,6 +400,50 @@ thunk is currently evaluated, but have two useful technical benefits:
  interpreter to catch some non-terminating computations with a useful error
 
 
+
+Differences from the 1992 paper
+-------------------------------
+
+### Grammar
+
+- Function application uses no parentheses or commas like in Haskell `f x y z`,
+  not with curly parentheses and commas like in the paper `f {x,y,z}`.
+- Comment syntax like in Haskell
+- Constructors can end with a `#` to allow labelling primitive boxes
+  e.g. with `Int#`.
+- A lambda's head is written `\(free) bound -> body`, where `free` and
+  `bound` are space-separated variable lists, instead of the paper's
+  `{free} \n {bound} -> body`, which uses comma-separated lists. The
+  update flag `\u` is signified using a double arrow `=>` instead of the
+  normal arrow `->`.
+
+### Evaluation
+
+- The three stacks from the operational semantics given in the paper - argument,
+  return, and update - are unified into a single one, since they run
+  synchronously anyway. This makes the current location in the evaluation much
+  clearer, since the stack is always popped from the top. For example, having a
+  return frame at the top means the program is close to a `case` expression.
+- There are different objects on the heap, not just closures:
+    - Closures are all represented alike, but classified for the user in the
+      visual output:
+        - Constructors are closures with a constructor application body, and
+          only free variables.
+        - Other closures with only free variables are thunks.
+        - Closures with non-empty argument lists are functions.
+    - Black holes overwrite updatable closures upon entering, allowing for
+      `<<loop>>` detection and avoiding certain space leaks (... apparently,
+      at least the 1992 paper says so).
+
+
+
+GHC's current STG
+-----------------
+
+Since 1992, the STG has undergone one notable revision, documented in [the 2004
+paper *How to make a fast curry*][fastcurry], which treats function application
+a bit different. I don't have plans to support this evaluation model right now,
+but it's on my list of long-term goals (alongside the current push/enter).
 
 
 

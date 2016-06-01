@@ -3,7 +3,7 @@
 set -euo pipefail
 
 stack test                    --ghc-options -Werror
-stack test --flag stg:doctest --ghc-options -Werror
+stack test --flag stgi:doctest --ghc-options -Werror
 stack haddock --no-haddock-deps
 stack sdist
 hlint src test app

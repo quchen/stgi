@@ -87,7 +87,7 @@ instance ToStg Bool where
         (AppC (Constr (show' b)) []) )])
 
 -- | >>> ppr (toStg "maybe" (Nothing :: Maybe Int))
--- maybe = \ -> nothing;
+-- maybe = \ => nothing;
 -- nothing = \ -> Nothing
 --
 -- >>> ppr (toStg "maybe" (Just 1 :: Maybe Int))
@@ -136,7 +136,7 @@ instance (ToStg a, ToStg b) => ToStg (Either a b) where
             chooseEither _ r (Right _) = r
 
 -- | >>> ppr (toStg "list" ([] :: [Int]))
--- list = \ -> nil;
+-- list = \ => nil;
 -- nil = \ -> Nil
 --
 -- >>> ppr (toStg "list" [1, 2, 3 :: Int])

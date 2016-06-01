@@ -56,7 +56,7 @@ data FromStgError =
     | IsNotCon            -- ^ Tried retrieving a thunk
     | IsBlackhole         -- ^ Tried retrieving a black hole
     | BadConArity         -- ^ e.g. @Cons x y z@
-    | NotFound NotInScope -- ^ A variable lookup unsuccessful
+    | NotFound NotInScope -- ^ An unsuccessful variable lookup
     | AddrNotOnHeap
     | NoConstructorMatch  -- ^ None of the given alternatives matched the given
                           -- constructor, e.g. when trying to receive a 'Left'

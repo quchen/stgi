@@ -37,7 +37,7 @@ script:
 
     # Tests
     - stack $ARGS --no-terminal test --ghc-options -Werror
-    - stack $ARGS --no-terminal test --flag stg:doctest --ghc-options -Werror
+    - stack $ARGS --no-terminal test --flag stgi:doctest --ghc-options -Werror
     - stack $ARGS --no-terminal haddock --no-haddock-deps
 
     - stack $ARGS --no-terminal sdist

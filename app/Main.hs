@@ -60,7 +60,7 @@ main = do
         Nothing -> hSupportsANSI stdout
     let numStates = optNumStates opts
 
-    let prog = Example.sum_foldr [1..5]
+    let prog = Example.sum_foldl' [1..5]
     if ansi
         then runForPager prettyprint      numStates prog
         else runForPager prettyprintPlain numStates prog
