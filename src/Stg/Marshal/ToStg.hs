@@ -97,7 +97,7 @@ instance ToStg Bool where
 instance ToStg a => ToStg (Maybe a) where
     toStgWithGlobals name Nothing = do
         tell Stg.nothing
-        pure (Program (Binds [(name, [QQ.stg| \ -> nothing |])]))
+        pure (Program (Binds [(name, [QQ.stg| \ => nothing |])]))
     toStgWithGlobals name (Just x) = do
         Program xBinding <- toStgWithGlobals justBindName x
         pure (Program (Binds [
@@ -157,7 +157,7 @@ instance ToStg a => ToStg [a] where
                     <- mkListBinds Nothing (NonEmpty.zip [0..] (x :| xs))
                 pure (Program (Binds [(name, LambdaForm [] Update []
                     (Let Recursive letBindings inExpression) )]))
-            _nil -> pure (Program (Binds [(name, [QQ.stg| \ -> nil |])]))
+            _nil -> pure (Program (Binds [(name, [QQ.stg| \ => nil |])]))
       where
 
         mkConsVar :: Int -> Var

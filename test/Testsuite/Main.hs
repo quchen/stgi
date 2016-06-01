@@ -7,6 +7,7 @@ import Data.Monoid
 
 import qualified Test.Language as Language
 import qualified Test.Machine  as Machine
+import qualified Test.Marshal  as Marshal
 import qualified Test.Parser   as Parser
 import qualified Test.Prelude  as Prelude
 import qualified Test.Stack    as Stack
@@ -51,5 +52,6 @@ tests = testGroup "STG"
     [ Stack.tests
     , Parser.tests
     , Machine.tests
+    , Marshal.tests
     , Language.tests
     , Prelude.tests ]
