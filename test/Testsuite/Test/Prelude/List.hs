@@ -184,7 +184,6 @@ foldSumTemplate foldName foldF foldStg failP
     { testName = foldName
     , maxSteps = 1024
     , failWithInfo = False
-    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = failP
     , source = \(z :: Int, xs) ->
            foldStg
@@ -224,7 +223,6 @@ testReverse = haskellReferenceTest defSpec
     { testName = "reverse"
     , maxSteps = 1024
     , failWithInfo = True
-    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = const False
     , source = \(xs :: [Int]) ->
            Stg.equals_List_Int
@@ -287,7 +285,6 @@ testReplicate = haskellReferenceTest defSpec
     { testName = "replicate"
     , maxSteps = 1024
     , failWithInfo = True
-    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = \stgState -> case stgCode stgState of
         Eval AppP {} _ -> True
         _ -> False

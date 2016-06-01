@@ -81,7 +81,6 @@ testBool = haskellReferenceTest defSpec
     { testName = "bool"
     , maxSteps = 1024
     , failWithInfo = True
-    , successPredicate = "main" ===> [stg| \ -> Success |]
     , failPredicate = const False
     , source = \(t :: Integer, f, p) ->
            toStg "p" p
