@@ -225,8 +225,10 @@ matchCon1 _ _ = Left Nothing
 --
 -- * If the constructor matches, return its arguments, and the local environment
 --   stored in the closure.
--- * If the constructor does not match, the generated error.
--- * If the constructor does not match, return 'Nothing' as error.
+-- * If the constructor does not match, return 'Nothing' as error, indicating
+--   to the caller that the next matcher should be tried.
+-- * If the constructor fails due to a non-recoverable error, such as wrong
+--   arity, abort with the corresponding error.
 matchCon2 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom), Locals)
 matchCon2 _ closure
     | isNotCon closure = Left (Just IsNotCon)
