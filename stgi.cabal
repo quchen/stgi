@@ -11,7 +11,12 @@ maintainer:          David Luposchainsky <dluposchainsky (λ) gmail (dot) com>
 copyright:           David Luposchainsky <dluposchainsky (λ) gmail (dot) com>
 category:            Development
 build-type:          Simple
--- extra-source-files:
+extra-source-files:  .stylish-haskell.yaml
+                   , HLint.hs
+                   , LICENSE.md
+                   , README.md
+                   , screenshot.png
+                   , stack.yaml
 cabal-version:       >=1.10
 
 Flag doctest

@@ -30,7 +30,7 @@ before_install:
     - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 
     - stack --no-terminal setup
-    - stack --no-terminal install hlint hscolour
+    - stack --no-terminal install hlint hscolour cabal-install
 
 script:
     - stack $ARGS --no-terminal build --ghc-options -Werror
@@ -41,6 +41,7 @@ script:
     - stack $ARGS --no-terminal haddock --no-haddock-deps
 
     - stack $ARGS --no-terminal sdist
+    - cabal check
     - hlint src test app
 
 # Caching so the next build will be fast too.

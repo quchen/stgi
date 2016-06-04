@@ -6,4 +6,5 @@ stack test                    --ghc-options -Werror
 stack test --flag stgi:doctest --ghc-options -Werror
 stack haddock --no-haddock-deps
 stack sdist
+cabal check
 hlint src test app
