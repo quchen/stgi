@@ -6,6 +6,11 @@
 -- during execution.
 module Stg.ExamplePrograms (
 
+    -- * Simple introductory programs
+
+        addTwoNumbers,
+        calculateLength,
+
     -- * Sum of list
 
         -- ** via 'Data.Foldable.foldl''
@@ -59,6 +64,29 @@ import           Stg.Language
 import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
+
+
+
+
+
+-- | A program that adds two numbers.
+addTwoNumbers :: Integer -> Integer -> Program
+addTwoNumbers x y = mconcat
+    [ Stg.add
+    , toStg "x" x
+    , toStg "y" y
+    , [program|
+    main = \ => case add x y of r -> r
+    |]]
+
+-- | A program that measures the length of a list.
+calculateLength :: [Integer] -> Program
+calculateLength xs = mconcat
+    [ Stg.length
+    , toStg "xs" xs
+    , [program|
+    main = \ => case length xs of r -> r
+    |]]
 
 
 
