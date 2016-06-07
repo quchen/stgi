@@ -22,6 +22,7 @@ module Stg.Prelude (
     repeat,
     replicate,
     sort,
+    naiveSort,
     map,
     length,
     zip,

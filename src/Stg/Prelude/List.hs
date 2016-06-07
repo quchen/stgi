@@ -16,6 +16,7 @@ module Stg.Prelude.List (
     repeat,
     replicate,
     sort,
+    naiveSort,
     map,
     equals_List_Int,
     length,
@@ -32,6 +33,7 @@ import Data.Monoid
 
 import Stg.Language
 import Stg.Parser.QuasiQuoter
+import Stg.Prelude.Function   as Func
 import Stg.Prelude.Number     as Num
 
 -- $setup
@@ -43,7 +45,7 @@ import Stg.Prelude.Number     as Num
 
 nil, concat2, foldl, foldl', foldr, iterate, cycle, take, filter,
     repeat, replicate, sort, map, equals_List_Int, length, zip, zipWith,
-    reverse, forceSpine :: Program
+    reverse, forceSpine, naiveSort :: Program
 
 
 -- | The empty list as a top-level closure.
@@ -252,30 +254,122 @@ replicate = [program|
             badInt -> Error_replicate badInt
     |]
 
--- | That Haskell sort function often misleadingly referred to as "quicksort".
+-- | Haskell's Prelude sort function at the time of implementing this.
+-- Not quite as pretty as the Haskell version, but functionally equivalent. :-)
+--
+-- This implementation is particularly efficient when the input contains runs of
+-- already sorted elements. For comparison, sorting [1..100] takes  6496 steps,
+-- whereas 'naiveSort' requires 268082.
 --
 -- @
 -- sort : [Int] -> [Int]
 -- @
-sort = mconcat [leq_Int, gt_Int, filter, concat2] <> [program|
-    sort = \xs -> case xs of
+sort = mconcat [gt_Int, Func.compose, nil] <> [program|
+    sort = \ =>
+        letrec
+            sequences = \(descending ascending) xs2 -> case xs2 of
+                Cons a xs1 -> case xs1 of
+                    Cons b xs -> case gt_Int a b of
+                        True -> let aList = \(a) -> Cons a nil
+                                in descending b aList xs;
+                        False -> let aCons = \(a) as -> Cons a as
+                                 in ascending b aCons xs;
+                        badBool -> Error_sort_sequences1 badBool;
+                    Nil -> Cons xs2 nil;
+                    badList -> Error_sort_sequences2 badList;
+                Nil -> Cons xs2 nil;
+                badList -> Error_sort_sequences3 badList;
+
+            descending = \(descending sequences) a as bbs ->
+                letrec
+                    aas = \(a as) -> Cons a as;
+                    fallthrough = \(sequences aas bbs) ->
+                        let sequencesBs = \(sequences bbs) -> sequences bbs
+                        in Cons aas sequencesBs
+                in case bbs of
+                    Cons b bs -> case gt_Int a b of
+                        True -> descending b aas bs;
+                        False -> fallthrough;
+                        badBool -> Error_sort_descending1 badBool;
+                    Nil -> fallthrough;
+                    badList -> Error_sort_descending2 badList;
+
+            ascending = \(ascending sequences) a as bbs ->
+                letrec
+                    asa = \(a as) ys ->
+                        let aConsYs = \(a ys) -> Cons a ys
+                        in as aConsYs;
+                    fallthrough = \(sequences asa bbs) ->
+                        let sequencesBs = \(sequences bbs) -> sequences bbs;
+                            asaNil = \(asa) -> asa nil
+                        in Cons asaNil sequencesBs
+                in case bbs of
+                    Cons b bs -> case gt_Int a b of
+                        False -> ascending b asa bs;
+                        True -> fallthrough;
+                        badBool -> Error_sort_ascescending1 badBool;
+                    Nil -> fallthrough;
+                    badList -> Error_sort_ascescending2 badList;
+
+            mergeAll = \(mergeAll mergePairs) xs -> case xs of
+                Cons y ys -> case ys of
+                    Nil -> y;
+                    Cons _1 _2 -> compose mergeAll mergePairs xs;
+                    badList -> Error_sort_mergeAll1 badList;
+                Nil -> Error_sort_mergeAll_emptyListAsArgument;
+                badList -> Error_sort_mergeAll2 badList;
+
+            mergePairs = \(merge mergePairs) zs -> case zs of
+                Cons a ys -> case ys of
+                    Cons b xs ->
+                        let mergeAB = \(merge a b) -> merge a b;
+                            mergePairsXs = \(mergePairs xs) -> mergePairs xs
+                        in Cons mergeAB mergePairsXs;
+                    Nil -> zs;
+                    badList -> Error_sort_mergePairs1 badList;
+                Nil -> zs;
+                badList -> Error_sort_mergePairs2 badList;
+
+            merge = \(merge) as bs -> case as of
+                Cons a as' -> case bs of
+                    Cons b bs' -> case gt_Int a b of
+                        True ->
+                            let mergeAsBs' = \(merge as bs') -> merge as bs'
+                            in Cons b mergeAsBs';
+                        False ->
+                            let mergeAs'Bs = \(merge as' bs) -> merge as' bs
+                            in Cons a mergeAs'Bs;
+                        badBool -> Error_sort_merge3 badBool;
+                    Nil -> as;
+                    badList -> Error_sort_merge2 badList;
+                Nil -> bs;
+                badList -> Error_sort_merge1 badList
+
+        in compose mergeAll sequences |]
+
+-- | That Haskell sort function often misleadingly referred to as "quicksort".
+--
+-- @
+-- naiveSort : [Int] -> [Int]
+-- @
+naiveSort = mconcat [leq_Int, gt_Int, filter, concat2] <> [program|
+    naiveSort = \xs -> case xs of
         Nil -> Nil;
         Cons pivot xs' ->
             let beforePivotSorted = \(pivot xs') =>
                     letrec
                         atMostPivot = \(pivot) y -> leq_Int  y pivot;
                         beforePivot = \(xs' atMostPivot) => filter atMostPivot xs'
-                    in sort beforePivot;
+                    in naiveSort beforePivot;
 
                 afterPivotSorted = \(pivot xs') =>
                     letrec
                         moreThanPivot = \(pivot) y -> gt_Int y pivot;
                         afterPivot    = \(xs' moreThanPivot) => filter moreThanPivot  xs'
-                    in sort afterPivot
+                    in naiveSort afterPivot
             in  let fromPivotOn = \(pivot afterPivotSorted) -> Cons pivot afterPivotSorted
                 in concat2 beforePivotSorted fromPivotOn;
-        badList -> Error_sort badList
-    |]
+        badList -> Error_sort badList |]
 
 -- | Apply a function to each element of a list.
 --

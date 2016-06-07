@@ -51,7 +51,8 @@ module Stg.ExamplePrograms (
         listConcatLeftAssociated,
 
     -- * Sorting
-    simpleSort,
+    naiveSort,
+    librarySort,
 
     -- * Sharing
 
@@ -343,8 +344,19 @@ listConcatLeftAssociated xss = mconcat
 -- Note that this is not Quicksort itself, as one key feature of it is sorting
 -- in-place. In particular, this algorithm is not all that quick, as it takes
 -- almost a thousand steps to reach the final state when sorting @[5,4,3,2,1]@.
-simpleSort :: [Integer] -> Program
-simpleSort xs =
+naiveSort :: [Integer] -> Program
+naiveSort xs =
+    toStg "xs" xs
+    <> Stg.forceSpine
+    <> Stg.naiveSort
+    <> [program|
+        sorted = \ => naiveSort xs;
+        main = \ => forceSpine sorted |]
+
+-- | Sort a list with a translation of Haskell's 'Data.List.sort', which is
+-- an implementation of mergesort with ordered sublist detection.
+librarySort :: [Integer] -> Program
+librarySort xs =
     toStg "xs" xs
     <> Stg.forceSpine
     <> Stg.sort

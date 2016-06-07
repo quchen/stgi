@@ -33,7 +33,9 @@ tests = testGroup "List"
     , testIterate
     , testRepeat
     , testReplicate
-    , testSort
+    , testGroup "Sort"
+        [ testSort
+        , testNaiveSort ]
     , testFilter
     , testMap
     , testZip
@@ -67,7 +69,8 @@ testFilter = haskellReferenceTest defSpec
 
 testSort :: TestTree
 testSort = haskellReferenceTest defSpec
-    { testName = "sort"
+    { testName = "sort (Haskell/base version)"
+    , failWithInfo = True
     , source = \(xs :: [Int]) ->
            toStg "inputList" xs
         <> toStg "expectedResult" (L.sort xs)
@@ -77,6 +80,23 @@ testSort = haskellReferenceTest defSpec
 
         main = \ =>
             let sorted = \ => sort inputList
+            in case equals_List_Int expectedResult sorted of
+                True  -> Success;
+                wrong -> TestFail wrong
+        |] }
+
+testNaiveSort :: TestTree
+testNaiveSort = haskellReferenceTest defSpec
+    { testName = "sort (naive version)"
+    , source = \(xs :: [Int]) ->
+           toStg "inputList" xs
+        <> toStg "expectedResult" (L.sort xs)
+        <> Stg.equals_List_Int
+        <> Stg.naiveSort
+        <> [stg|
+
+        main = \ =>
+            let sorted = \ => naiveSort inputList
             in case equals_List_Int expectedResult sorted of
                 True  -> Success;
                 wrong -> TestFail wrong
