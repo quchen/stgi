@@ -289,29 +289,11 @@ fibonacciImproved n = mconcat
         in fib n
     |]]
 
--- | Force the right-associated concatenation
---
--- @
--- [0] '++' ([1] '++' ([2] '++' ([3] '++' ([4] '++' ([5] '++' ([6] '++' ([7] '++' ([8] '++' [9]))))))))
--- @
---
--- and store it in the @main@ closure.
---
--- This computation is __linear__ in the number of elements of the sublists.
-listConcatRightAssociated :: Program
-listConcatRightAssociated = mconcat
-    [ toStg "list0" [0 :: Integer]
-    , toStg "list1" [1 :: Integer]
-    , toStg "list2" [2 :: Integer]
-    , toStg "list3" [3 :: Integer]
-    , toStg "list4" [4 :: Integer]
-    , toStg "list5" [5 :: Integer]
-    , toStg "list6" [6 :: Integer]
-    , toStg "list7" [7 :: Integer]
-    , toStg "list8" [8 :: Integer]
-    , toStg "list9" [9 :: Integer]
+-- | List concatenation example with the 'concat' definition left out.
+listConcatTemplate :: [[Integer]] -> Program
+listConcatTemplate xss = mconcat
+    [ toStg "xss" xss
     , Stg.concat2
-    , Stg.nil
     , [program|
 
     forceList = \xs -> case xs of
@@ -319,48 +301,41 @@ listConcatRightAssociated = mconcat
         Cons _ xs' -> forceList xs';
         _ -> BadListError;
 
-    concatenated = \ =>
-        letrec
-            list0123456789 = \(list123456789) => concat2 list0 list123456789;
-            list123456789  = \(list23456789)  => concat2 list1 list23456789;
-            list23456789   = \(list3456789)   => concat2 list2 list3456789;
-            list3456789    = \(list456789)    => concat2 list3 list456789;
-            list456789     = \(list56789)     => concat2 list4 list56789;
-            list56789      = \(list6789)      => concat2 list5 list6789;
-            list6789       = \(list789)       => concat2 list6 list789;
-            list789        = \(list89)        => concat2 list7 list89;
-            list89         = \                => concat2 list8 list9
-        in list0123456789;
-
+    concatenated = \ => concat xss;
     main = \ => case forceList concatenated of
         _ -> concatenated
 
     |]]
 
--- | Force the left-associated concatenation
+-- | Force a right-associated concatenation
 --
 -- @
--- (((((((([0] '++' [1]) '++' [2]) '++' [3]) '++' [4]) '++' [5]) '++' [6]) '++' [7]) '++' [8]) '++' [9]
+-- [0] '++' ([1] '++' ([2] '++' ([3])))
+-- @
+--
+-- and store it in the @main@ closure.
+--
+-- This computation is __linear__ in the number of elements of the sublists.
+listConcatRightAssociated :: [[Integer]] -> Program
+listConcatRightAssociated xss = mconcat
+    [ listConcatTemplate xss
+    , Stg.foldr
+    , [program| concat = \ -> foldr concat2 nil |]]
+
+-- | Force a left-associated concatenation
+--
+-- @
+-- (([0] '++' [1]) '++' [2]) '++' [3]
 -- @
 --
 -- and store it in the @main@ closure.
 --
 -- This computation is __quadratic__ in the number of elements of the sublists.
-listConcatLeftAssociated :: Program
-listConcatLeftAssociated = listConcatRightAssociated <> [program|
-    concatenated = \ =>
-        letrec
-            list01         = \                => concat2 list0         list1;
-            list012        = \(list01)        => concat2 list01        list2;
-            list0123       = \(list012)       => concat2 list012       list3;
-            list01234      = \(list0123)      => concat2 list0123      list4;
-            list012345     = \(list01234)     => concat2 list01234     list5;
-            list0123456    = \(list012345)    => concat2 list012345    list6;
-            list01234567   = \(list0123456)   => concat2 list0123456   list7;
-            list012345678  = \(list01234567)  => concat2 list01234567  list8;
-            list0123456789 = \(list012345678) => concat2 list012345678 list9
-        in list0123456789
-    |]
+listConcatLeftAssociated :: [[Integer]] -> Program
+listConcatLeftAssociated xss = mconcat
+    [ listConcatTemplate xss
+    , Stg.foldl'
+    , [program| concat = \ -> foldl' concat2 nil |]]
 
 -- | Sort a list with the canonical Quicksort-inspired algorithm often found
 -- in introductory texts about Haskell.
