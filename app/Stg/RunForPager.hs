@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
@@ -6,6 +7,7 @@ module Stg.RunForPager (runForPager) where
 
 
 
+import           Control.Monad
 import           Data.Foldable
 import           Data.Monoid
 import           Data.Text     (Text)
@@ -23,9 +25,10 @@ import Stg.Util
 runForPager
     :: (forall a. Pretty a => a -> Text)
     -> Maybe Int -- ^ Steps to show. Negative numbers count from the end.
+    -> Int       -- ^ Verbosity level
     -> Program
     -> IO ()
-runForPager ppr showSteps prog =
+runForPager ppr showSteps verbosity prog =
     let allStates = evalsUntil RunIndefinitely
                             (HaltIf (const False))
                             (PerformGc (const (Just triStateTracing)))
@@ -43,10 +46,24 @@ runForPager ppr showSteps prog =
         T.putStrLn (ppr prog)
         for_ states (\state -> do
             T.putStrLn fatLine
-            T.putStrLn (show' (stgSteps state) <> ". " <> ppr (stgInfo state))
-            T.putStrLn line
+            printInfo ppr verbosity state line
             T.putStrLn (ppr state) )
         T.putStrLn fatLine
+
+printInfo
+    :: (forall a. Pretty a => a -> Text)
+    -> Int
+    -> StgState
+    -> Text -- ^ Line
+    -> IO ()
+printInfo ppr verbosity state line =
+    when (verbosity > 0)
+        (do T.putStr (show' (stgSteps state) <> ". ")
+            T.putStrLn
+                (if | verbosity == 2 -> ppr (stgInfo state)
+                    | verbosity == 1 -> ppr (let Info shortInfo _ = stgInfo state
+                                             in shortInfo ))
+            T.putStrLn line )
 
 takeFromEnd :: Int -> [a] -> [a]
 takeFromEnd n list = zipOverflow (drop n list) list

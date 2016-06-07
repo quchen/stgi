@@ -17,32 +17,49 @@ import           Stg.RunForPager
 
 
 
-data Options = Options { optAnsi       :: Maybe Bool
-                       , optNumStates :: Maybe Int }
+data Options = Options
+    { optAnsi      :: Maybe Bool
+    , optNumStates :: Maybe Int
+    , optVerbosity :: Int }
 
 defOptions :: Options
-defOptions = Options { optAnsi       = Nothing
-                     , optNumStates = Nothing }
+defOptions = Options { optAnsi      = Nothing
+                     , optNumStates = Nothing
+                     , optVerbosity = 1 }
 
 options :: [OptDescr (Options -> Options)]
 options =
     [ Option ['c'] ["colour"]
         (OptArg
-            (\case Nothing      -> \opts -> opts { optAnsi = Just True  }
-                   Just "auto"  -> \opts -> opts { optAnsi = Nothing    }
-                   Just "false" -> \opts -> opts { optAnsi = Just False }
-                   Just "true"  -> \opts -> opts { optAnsi = Just True  }
-                   Just _       -> \opts -> opts { optAnsi = Just False } )
+            (\x ->
+                let parsed = case x of
+                        Nothing      -> Just True
+                        Just "auto"  -> Nothing
+                        Just "false" -> Just False
+                        Just "true"  -> Just True
+                        Just _       -> Just False
+                in \opts -> opts { optAnsi = parsed } )
             "auto|false|true" )
         "Colourize output"
     , Option ['n'] ["showStates"]
         (OptArg
-            (\x -> case x >>= readMaybe of
-                   Just n | n == 0    -> \opts -> opts { optNumStates = Nothing }
-                          | otherwise -> \opts -> opts { optNumStates = Just n  }
-                   _otherwise         -> \opts -> opts { optNumStates = Nothing } )
+            (\x ->
+                let parsed = case x >>= readMaybe of
+                        Just n | n == 0    -> Nothing
+                               | otherwise -> Just n
+                        Nothing            -> Nothing
+                in \opts -> opts { optNumStates = parsed } )
             "int" )
-        "Colourize output" ]
+        "Colourize output"
+    , Option ['v'] ["verbosity"]
+        (OptArg
+            (\x ->
+                let parsed = case x >>= readMaybe of
+                        Just n | 0 <= n && n <= 2 -> n
+                        _otherwise                -> 1
+                in \opts -> opts { optVerbosity = parsed } )
+            "0,1,2" )
+        "Verbosity" ]
 
 handleArgs :: [String] -> IO Options
 handleArgs argv = case getOpt Permute options argv of
@@ -59,8 +76,11 @@ main = do
         Just x -> pure x
         Nothing -> hSupportsANSI stdout
     let numStates = optNumStates opts
+        verbosity = optVerbosity opts
 
     let prog = Example.sum_foldl' [1..5]
-    if ansi
-        then runForPager prettyprint      numStates prog
-        else runForPager prettyprintPlain numStates prog
+
+    runForPager (if ansi then prettyprint else prettyprintPlain)
+                numStates
+                verbosity
+                prog
