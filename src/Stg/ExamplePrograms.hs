@@ -50,6 +50,9 @@ module Stg.ExamplePrograms (
         -- ** Left-associated
         listConcatLeftAssociated,
 
+    -- * Sorting
+    simpleSort,
+
     -- * Sharing
 
         -- ** Repeat
@@ -358,6 +361,21 @@ listConcatLeftAssociated = listConcatRightAssociated <> [program|
             list0123456789 = \(list012345678) => concat2 list012345678 list9
         in list0123456789
     |]
+
+-- | Sort a list with the canonical Quicksort-inspired algorithm often found
+-- in introductory texts about Haskell.
+--
+-- Note that this is not Quicksort itself, as one key feature of it is sorting
+-- in-place. In particular, this algorithm is not all that quick, as it takes
+-- almost a thousand steps to reach the final state when sorting @[5,4,3,2,1]@.
+simpleSort :: [Integer] -> Program
+simpleSort xs =
+    toStg "xs" xs
+    <> Stg.forceSpine
+    <> Stg.sort
+    <> [program|
+        sorted = \ => sort xs;
+        main = \ => forceSpine sorted |]
 
 
 
