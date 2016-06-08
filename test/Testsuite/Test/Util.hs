@@ -34,17 +34,10 @@ scaled factor = scale (\n -> n * numerator factor `quot` denominator factor)
 allEnums :: (Enum a, Bounded a) => Gen a
 allEnums = elements [minBound ..]
 
-arbitrary0 :: $(arbitraryNType 0)
-arbitrary0 = $(arbitraryNValue 0)
-
-arbitrary1 :: $(arbitraryNType 1)
-arbitrary1 = $(arbitraryNValue 1)
-
-arbitrary2 :: $(arbitraryNType 2)
-arbitrary2 = $(arbitraryNValue 2)
-
-arbitrary3 :: $(arbitraryNType 3)
-arbitrary3 = $(arbitraryNValue 3)
+$(arbitraryN 0)
+$(arbitraryN 1)
+$(arbitraryN 2)
+$(arbitraryN 3)
 
 infix 4 ==*==
 (==*==) :: (Eq a, Pretty a) => a -> a -> Property
