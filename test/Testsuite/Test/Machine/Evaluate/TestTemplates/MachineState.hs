@@ -13,6 +13,7 @@ module Test.Machine.Evaluate.TestTemplates.MachineState (
 
 
 import qualified Data.List                    as L
+import qualified Data.List.NonEmpty           as NE
 import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
@@ -89,12 +90,12 @@ machineStateTest testSpec = askOption (\htmlOpt ->
                         (HaltIf (successPredicate testSpec))
                         (performGc testSpec)
                         program
-    finalState = last states
+    finalState = NE.last states
 
     test :: PrettyprinterDict -> Assertion
     test pprDict = case L.find (failPredicate testSpec) states of
         Just badState -> fail_failPredicateTrue pprDict testSpec badState
-        Nothing -> case states `allSatisfyAtSomePoint` allSatisfied testSpec of
+        Nothing -> case NE.toList states `allSatisfyAtSomePoint` allSatisfied testSpec of
             True -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> pure ()
                 _otherwise -> fail_successPredicateNotTrue pprDict testSpec finalState

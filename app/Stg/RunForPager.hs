@@ -8,11 +8,12 @@ module Stg.RunForPager (runForPager) where
 
 
 import           Control.Monad
-import           Data.Foldable
+import           Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import           Data.Monoid
-import           Data.Text     (Text)
-import qualified Data.Text     as T
-import qualified Data.Text.IO  as T
+import           Data.Text          (Text)
+import qualified Data.Text          as T
+import qualified Data.Text.IO       as T
 
 import Stg.Language
 import Stg.Language.Prettyprint
@@ -30,12 +31,12 @@ runForPager
     -> IO ()
 runForPager ppr showSteps verbosity prog =
     let allStates = evalsUntil RunIndefinitely
-                            (HaltIf (const False))
-                            (PerformGc (const (Just triStateTracing)))
-                            (initialState "main" prog)
+                               (HaltIf (const False))
+                               (PerformGc (const (Just triStateTracing)))
+                               (initialState "main" prog)
         states = case showSteps of
-            Just n | n > 0 -> take n allStates
-                   | n < 0 -> takeFromEnd (abs n) allStates
+            Just n | n > 0 -> NE.fromList (NE.take n allStates)
+                   | n < 0 -> unsafeTakeLast (abs n) allStates
             _else -> allStates
         line = T.replicate 80 "-"
         fatLine = T.replicate 80 "="
@@ -44,10 +45,14 @@ runForPager ppr showSteps verbosity prog =
         T.putStrLn "Program:"
         T.putStrLn line
         T.putStrLn (ppr prog)
-        for_ states (\state -> do
-            T.putStrLn fatLine
-            printInfo ppr verbosity state line
-            T.putStrLn (ppr state) )
+        let loop (state :| rest) = do
+                T.putStrLn fatLine
+                printInfo ppr verbosity state line
+                T.putStrLn (ppr state)
+                case rest of
+                    [] -> pure state
+                    (s:ss) -> loop (s:|ss)
+        _finalState <- loop states
         T.putStrLn fatLine
 
 printInfo
@@ -65,8 +70,14 @@ printInfo ppr verbosity state line =
                                              in shortInfo ))
             T.putStrLn line )
 
-takeFromEnd :: Int -> [a] -> [a]
-takeFromEnd n list = zipOverflow (drop n list) list
+-- | Take the last N elements of a list (in original order).
+--
+-- Number of takes must be at least 1!
+unsafeTakeLast :: Int -> NonEmpty a -> NonEmpty a
+unsafeTakeLast n _ | n <= 0 = error "unsafeTakeLast: argument must be >= 1"
+unsafeTakeLast n list
+  = let list' = NE.toList list
+    in NE.fromList (zipOverflow (drop n list') list')
   where
     zipOverflow (_:xs) (_:ys) = zipOverflow xs ys
     zipOverflow xs [] = xs

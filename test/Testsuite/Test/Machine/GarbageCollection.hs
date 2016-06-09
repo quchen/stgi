@@ -8,11 +8,12 @@ module Test.Machine.GarbageCollection (tests) where
 
 
 import           Control.DeepSeq
-import qualified Data.Map        as M
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Map           as M
 import           Data.Monoid
-import qualified Data.Set        as S
-import           Data.Text       (Text)
-import qualified Data.Text       as T
+import qualified Data.Set           as S
+import           Data.Text          (Text)
+import qualified Data.Text          as T
 
 import           Stg.Language.Prettyprint
 import           Stg.Machine
@@ -126,8 +127,8 @@ fibonacciSumTest algorithm = testCase "Long-running program" test
             in foldl' flipConst zero fibo
         |]
     prog = initialState "main" source
-    states = take 1e3 (evalsUntil (RunForMaxSteps 1e10)
-                                   (HaltIf (const False))
-                                   (PerformGc (const (Just algorithm)))
-                                   prog )
+    states = NE.take 1e3 (evalsUntil (RunForMaxSteps 1e10)
+                                     (HaltIf (const False))
+                                     (PerformGc (const (Just algorithm)))
+                                     prog )
     test = rnf states `seq` pure ()

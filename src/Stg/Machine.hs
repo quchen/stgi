@@ -22,6 +22,8 @@ module Stg.Machine (
 ) where
 
 
+import           Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 
 import Stg.Language
 import Stg.Machine.Evaluate
@@ -93,7 +95,7 @@ evalUntil
     -> StgState    -- ^ Initial state
     -> StgState    -- ^ Final state
 evalUntil runForSteps halt performGc state
-    = last (evalsUntil runForSteps halt performGc state)
+    = NE.last (evalsUntil runForSteps halt performGc state)
 
 -- | Evaluate the STG, and record all intermediate states.
 --
@@ -105,12 +107,13 @@ evalUntil runForSteps halt performGc state
 -- 'evalsUntil' ≈ 'unfoldr' 'evalUntil'
 -- @
 evalsUntil
-    :: RunForSteps -- ^ Maximum number of steps allowed
-    -> HaltIf      -- ^ Halting decision function
-    -> PerformGc   -- ^ Condition under which to perform GC
-    -> StgState    -- ^ Initial state
-    -> [StgState]  -- ^ All intermediate states
-evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc) = go False
+    :: RunForSteps       -- ^ Maximum number of steps allowed
+    -> HaltIf            -- ^ Halting decision function
+    -> PerformGc         -- ^ Condition under which to perform GC
+    -> StgState          -- ^ Initial state
+    -> NonEmpty StgState -- ^ Initial state plus intermediate states
+evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc)
+  = NE.fromList . go False
   where
     terminate = (:[])
     go attemptGc = \case

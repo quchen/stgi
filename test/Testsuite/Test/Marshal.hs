@@ -7,9 +7,10 @@ module Test.Marshal (tests) where
 
 
 
+import qualified Data.List.NonEmpty as NE
 import           Data.Proxy
-import           Data.Text  (Text)
-import qualified Data.Text  as T
+import           Data.Text          (Text)
+import qualified Data.Text          as T
 
 import Stg.Language.Prettyprint
 import Stg.Machine
@@ -101,7 +102,7 @@ roundTripTest spec = testProperty (T.unpack (testName spec)) test
             (HaltIf (const False))
             (PerformGc (const Nothing))
             prog
-        finalState = garbageCollect triStateTracing (last states)
+        finalState = garbageCollect triStateTracing (NE.last states)
         expected = fromStg finalState "payload"
 
 

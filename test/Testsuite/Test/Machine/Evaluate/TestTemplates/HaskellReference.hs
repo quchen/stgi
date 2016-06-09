@@ -16,6 +16,7 @@ module Test.Machine.Evaluate.TestTemplates.HaskellReference (
 
 
 import qualified Data.List                    as L
+import qualified Data.List.NonEmpty           as NE
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Test.Tasty
@@ -87,7 +88,7 @@ haskellReferenceTest testSpec = askOption (\htmlOpt ->
                 (HaltIf (successPredicate testSpec))
                 (PerformGc (const Nothing))
                 program
-            finalState = last states
+            finalState = NE.last states
         in case L.find (failPredicate testSpec) states of
             Just badState -> fail_failPredicateTrue pprDict testSpec input badState
             Nothing -> case stgInfo finalState of
