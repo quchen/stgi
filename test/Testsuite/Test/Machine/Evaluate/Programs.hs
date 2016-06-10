@@ -14,7 +14,6 @@ module Test.Machine.Evaluate.Programs (tests) where
 
 import Data.Foldable
 import Data.Monoid
-import Test.Tasty
 
 import           Stg.Machine.Types
 import           Stg.Marshal
@@ -25,6 +24,7 @@ import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
 import           Test.Machine.Evaluate.TestTemplates.MachineState
 import           Test.Orphans                                         ()
 import           Test.QuickCheck.Modifiers
+import           Test.Tasty
 
 
 

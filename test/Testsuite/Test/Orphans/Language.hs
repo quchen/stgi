@@ -10,18 +10,18 @@ module Test.Orphans.Language () where
 
 
 import           Control.Applicative
-import qualified Data.List.NonEmpty     as NonEmpty
-import qualified Data.Map               as M
-import           Data.Monoid            hiding (Alt)
+import qualified Data.List.NonEmpty  as NonEmpty
+import qualified Data.Map            as M
+import           Data.Monoid         hiding (Alt)
 import           Data.Ratio
-import           Data.Text              (Text)
-import qualified Data.Text              as T
-import           Test.SmallCheck.Series
-import           Test.Tasty.QuickCheck
+import           Data.Text           (Text)
+import qualified Data.Text           as T
 
 import Stg.Language
 import Stg.Parser.QuasiQuoter
 
+import Test.SmallCheck.Series
+import Test.Tasty.QuickCheck
 import Test.Util
 
 

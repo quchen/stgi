@@ -9,11 +9,10 @@ module Test.Machine.Evaluate (tests) where
 
 
 
-import Test.Tasty
-
 import qualified Test.Machine.Evaluate.Errors   as Errors
 import qualified Test.Machine.Evaluate.Programs as Programs
 import qualified Test.Machine.Evaluate.Rules    as Rules
+import           Test.Tasty
 
 
 

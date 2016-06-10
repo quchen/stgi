@@ -7,18 +7,18 @@ module Test.Language.Prettyprint (tests) where
 
 
 import           Data.Bifunctor
-import           Data.Text                (Text)
-import qualified Data.Text                as T
-import           Test.QuickCheck.Property
-import           Test.SmallCheck.Series
+import           Data.Text      (Text)
+import qualified Data.Text      as T
 
 import Stg.Language.Prettyprint
 import Stg.Parser.Parser        as Parser
 
-import Test.Orphans          ()
+import Test.Orphans             ()
+import Test.QuickCheck.Property
+import Test.SmallCheck.Series
 import Test.Tasty
-import Test.Tasty.QuickCheck as QC
-import Test.Tasty.SmallCheck as SC
+import Test.Tasty.QuickCheck    as QC
+import Test.Tasty.SmallCheck    as SC
 
 
 

@@ -31,6 +31,7 @@ module Stg.Language (
     Var            (..),
     Atom           (..),
     Constr         (..),
+    Pretty         (..),
 ) where
 
 

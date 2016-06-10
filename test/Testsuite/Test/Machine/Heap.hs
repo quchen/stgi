@@ -3,13 +3,13 @@ module Test.Machine.Heap (tests) where
 
 
 import Data.Monoid
-import Test.Tasty
-import Test.Tasty.QuickCheck
 
 import           Stg.Language.Prettyprint
 import qualified Stg.Machine.Heap         as Heap
 
-import Test.Orphans ()
+import Test.Orphans          ()
+import Test.Tasty
+import Test.Tasty.QuickCheck
 import Test.Util
 
 

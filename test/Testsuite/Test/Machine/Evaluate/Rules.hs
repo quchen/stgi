@@ -12,7 +12,6 @@ module Test.Machine.Evaluate.Rules (tests) where
 
 
 
-import Test.Tasty
 
 import Stg.Language
 import Stg.Machine
@@ -26,6 +25,7 @@ import qualified Test.Machine.Evaluate.TestTemplates.MachineState     as Machine
 
 import Test.Orphans              ()
 import Test.QuickCheck.Modifiers
+import Test.Tasty
 
 
 

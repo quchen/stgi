@@ -19,8 +19,6 @@ import qualified Data.List                    as L
 import qualified Data.List.NonEmpty           as NE
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
-import           Test.Tasty
-import           Test.Tasty.QuickCheck
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
 import Stg.Language
@@ -31,6 +29,8 @@ import Stg.Parser.QuasiQuoter   (stg)
 
 import Test.Machine.Evaluate.TestTemplates.Util
 import Test.Orphans                             ()
+import Test.Tasty
+import Test.Tasty.QuickCheck
 import Test.Tasty.Runners.Html
 
 

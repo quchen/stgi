@@ -13,9 +13,8 @@ import qualified Data.Text                    as T
 import           Text.PrettyPrint.ANSI.Leijen (Doc)
 
 import Stg.Language
-import Stg.Language.Prettyprint
 import Stg.Machine.Env
-import Stg.Machine.Heap         as H
+import Stg.Machine.Heap  as H
 import Stg.Machine.Types
 import Stg.Util
 
@@ -40,7 +39,8 @@ data VarLookupResult =
 varLookup :: StgState -> Var -> VarLookupResult
 varLookup state var =
     case globalVal (stgGlobals state) (AtomVar var) of
-        Failure (NotInScope notInScope) -> VarLookupError (T.intercalate ", " (map (\(Var v) -> v) notInScope) <> " not in global scope")
+        Failure (NotInScope notInScope) -> VarLookupError
+            (T.intercalate ", " (map (\(Var v) -> v) notInScope) <> " not in global scope")
         Success (Addr addr) -> case H.lookup addr (stgHeap state) of
             Just (HClosure closure)  -> VarLookupClosure closure
             Just (Blackhole _bhTick) -> VarLookupBlackhole

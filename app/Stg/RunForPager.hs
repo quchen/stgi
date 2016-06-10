@@ -16,7 +16,6 @@ import qualified Data.Text          as T
 import qualified Data.Text.IO       as T
 
 import Stg.Language
-import Stg.Language.Prettyprint
 import Stg.Machine
 import Stg.Machine.Types
 import Stg.Util

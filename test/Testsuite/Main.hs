@@ -5,19 +5,19 @@ module Main (main) where
 import Control.Concurrent
 import Data.Monoid
 
-import qualified Test.Language as Language
-import qualified Test.Machine  as Machine
-import qualified Test.Marshal  as Marshal
-import qualified Test.Parser   as Parser
-import qualified Test.Prelude  as Prelude
-import qualified Test.Stack    as Stack
-
 import Test.Tasty
 import Test.Tasty.Ingredients.Rerun
 import Test.Tasty.Options
 import Test.Tasty.QuickCheck
 import Test.Tasty.Runners
 import Test.Tasty.Runners.Html
+
+import qualified Test.Language as Language
+import qualified Test.Machine  as Machine
+import qualified Test.Marshal  as Marshal
+import qualified Test.Parser   as Parser
+import qualified Test.Prelude  as Prelude
+import qualified Test.Stack    as Stack
 
 
 

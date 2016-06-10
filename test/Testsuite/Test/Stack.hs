@@ -4,13 +4,13 @@ module Test.Stack (tests) where
 
 import Data.Foldable
 import Data.Monoid
-import GHC.Exts              (fromList)
-import Test.Tasty
-import Test.Tasty.QuickCheck as QC
+import GHC.Exts      (fromList)
 
 import Data.Stack
 
-import Test.Orphans ()
+import Test.Orphans          ()
+import Test.Tasty
+import Test.Tasty.QuickCheck as QC
 
 
 
