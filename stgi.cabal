@@ -35,6 +35,7 @@ library
                      , Stg.Machine.Evaluate
                      , Stg.Machine.GarbageCollection
                      , Stg.Machine.GarbageCollection.Common
+                     , Stg.Machine.GarbageCollection.Copying
                      , Stg.Machine.GarbageCollection.TriStateTracing
                      , Stg.Machine.Heap
                      , Stg.Machine.Types
@@ -58,6 +59,7 @@ library
                      , deepseq
                      , parsers
                      , semigroups
+                     , tagged
                      , template-haskell
                      , text
                      , th-lift
@@ -130,6 +132,7 @@ test-suite testsuite
                      , containers
                      , deepseq
                      , semigroups
+                     , tagged
                      , tasty
                      , tasty-html
                      , tasty-hunit

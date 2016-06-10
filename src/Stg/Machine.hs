@@ -19,6 +19,7 @@ module Stg.Machine (
     PerformGc(..),
     GarbageCollectionAlgorithm,
     triStateTracing,
+    copying,
 ) where
 
 

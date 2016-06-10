@@ -1,20 +1,19 @@
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
 
 -- | Definitions used by various garbage collection algorithms.
 module Stg.Machine.GarbageCollection.Common (
     splitHeapWith,
     GarbageCollectionAlgorithm(..),
-    Dead(..),
-    Alive(..),
+    Dead,
     Addresses(..),
 ) where
 
 
 
-import           Data.Set (Set)
-import qualified Data.Set as S
+import           Data.Set    (Set)
+import qualified Data.Set    as S
+import           Data.Tagged
 
 import Stg.Machine.Types
 
@@ -26,19 +25,14 @@ import Stg.Machine.Types
 splitHeapWith
     :: GarbageCollectionAlgorithm
     -> StgState
-    -> (Dead Heap, Alive Heap)
+    -> (Tagged Dead Heap, StgState)
 splitHeapWith (GarbageCollectionAlgorithm gc) = gc
 
 newtype GarbageCollectionAlgorithm
-  = GarbageCollectionAlgorithm (StgState -> (Dead Heap, Alive Heap))
+  = GarbageCollectionAlgorithm (StgState -> (Tagged Dead Heap, StgState))
 
--- | Alive objects.
-newtype Alive a = Alive a
-    deriving (Eq, Ord, Show, Monoid)
-
--- | Dead objects that been eliminated by garbage collection.
-newtype Dead a = Dead a
-    deriving (Eq, Ord, Show, Monoid)
+-- | Tag for dead things
+data Dead
 
 
 
