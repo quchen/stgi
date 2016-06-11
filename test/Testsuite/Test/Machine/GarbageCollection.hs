@@ -12,6 +12,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map           as M
 import           Data.Monoid
 import qualified Data.Set           as S
+import           Data.Tagged
 import           Data.Text          (Text)
 import qualified Data.Text          as T
 
@@ -31,7 +32,8 @@ import Test.Tasty.HUnit
 
 tests :: TestTree
 tests = testGroup "Garbage collection"
-    [ gcTests "Tri-state tracing" triStateTracing ]
+    [ gcTests "Tri-state tracing" triStateTracing
+    , gcTests "Two space copying" twoSpaceCopying ]
 
 gcTests :: Text -> GarbageCollectionAlgorithm -> TestTree
 gcTests name algorithm = testGroup (T.unpack name)
@@ -77,7 +79,7 @@ splitHeapTest algorithm = testGroup "Split heap in dead/alive"
     unusedIsCollected = testCase "Dead address is found" test
       where
         expectedDead = S.singleton (MemAddr 3)
-        (Dead (Heap actualDead), Alive cleanHeap) = splitHeapWith algorithm dummyState
+        (Tagged (Heap actualDead), StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedDead
                            (M.keysSet actualDead)
@@ -86,7 +88,7 @@ splitHeapTest algorithm = testGroup "Split heap in dead/alive"
       where
         expectedHeap = let Heap h = dirtyHeap
                        in Heap (M.delete (MemAddr 3) h)
-        (_dead, Alive cleanHeap) = splitHeapWith algorithm dummyState
+        (_dead, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedHeap
                            cleanHeap
@@ -95,7 +97,7 @@ splitHeapTest algorithm = testGroup "Split heap in dead/alive"
       where
         expected = dirtyHeap
         actual = dead <> cleanHeap
-        (Dead dead, Alive cleanHeap) = splitHeapWith algorithm dummyState
+        (Tagged dead, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expected
                            actual
