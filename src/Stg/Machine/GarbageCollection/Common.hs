@@ -7,6 +7,7 @@ module Stg.Machine.GarbageCollection.Common (
     GarbageCollectionAlgorithm(..),
     Dead,
     Addresses(..),
+    UpdateAddrs(..),
 ) where
 
 
@@ -81,3 +82,36 @@ instance Addresses Value where
     addrs = \case
         Addr addr  -> addrs addr
         PrimInt _i -> mempty
+
+
+-- | Update all contained addresses in a certain value. Useful for moving
+-- garbage collectors.
+class UpdateAddrs a where
+    updateAddrs :: (MemAddr -> MemAddr) -> a -> a
+
+instance UpdateAddrs Code where
+    updateAddrs upd = \case
+        Eval expr locals      -> Eval expr (updateAddrs upd locals)
+        Enter addr            -> Enter (updateAddrs upd addr)
+        ReturnCon constr args -> ReturnCon constr (updateAddrs upd args)
+        r@ReturnInt{}         -> r
+
+instance UpdateAddrs Locals where
+    updateAddrs upd (Locals locals) = Locals (updateAddrs upd locals)
+
+instance UpdateAddrs Value where
+    updateAddrs upd = \case
+        Addr addr   -> Addr (updateAddrs upd addr)
+        p@PrimInt{} -> p
+
+instance UpdateAddrs MemAddr where
+    updateAddrs = id
+
+instance (Functor f, UpdateAddrs a) => UpdateAddrs (f a) where
+    updateAddrs upd = fmap (updateAddrs upd)
+
+instance UpdateAddrs StackFrame where
+    updateAddrs upd = \case
+        ArgumentFrame arg       -> ArgumentFrame (updateAddrs upd arg)
+        ReturnFrame alts locals -> ReturnFrame alts (updateAddrs upd locals)
+        UpdateFrame addr        -> UpdateFrame (updateAddrs upd addr)

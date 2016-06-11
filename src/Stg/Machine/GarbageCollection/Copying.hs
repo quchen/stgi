@@ -26,7 +26,6 @@ import qualified Data.Set                   as S
 import           Data.Tagged
 import           Data.Traversable
 
-import           Data.Stack                           (Stack)
 import           Stg.Machine.GarbageCollection.Common
 import qualified Stg.Machine.Heap                     as H
 import           Stg.Machine.Types
@@ -103,29 +102,35 @@ evacuateScavengeLoop :: Gc ()
 evacuateScavengeLoop = initialEvacuation >> scavengeLoop
 
 initialEvacuation :: Gc ()
-initialEvacuation = do
-    GcState { toEvacuate = evacuateNext } <- getGcState
-    traverse_ evacuate evacuateNext
+initialEvacuation = getAndClearToEvacuate >>= evacuateAll
+  where
+    getAndClearToEvacuate = do
+        gcState <- getGcState
+        putGcState (gcState{toEvacuate = mempty})
+        pure (toEvacuate gcState)
+    evacuateAll = traverse_ evacuate
 
 scavengeLoop :: Gc ()
 scavengeLoop = do
-    GcState { toScavenge = scavengeNext } <- getGcState
+    scavengeNext <- getAndClearToScavenge
     if | Seq.null scavengeNext -> pure ()
-       | otherwise -> scavengeAll scavengeNext >> scavengeLoop
-
-scavengeAll :: Seq MemAddr -> Gc ()
-scavengeAll = go S.empty
+       | otherwise -> do
+           scavengeAddrs S.empty scavengeNext
+           scavengeLoop
   where
-    go cache toAddrs = case Seq.viewl toAddrs of
+    getAndClearToScavenge = do
+        gcState <- getGcState
+        putGcState (gcState{toScavenge = mempty})
+        pure (toScavenge gcState)
+    scavengeAddrs alreadyScavenged toAddrs = case Seq.viewl toAddrs of
         EmptyL -> pure ()
         addr :< rest
-            | S.member addr cache -> go cache rest
+            | S.member addr alreadyScavenged -> scavengeAddrs alreadyScavenged rest
             | otherwise -> do
                 scavenge addr
-                go (S.insert addr cache) rest
+                scavengeAddrs (S.insert addr alreadyScavenged) rest
 
-
-data EvacuationStatus = NotEvacuated | AlreadyEvacuated MemAddr
+data EvacuationStatus = NotEvacuatedYet | AlreadyEvacuatedTo MemAddr
 
 -- | Copy a closure from from-space to to-space, and return the new memory
 -- address.
@@ -133,9 +138,9 @@ data EvacuationStatus = NotEvacuated | AlreadyEvacuated MemAddr
 -- If the closure has previously been evacuated do nothing, and return only the
 -- new address.
 evacuate :: MemAddr -> Gc MemAddr
-evacuate = \fromAddr -> resolveForward fromAddr >>= \case
-    AlreadyEvacuated newAddr -> pure newAddr
-    NotEvacuated -> fmap (H.lookup fromAddr) askHeap >>= \case
+evacuate = \fromAddr -> forwardingStatus fromAddr >>= \case
+    AlreadyEvacuatedTo newAddr -> pure newAddr
+    NotEvacuatedYet -> fmap (H.lookup fromAddr) askHeap >>= \case
         Nothing -> error "Tried collecting a non-existent memory address!\
                          \ Please report this as a bug."
         Just heapObject -> do
@@ -157,12 +162,12 @@ evacuate = \fromAddr -> resolveForward fromAddr >>= \case
             -- 3. Return new to-space address
             pure newAddr
   where
-    resolveForward :: MemAddr -> Gc EvacuationStatus
-    resolveForward addr = do
+    forwardingStatus :: MemAddr -> Gc EvacuationStatus
+    forwardingStatus addr = do
         GcState { forwards = forw } <- getGcState
         pure (case M.lookup addr forw of
-            Nothing -> NotEvacuated
-            Just newAddr -> AlreadyEvacuated newAddr )
+            Nothing -> NotEvacuatedYet
+            Just newAddr -> AlreadyEvacuatedTo newAddr )
 
     setToHeap :: Heap -> Gc ()
     setToHeap to = do
@@ -204,36 +209,3 @@ scavenge scavengeAddr = do
             do  gcState@GcState { toEvacuate = evac } <- getGcState
                 let newEvacs = Seq.fromList [ addr | Addr addr <- frees' ]
                 putGcState gcState { toEvacuate = evac <> newEvacs }
-
-class UpdateAddrs a where
-    updateAddrs :: (MemAddr -> MemAddr) -> a -> a
-
-instance UpdateAddrs Code where
-    updateAddrs upd = \case
-        Eval expr locals      -> Eval expr (updateAddrs upd locals)
-        Enter addr            -> Enter (updateAddrs upd addr)
-        ReturnCon constr args -> ReturnCon constr (updateAddrs upd args)
-        r@ReturnInt{}         -> r
-
-instance UpdateAddrs Locals where
-    updateAddrs upd (Locals locals) = Locals (M.map (updateAddrs upd) locals)
-
-instance UpdateAddrs Value where
-    updateAddrs upd = \case
-        Addr addr   -> Addr (updateAddrs upd addr)
-        p@PrimInt{} -> p
-
-instance UpdateAddrs MemAddr where
-    updateAddrs = id
-
-instance UpdateAddrs a => UpdateAddrs [a] where
-    updateAddrs upd = map (updateAddrs upd)
-
-instance UpdateAddrs a => UpdateAddrs (Stack a) where
-    updateAddrs upd = fmap (updateAddrs upd)
-
-instance UpdateAddrs StackFrame where
-    updateAddrs upd = \case
-        ArgumentFrame arg       -> ArgumentFrame (updateAddrs upd arg)
-        ReturnFrame alts locals -> ReturnFrame alts (updateAddrs upd locals)
-        UpdateFrame addr        -> UpdateFrame (updateAddrs upd addr)
