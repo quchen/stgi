@@ -35,8 +35,8 @@ library
                      , Stg.Machine.Evaluate
                      , Stg.Machine.GarbageCollection
                      , Stg.Machine.GarbageCollection.Common
-                     , Stg.Machine.GarbageCollection.Copying
                      , Stg.Machine.GarbageCollection.TriStateTracing
+                     , Stg.Machine.GarbageCollection.TwoSpaceCopying
                      , Stg.Machine.Heap
                      , Stg.Machine.Types
                      , Stg.Marshal

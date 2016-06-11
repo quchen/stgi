@@ -78,7 +78,7 @@ main = do
     let numStates = optNumStates opts
         verbosity = optVerbosity opts
 
-    let prog = Example.addTwoNumbers 1 2
+    let prog = Example.sum_foldl' [1..5]
 
     runForPager (if ansi then prettyprint else prettyprintPlain)
                 numStates

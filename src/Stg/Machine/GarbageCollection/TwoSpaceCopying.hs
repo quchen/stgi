@@ -7,8 +7,8 @@
 --
 -- * Compacting: memory is moved to a new location
 -- * Tracing
-module Stg.Machine.GarbageCollection.Copying (
-    copying,
+module Stg.Machine.GarbageCollection.TwoSpaceCopying (
+    twoSpaceCopying,
 ) where
 
 
@@ -24,7 +24,6 @@ import           Data.Sequence              (Seq, ViewL (..), (|>))
 import qualified Data.Sequence              as Seq
 import qualified Data.Set                   as S
 import           Data.Tagged
-import           Data.Traversable
 
 import           Stg.Machine.GarbageCollection.Common
 import qualified Stg.Machine.Heap                     as H
@@ -33,8 +32,8 @@ import           Stg.Machine.Types
 
 
 -- | Remove all unused addresses by moving them to a safe location.
-copying :: GarbageCollectionAlgorithm
-copying = GarbageCollectionAlgorithm splitHeap
+twoSpaceCopying :: GarbageCollectionAlgorithm
+twoSpaceCopying = GarbageCollectionAlgorithm splitHeap
 
 newtype Gc a = Gc (ReaderT Heap (State GcState) a)
     deriving (Functor, Applicative, Monad)
@@ -77,7 +76,7 @@ splitHeap stgState@StgState
     , stgGlobals = globals
     , stgStack   = stack }
   = let rootAddrs = (mconcat . map (Seq.fromList . S.toList))
-                        [addrs code, addrs globals, addrs stack]
+                        [addrs code, addrs stack, addrs globals]
         initialState = GcState
             { toHeap     = mempty
             , forwards   = mempty
@@ -93,9 +92,10 @@ splitHeap stgState@StgState
                 forwardErr = error "Invalid forward in GC; please report this as a bug"
 
                 stgState' = stgState
-                    { stgCode  = updateAddrs forward code
-                    , stgStack = updateAddrs forward stack
-                    , stgHeap  = heap' }
+                    { stgCode    = updateAddrs forward code
+                    , stgStack   = updateAddrs forward stack
+                    , stgGlobals = updateAddrs forward globals
+                    , stgHeap    = heap' }
             in (Tagged dead, stgState')
 
 evacuateScavengeLoop :: Gc ()
@@ -132,11 +132,10 @@ scavengeLoop = do
 
 data EvacuationStatus = NotEvacuatedYet | AlreadyEvacuatedTo MemAddr
 
--- | Copy a closure from from-space to to-space, and return the new memory
--- address.
---
--- If the closure has previously been evacuated do nothing, and return only the
--- new address.
+-- | Copy a closure from from-space to to-space, if it has not been evacuated
+-- previously. Copying to to-space involves a new allocation in to-space,
+-- registering the copied address to be scavenged, and creating a forwarding
+-- entry so that further evacuations can short-circuit.
 evacuate :: MemAddr -> Gc MemAddr
 evacuate = \fromAddr -> forwardingStatus fromAddr >>= \case
     AlreadyEvacuatedTo newAddr -> pure newAddr
@@ -144,22 +143,9 @@ evacuate = \fromAddr -> forwardingStatus fromAddr >>= \case
         Nothing -> error "Tried collecting a non-existent memory address!\
                          \ Please report this as a bug."
         Just heapObject -> do
-
-            -- 1. Copy object into to-space
-            newAddr <- do
-                GcState { toHeap = to } <- getGcState
-                let (addr', to') = H.alloc heapObject to
-                setToHeap to'
-                pure addr'
-
-            -- 2. Register the object to be scavenged
-            do  gcState@GcState { toScavenge = sc } <- getGcState
-                putGcState gcState { toScavenge = sc |> newAddr }
-
-            -- 2. Create forwarding pointer to make evacuation idempotent
+            newAddr <- copyIntoToSpace heapObject
+            registerToBeScavenged newAddr
             createForward fromAddr newAddr
-
-            -- 3. Return new to-space address
             pure newAddr
   where
     forwardingStatus :: MemAddr -> Gc EvacuationStatus
@@ -169,10 +155,17 @@ evacuate = \fromAddr -> forwardingStatus fromAddr >>= \case
             Nothing -> NotEvacuatedYet
             Just newAddr -> AlreadyEvacuatedTo newAddr )
 
-    setToHeap :: Heap -> Gc ()
-    setToHeap to = do
+    copyIntoToSpace :: HeapObject -> Gc MemAddr
+    copyIntoToSpace heapObject = do
         gcState <- getGcState
-        putGcState gcState { toHeap = to }
+        let (addr', to') = H.alloc heapObject (toHeap gcState)
+        putGcState gcState { toHeap = to' }
+        pure addr'
+
+    registerToBeScavenged :: MemAddr -> Gc ()
+    registerToBeScavenged addr = do
+        gcState@GcState { toScavenge = sc } <- getGcState
+        putGcState gcState { toScavenge = sc |> addr }
 
     createForward :: MemAddr -> MemAddr -> Gc ()
     createForward from to = do
@@ -182,7 +175,7 @@ evacuate = \fromAddr -> forwardingStatus fromAddr >>= \case
 -- | Find referenced addresses in a heap object, and overwrite them with their
 -- evacuated new addresses.
 scavenge :: MemAddr -> Gc ()
-scavenge scavengeAddr = do
+scavenge = \scavengeAddr -> do
     scavengeHeapObject <- do
         GcState { toHeap = heap } <- getGcState
         pure (H.lookup scavengeAddr heap)
@@ -191,21 +184,22 @@ scavenge scavengeAddr = do
                          \ Please report this as a bug."
         Just Blackhole{} -> pure mempty
         Just (HClosure (Closure lf frees)) -> do
+            frees' <- evacuateContainedValues frees
+            updateClosure scavengeAddr (Closure lf frees')
+            registerForEvacuation [ addr | Addr addr <- frees' ]
+  where
+    evacuateContainedValues :: [Value] -> Gc [Value]
+    evacuateContainedValues = traverse (\case
+        Addr addr -> fmap (\x -> Addr x) (evacuate addr)
+        i@PrimInt{} -> pure i )
 
-            -- 1. Call the evacuation code of all contained addresses
-            frees' <- for frees (\case
-                Addr addr -> fmap (\x -> Addr x) (evacuate addr)
-                i@PrimInt{} -> pure i )
+    updateClosure :: MemAddr -> Closure -> Gc ()
+    updateClosure addr closure = do
+        gcState@GcState { toHeap = heap } <- getGcState
+        let heap' = H.update addr (HClosure closure) heap
+        putGcState gcState { toHeap = heap' }
 
-            -- 2. Replace the pointers in the original closure with their
-            --    new to-space addresses
-            do  gcState@GcState { toHeap = heap } <- getGcState
-                let closure' = HClosure (Closure lf frees')
-                    heap' = H.update scavengeAddr closure' heap
-                putGcState gcState { toHeap = heap' }
-
-            -- 3. Add the addresses found in the just evacuated heap objects
-            --    to the to-reclaim list
-            do  gcState@GcState { toEvacuate = evac } <- getGcState
-                let newEvacs = Seq.fromList [ addr | Addr addr <- frees' ]
-                putGcState gcState { toEvacuate = evac <> newEvacs }
+    registerForEvacuation :: [MemAddr] -> Gc ()
+    registerForEvacuation addresses = do
+        gcState@GcState { toEvacuate = evac } <- getGcState
+        putGcState gcState { toEvacuate = evac <> Seq.fromList addresses }

@@ -86,6 +86,10 @@ foldl = [program|
 
 -- | Strict left list fold.
 --
+-- Careful: the STG only supports primitive and algebraic case scrutinees.
+-- As a result, you can only hand primitive or algebraic @b@ values to this
+-- function or it will fail!
+--
 -- @
 -- foldl' : (b -> a -> b) -> b -> [a] -> b
 -- @

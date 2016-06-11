@@ -8,7 +8,7 @@ module Stg.Machine.GarbageCollection (
     -- * Algorithms
     GarbageCollectionAlgorithm,
     triStateTracing,
-    copying,
+    twoSpaceCopying,
 ) where
 
 
@@ -17,8 +17,8 @@ import Data.Foldable
 import Data.Tagged
 
 import           Stg.Machine.GarbageCollection.Common
-import           Stg.Machine.GarbageCollection.Copying
 import           Stg.Machine.GarbageCollection.TriStateTracing
+import           Stg.Machine.GarbageCollection.TwoSpaceCopying
 import qualified Stg.Machine.Heap                              as H
 import           Stg.Machine.Types
 

@@ -99,6 +99,9 @@ instance UpdateAddrs Code where
 instance UpdateAddrs Locals where
     updateAddrs upd (Locals locals) = Locals (updateAddrs upd locals)
 
+instance UpdateAddrs Globals where
+    updateAddrs upd (Globals locals) = Globals (updateAddrs upd locals)
+
 instance UpdateAddrs Value where
     updateAddrs upd = \case
         Addr addr   -> Addr (updateAddrs upd addr)
