@@ -6,14 +6,15 @@ module Stg.Machine.GarbageCollection.Common (
     splitHeapWith,
     GarbageCollectionAlgorithm(..),
     Dead,
-    Addresses(..),
+    Addresses(addrs),
     UpdateAddrs(..),
 ) where
 
 
 
-import           Data.Set    (Set)
-import qualified Data.Set    as S
+import           Data.Sequence (Seq, ViewL (..), (<|))
+import qualified Data.Sequence as Seq
+import qualified Data.Set      as S
 import           Data.Tagged
 
 import Stg.Machine.Types
@@ -43,44 +44,59 @@ data Dead
 -- address is not something present in the STG _language_, only in the execution
 -- contest the language is put in in the "Stg.Machine" modules.
 class Addresses a where
-    addrs :: a -> Set MemAddr
+    -- | All contained addresses in the order they appear, but without
+    -- duplicates.
+    addrs :: a -> Seq MemAddr
+    addrs = nubSeq . addrs'
+
+    -- | All contained addresses in the order they appear, with duplicates.
+    addrs' :: a -> Seq MemAddr
+
+nubSeq :: Ord a => Seq a -> Seq a
+nubSeq = go mempty
+  where
+    go cache entries = case Seq.viewl entries of
+        EmptyL -> mempty
+        x :< xs
+            | S.member x cache -> go cache xs
+            | otherwise -> x <| go (S.insert x cache) xs
 
 instance (Foldable f, Addresses a) => Addresses (f a) where
-    addrs = foldMap addrs
+    addrs' = foldMap addrs'
 
 instance Addresses Code where
-    addrs = \case
-        Eval _expr locals   -> addrs locals
-        Enter addr          -> addrs addr
-        ReturnCon _con args -> addrs args
+    addrs' = \case
+        Eval _expr locals   -> addrs' locals
+        Enter addr          -> addrs' addr
+        ReturnCon _con args -> addrs' args
         ReturnInt _int      -> mempty
 
 instance Addresses StackFrame where
-    addrs = \case
-        ArgumentFrame vals       -> addrs vals
-        ReturnFrame _alts locals -> addrs locals
-        UpdateFrame addr         -> addrs addr
+    addrs' = \case
+        ArgumentFrame vals       -> addrs' vals
+        ReturnFrame _alts locals -> addrs' locals
+        UpdateFrame addr         -> addrs' addr
 
 instance Addresses MemAddr where
-    addrs addr = S.singleton addr
+    addrs' addr = Seq.singleton addr
 
 instance Addresses Globals where
-    addrs (Globals globals) = addrs globals
+    addrs' (Globals globals) = addrs' globals
 
 instance Addresses Locals where
-    addrs (Locals locals) = addrs locals
+    addrs' (Locals locals) = addrs' locals
 
 instance Addresses Closure where
-    addrs (Closure _lf free) = addrs free
+    addrs' (Closure _lf free) = addrs' free
 
 instance Addresses HeapObject where
-    addrs = \case
-        HClosure closure  -> addrs closure
+    addrs' = \case
+        HClosure closure  -> addrs' closure
         Blackhole _bhTick -> mempty
 
 instance Addresses Value where
-    addrs = \case
-        Addr addr  -> addrs addr
+    addrs' = \case
+        Addr addr  -> addrs' addr
         PrimInt _i -> mempty
 
 

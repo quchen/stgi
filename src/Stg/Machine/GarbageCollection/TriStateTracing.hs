@@ -11,11 +11,12 @@ module Stg.Machine.GarbageCollection.TriStateTracing (
 
 
 
-import           Data.Map    (Map)
-import qualified Data.Map    as M
-import           Data.Monoid hiding (Alt)
-import           Data.Set    (Set)
-import qualified Data.Set    as S
+import           Data.Map      (Map)
+import qualified Data.Map      as M
+import           Data.Monoid   hiding (Alt)
+import           Data.Sequence (Seq)
+import           Data.Set      (Set)
+import qualified Data.Set      as S
 import           Data.Tagged
 
 import Stg.Machine.GarbageCollection.Common
@@ -38,10 +39,13 @@ splitHeap stgState@StgState
         start = GcState
             { aliveHeap = mempty
             , oldHeap = heap
-            , staged = mconcat
+            , staged = (seqToSet . mconcat)
                 [addrs code, addrs globals, addrs stack] }
         stgState' = stgState { stgHeap = alive }
     in (Tagged dead, stgState')
+
+seqToSet :: Ord a => Seq a -> Set a
+seqToSet = foldMap S.singleton
 
 everythingCollected :: GcState -> Bool
 everythingCollected = noAlives
@@ -71,7 +75,7 @@ gcStep GcState
     , oldHeap   = Heap oldRest }
   = GcState
     { aliveHeap = oldAlive <> Heap rescued
-    , staged    = addrs rescued
+    , staged    = seqToSet (addrs rescued)
     , oldHeap   = Heap newRest }
   where
     rescued, newRest :: Map MemAddr HeapObject

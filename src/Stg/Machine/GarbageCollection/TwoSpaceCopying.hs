@@ -75,8 +75,7 @@ splitHeap stgState@StgState
     , stgHeap    = heap
     , stgGlobals = globals
     , stgStack   = stack }
-  = let rootAddrs = (mconcat . map (Seq.fromList . S.toList))
-                        [addrs code, addrs stack, addrs globals]
+  = let rootAddrs = mconcat [addrs code, addrs stack, addrs globals]
         initialState = GcState
             { toHeap     = mempty
             , forwards   = mempty
