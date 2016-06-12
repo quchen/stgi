@@ -3,7 +3,7 @@ version:             1
 synopsis:            Educational implementation of the STG (Spineless Tagless
                      G-machine)
 description:         See README.md
-homepage:            https://github.com/quchen/stg#readme
+homepage:            https://github.com/quchen/stgi#readme
 license:             BSD3
 license-file:        LICENSE.md
 author:              David Luposchainsky <dluposchainsky (λ) gmail (dot) com>
@@ -18,6 +18,7 @@ extra-source-files:  .stylish-haskell.yaml
                    , screenshot.png
                    , stack.yaml
 cabal-version:       >=1.10
+tested-with:         GHC >= 7.10 && <= 7.10.3
 
 Flag doctest
   Description: Enable doctests
@@ -52,18 +53,18 @@ library
                      , Stg.Prelude.Number
                      , Stg.Prelude.Tuple
                      , Stg.Util
-  ghc-options:         -Wall -fdefer-typed-holes
-  build-depends:       base >= 4.7 && < 5
+  ghc-options:         -Wall
+  build-depends:       base >= 4.8 && < 5
                      , ansi-wl-pprint
-                     , containers
-                     , deepseq
-                     , parsers
-                     , semigroups
-                     , template-haskell
-                     , text
-                     , th-lift
-                     , transformers
-                     , trifecta
+                     , containers       >= 0.5
+                     , deepseq          >= 1.4
+                     , parsers          >= 0.12
+                     , semigroups       >= 0.18
+                     , template-haskell >= 2.10
+                     , text             >= 1.2
+                     , th-lift          >= 0.7
+                     , transformers     >= 0.4
+                     , trifecta         >= 1.5
   other-extensions:    DeriveGeneric
                      , FlexibleInstances
                      , GeneralizedNewtypeDeriving
@@ -129,9 +130,9 @@ test-suite testsuite
   build-depends:       base
                      , stgi
                      , ansi-wl-pprint
-                     , containers
-                     , deepseq
-                     , semigroups
+                     , containers >= 0.5
+                     , deepseq >= 1.4
+                     , semigroups >= 0.18
                      , tasty
                      , tasty-html
                      , tasty-hunit
@@ -161,7 +162,7 @@ test-suite doctest
   hs-source-dirs:      test/Doctest
   main-is:             Main.hs
   build-depends:       base
-                     , doctest
+                     , doctest >= 0.10
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
   if flag(doctest)
@@ -171,4 +172,4 @@ test-suite doctest
 
 source-repository head
   type:     git
-  location: https://github.com/quchen/stg
+  location: https://github.com/quchen/stgi
