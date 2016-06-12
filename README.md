@@ -9,6 +9,27 @@ model.
 [![](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
 
 
+Quickstart guide
+----------------
+
+If you're impatient, here is how to get going:
+
+The `app/Main.hs` file is written so you can easily switch out the `prog` value.
+The `Stg.ExamplePrograms` module provides a number of programs that might be
+worth having a look, and are a good starting point for modifications or adding
+your own programs.
+
+When you're happy with your `app/Main.hs`, run
+
+```bash
+stack build --exec "stg-exe --colour=true" | less -R
+```
+
+to get coloured output in `less`. Type `/====` to search for `====`, which
+finds the top of every new step; use `n` (next step) or `N` (previous step) to
+navigate through the execution.
+
+
 About the machine
 -----------------
 
@@ -19,7 +40,7 @@ developed for, and is heavily used in, [the Haskell compiler GHC][ghc].
 This project implements an interpreter for the STG as it is [described in the
 1992 paper on the subject][stg1992], with the main focus on being nice to a
 human user. Things that might be important for an actual compiler backend, such
-as performance or static analysis, are not considered in general; only if it
+as performance or static analysis, are not considered in general, only if it
 helps the understanding of the STG.
 
 The idea behind the machine is to represent the program in its abstract syntax
@@ -51,7 +72,7 @@ These are some of the questions STGi answers:
 1. Does this leak memory? If yes, then on the heap or on the stack, and why?
 2. I heard GHC doesn't have a call stack. How does that work?
 3. Why is this value not garbage collected?
-4. Do linked lists have bad performance?
+4. Why are lists sometimes not very performant?
 
 
 Language introduction
@@ -333,25 +354,6 @@ by hand in STG in the `Prelude` modules. Combined with the above explanations,
 this is all you should need to get started.
 
 
-Running an STG program
-----------------------
-
-The `app/Main.hs` file is written so you can easily switch out the `prog` value.
-The `Stg.ExamplePrograms` module provides a number of programs that might be
-worth having a look, and are a good starting point for modifications or adding
-your own programs.
-
-When you're happy with your `app/Main.hs`, run
-
-```bash
-stack build --exec "stg-exe --colour=true" | less -R
-```
-
-to get coloured output in `less`. Type `/====` to search for `====`, which
-finds the top of every new step; use `n` (next step) or `N` (previous step) to
-navigate through the execution.
-
-
 
 ### Marshalling values
 
@@ -364,14 +366,15 @@ be careful doing it at that.
 
 
 
-### Special conditions
+Special runtime conditions
+--------------------------
 
-#### Unhelpful error?
+### Unhelpful error message?
 
 The goal of this project is being useful to human readers. If you find an error
 message that is unhelpful or even misleading, please report it as a bug!
 
-#### Black holes
+### Black holes
 
 The heap does not only contain closures (lambda forms with values for the free
 variables), but also black holes. Black holes are annotated with the step in
