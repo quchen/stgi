@@ -380,16 +380,14 @@ instance Pretty InfoDetail where
               <+> "to argument" <> pluralS args
               <+> commaSep (map pretty args) ]
 
-        Detail_UnusedLocalVariables vars (Locals locals) ->
-            let used = M.fromList [ (var, ()) | var <- vars ]
+        Detail_UnusedLocalVariables usedVars (Locals locals) ->
+            let used = M.fromList [ (var, ()) | var <- usedVars ]
                 unused = locals `M.difference` used
                 pprDiscardedBind var val = [pretty var <+> "(" <> pretty val <> ")"]
-            in if
-                | M.null locals -> ["No local values were present, so none was discarded"]
-                | M.null unused -> ["All locals were used, so none was discarded"]
-                | otherwise ->
-                    ["Unused local variable" <> pluralS (M.toList unused) <+> "discarded:"
-                     <+> commaSep (M.foldMapWithKey pprDiscardedBind unused)]
+            in ["Unused local variable" <> pluralS (M.toList unused) <+> "discarded:"
+                <+> case unused of
+                    [] -> "(none)"
+                    _  -> commaSep (M.foldMapWithKey pprDiscardedBind unused) ]
 
         Detail_EnterNonUpdatable addr args ->
             [ "Enter closure at" <+> pretty addr

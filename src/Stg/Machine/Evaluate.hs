@@ -25,6 +25,15 @@ import           Stg.Util
 
 
 
+-- | Smart constructor to avoid generating info if nothing was discarded
+mkDetail_UnusedLocalVariables :: [Var] -> Locals -> [InfoDetail]
+mkDetail_UnusedLocalVariables usedVars locals =
+    [ Detail_UnusedLocalVariables usedVars locals
+    | let Locals localsMap = locals
+          used = M.fromList [ (var, ()) | var <- usedVars ]
+          unused = localsMap `M.difference` used
+    , not (M.null unused) && not (M.null localsMap) ]
+
 -- | Look up an algebraic constructor among the given alternatives, and return
 -- the first match. If nothing matches, return the default alternative.
 lookupAlgebraicAlt
@@ -113,8 +122,8 @@ stgRule s@StgState
          , stgStack = stack'
          , stgInfo  = Info
              (StateTransition Eval_FunctionApplication)
-             [ Detail_FunctionApplication f xs
-             , Detail_UnusedLocalVariables (f : [ var | AtomVar var <- xs ]) locals ]}
+             ( Detail_FunctionApplication f xs
+             : mkDetail_UnusedLocalVariables (f : [ var | AtomVar var <- xs ]) locals )}
 
 
 
@@ -248,7 +257,7 @@ stgRule s@StgState
   = s { stgCode = ReturnCon con valsXs
       , stgInfo = Info
           (StateTransition Eval_AppC)
-          [Detail_UnusedLocalVariables [ var | AtomVar var <- xs ] locals] }
+          (mkDetail_UnusedLocalVariables [ var | AtomVar var <- xs ] locals) }
 
 
 
@@ -312,7 +321,7 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
 
   = s { stgCode = ReturnInt k
       , stgInfo = Info (StateTransition Eval_LitApp)
-                       [Detail_UnusedLocalVariables [f] locals] }
+                       (mkDetail_UnusedLocalVariables [f] locals) }
 
 
 
@@ -382,8 +391,8 @@ stgRule s@StgState
 
   = s { stgCode = ReturnInt result
       , stgInfo = Info (StateTransition Eval_AppP)
-                       [Detail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
-                                                    locals] }
+                       (mkDetail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
+                                                      locals )}
 
 
 
