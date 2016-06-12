@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | Tri-state ("tri-colour") garbage collector.
 --
@@ -17,7 +18,6 @@ import           Data.Monoid   hiding (Alt)
 import           Data.Sequence (Seq)
 import           Data.Set      (Set)
 import qualified Data.Set      as S
-import           Data.Tagged
 
 import Stg.Machine.GarbageCollection.Common
 import Stg.Machine.Types
@@ -26,15 +26,20 @@ import Stg.Machine.Types
 
 -- | Remove all unused addresses, without moving the others.
 triStateTracing :: GarbageCollectionAlgorithm
-triStateTracing = GarbageCollectionAlgorithm splitHeap
+triStateTracing = GarbageCollectionAlgorithm
+    "Tri-state tracing"
+    (insert2nd mempty . garbageCollect)
 
-splitHeap :: StgState -> (Tagged Dead Heap, StgState)
-splitHeap stgState@StgState
+insert2nd :: a -> (x, y) -> (x, a, y)
+insert2nd a (x,y) = (x,a,y)
+
+garbageCollect :: StgState -> (Set MemAddr, StgState)
+garbageCollect stgState@StgState
     { stgCode    = code
     , stgHeap    = heap
     , stgGlobals = globals
     , stgStack   = stack }
-  = let GcState {aliveHeap = alive, oldHeap = dead}
+  = let GcState {aliveHeap = alive, oldHeap = Heap dead}
             = until everythingCollected gcStep start
         start = GcState
             { aliveHeap = mempty
@@ -42,7 +47,7 @@ splitHeap stgState@StgState
             , staged = (seqToSet . mconcat)
                 [addrs code, addrs globals, addrs stack] }
         stgState' = stgState { stgHeap = alive }
-    in (Tagged dead, stgState')
+    in (M.keysSet dead, stgState')
 
 seqToSet :: Ord a => Seq a -> Set a
 seqToSet = foldMap S.singleton

@@ -12,7 +12,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map           as M
 import           Data.Monoid
 import qualified Data.Set           as S
-import           Data.Tagged
 import           Data.Text          (Text)
 import qualified Data.Text          as T
 
@@ -79,25 +78,25 @@ splitHeapTest algorithm = testGroup "Split heap in dead/alive"
     unusedIsCollected = testCase "Dead address is found" test
       where
         expectedDead = S.singleton (MemAddr 3)
-        (Tagged (Heap actualDead), StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
+        (actualDead, _forwards, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedDead
-                           (M.keysSet actualDead)
+                           actualDead
 
     usedIsNotCollected = testCase "Alives are kept" test
       where
         expectedHeap = let Heap h = dirtyHeap
                        in Heap (M.delete (MemAddr 3) h)
-        (_dead, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
+        (_dead, _forwards, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expectedHeap
                            cleanHeap
 
     heapSplit = testCase "dead+alive contain all previous addresses" test
       where
-        expected = dirtyHeap
-        actual = dead <> cleanHeap
-        (Tagged dead, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
+        expected = M.keysSet (let Heap h = dirtyHeap in h)
+        actual = deadAddrs <> M.keysSet (let Heap h = cleanHeap in h)
+        (deadAddrs, _forwards, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
         test = assertEqual (T.unpack (errorMsg cleanHeap))
                            expected
                            actual

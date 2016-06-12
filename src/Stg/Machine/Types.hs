@@ -37,6 +37,9 @@ import           Data.Foldable
 import           Data.Map                     (Map)
 import qualified Data.Map                     as M
 import           Data.Monoid
+import           Data.Set                     (Set)
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
 import           GHC.Generics
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 import           Text.Printf
@@ -364,7 +367,7 @@ data InfoDetail =
     | Detail_PapUpdate MemAddr
     | Detail_ReturnIntCannotUpdate
     | Detail_StackNotEmpty
-    | Detail_GarbageCollected [MemAddr]
+    | Detail_GarbageCollected Text (Set MemAddr) (Map MemAddr MemAddr)
     | Detail_EnterBlackHole MemAddr Integer
     | Detail_UpdateClosureWithPrimitive
     deriving (Eq, Ord, Show, Generic)
@@ -392,7 +395,7 @@ instance Pretty InfoDetail where
         Detail_EnterNonUpdatable addr args ->
             [ "Enter closure at" <+> pretty addr
             , if null args
-                then pretty addr <+> "does not take any arguments, so none are popped"
+                then pretty addr <+> "does not take any arguments, so no frames are popped"
                 else hang 4 (vsep
                         [ "Extend local environment with mappings from bound values to argument frame addresses:"
                         , commaSep (foldMap (\arg -> [pretty arg]) args) ])]
@@ -436,11 +439,17 @@ instance Pretty InfoDetail where
             , "The lack of a better description is a bug in the STG evaluator."
             , "Please report this to the project maintainers!" ]
 
-        Detail_GarbageCollected addrs ->  ["Removed address" <> pluralES addrs <> ":" <+> pprAddrs addrs]
+        Detail_GarbageCollected algorithm deadAddrs movedAddrs -> mconcat
+            [ [ "Algorithm: " <> string (T.unpack algorithm) ]
+            , [ "Removed old address" <> pluralES deadAddrs <> ":" <+> pprAddrs deadAddrs ]
+            , [ "Moved alive address" <> pluralES movedAddrs <> ":" <+> pprMoved movedAddrs
+                | not (M.null movedAddrs) ]]
           where
             pprAddrs = pretty . commaSep . foldMap (\addr -> [pretty addr])
             pluralES [_] = ""
             pluralES _ = "es"
+
+            pprMoved = commaSep . map (\(x, y) -> pretty (Mapping x y)) . M.assocs
 
         Detail_EnterBlackHole addr tick ->
             [ "Heap address" <+> pretty addr <+> "is a black hole, created in step" <+> pretty tick

@@ -1,10 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Orphans.Machine () where
 
 
 
-import qualified Data.Map as M
+import qualified Data.Map    as M
+import           Data.Monoid
+import qualified Data.Set    as S
+import qualified Data.Text   as T
 
 import Stg.Machine.Types
 
@@ -84,7 +89,10 @@ instance Arbitrary InfoDetail where
         , arbitrary1 Detail_PapUpdate
         , arbitrary0 Detail_ReturnIntCannotUpdate
         , arbitrary0 Detail_StackNotEmpty
-        , arbitrary1 Detail_GarbageCollected
+        , Detail_GarbageCollected
+            <$> ((\x -> "GC algorithm: " <> T.pack x) <$> arbitrary)
+            <*> (S.fromList <$> arbitrary)
+            <*> (M.fromList <$> arbitrary)
         , arbitrary2 Detail_EnterBlackHole ]
 
 instance Arbitrary StateTransition where

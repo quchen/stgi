@@ -59,7 +59,6 @@ library
                      , deepseq
                      , parsers
                      , semigroups
-                     , tagged
                      , template-haskell
                      , text
                      , th-lift
@@ -133,7 +132,6 @@ test-suite testsuite
                      , containers
                      , deepseq
                      , semigroups
-                     , tagged
                      , tasty
                      , tasty-html
                      , tasty-hunit

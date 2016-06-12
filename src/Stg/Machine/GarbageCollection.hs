@@ -13,22 +13,20 @@ module Stg.Machine.GarbageCollection (
 
 
 
-import Data.Foldable
-import Data.Tagged
+import qualified Data.Set as S
 
-import           Stg.Machine.GarbageCollection.Common
-import           Stg.Machine.GarbageCollection.TriStateTracing
-import           Stg.Machine.GarbageCollection.TwoSpaceCopying
-import qualified Stg.Machine.Heap                              as H
-import           Stg.Machine.Types
+import Stg.Machine.GarbageCollection.Common
+import Stg.Machine.GarbageCollection.TriStateTracing
+import Stg.Machine.GarbageCollection.TwoSpaceCopying
+import Stg.Machine.Types
 
 
 
 garbageCollect :: GarbageCollectionAlgorithm -> StgState -> StgState
-garbageCollect algorithm state
-  = let (Tagged deadHeap, state') = splitHeapWith algorithm state
-    in if H.size deadHeap > 0
+garbageCollect algorithm@(GarbageCollectionAlgorithm name _) state
+  = let (deadAddrs, forwards, state') = splitHeapWith algorithm state
+    in if S.size deadAddrs > 0
         then state' { stgSteps = stgSteps state + 1
                     , stgInfo  = Info GarbageCollection
-                                      [Detail_GarbageCollected (toList (H.addresses deadHeap))] }
+                                      [Detail_GarbageCollected name deadAddrs forwards] }
         else state

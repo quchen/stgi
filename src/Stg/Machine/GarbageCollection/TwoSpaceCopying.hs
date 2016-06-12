@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiWayIf                 #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 -- | Two space stop-and-copy garbage collector.
 --
@@ -22,8 +23,8 @@ import qualified Data.Map                   as M
 import           Data.Monoid
 import           Data.Sequence              (Seq, ViewL (..), (|>))
 import qualified Data.Sequence              as Seq
+import           Data.Set                   (Set)
 import qualified Data.Set                   as S
-import           Data.Tagged
 
 import           Stg.Machine.GarbageCollection.Common
 import qualified Stg.Machine.Heap                     as H
@@ -33,7 +34,9 @@ import           Stg.Machine.Types
 
 -- | Remove all unused addresses by moving them to a safe location.
 twoSpaceCopying :: GarbageCollectionAlgorithm
-twoSpaceCopying = GarbageCollectionAlgorithm splitHeap
+twoSpaceCopying = GarbageCollectionAlgorithm
+    "Two-space copying"
+    garbageCollect
 
 newtype Gc a = Gc (ReaderT Heap (State GcState) a)
     deriving (Functor, Applicative, Monad)
@@ -69,8 +72,8 @@ data GcState = GcState
         -- ^ Heap objects known to be alive, but not yet evacuated.
     } deriving (Eq, Ord, Show)
 
-splitHeap :: StgState -> (Tagged Dead Heap, StgState)
-splitHeap stgState@StgState
+garbageCollect :: StgState -> (Set MemAddr, Map MemAddr MemAddr, StgState)
+garbageCollect stgState@StgState
     { stgCode    = code
     , stgHeap    = heap
     , stgGlobals = globals
@@ -84,18 +87,20 @@ splitHeap stgState@StgState
         finalState = execGc evacuateScavengeLoop heap initialState
     in case finalState of
         GcState {toHeap = heap'@(Heap alive'), forwards = forwards'} ->
-            let Heap old = heap
-                dead     = Heap (old `M.difference` alive')
+            let deadAddrs = let Heap old = heap
+                            in M.keysSet (old `M.difference` alive')
 
                 forward addr = M.findWithDefault forwardErr addr forwards'
                 forwardErr = error "Invalid forward in GC; please report this as a bug"
+
+                removeIdentities = M.filterWithKey (/=)
 
                 stgState' = stgState
                     { stgCode    = updateAddrs forward code
                     , stgStack   = updateAddrs forward stack
                     , stgGlobals = updateAddrs forward globals
                     , stgHeap    = heap' }
-            in (Tagged dead, stgState')
+            in (deadAddrs, removeIdentities forwards', stgState')
 
 evacuateScavengeLoop :: Gc ()
 evacuateScavengeLoop = initialEvacuation >> scavengeLoop

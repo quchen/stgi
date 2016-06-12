@@ -5,17 +5,18 @@
 module Stg.Machine.GarbageCollection.Common (
     splitHeapWith,
     GarbageCollectionAlgorithm(..),
-    Dead,
     Addresses(addrs),
     UpdateAddrs(..),
 ) where
 
 
 
+import           Data.Map      (Map)
 import           Data.Sequence (Seq, ViewL (..), (<|))
 import qualified Data.Sequence as Seq
+import           Data.Set      (Set)
 import qualified Data.Set      as S
-import           Data.Tagged
+import           Data.Text
 
 import Stg.Machine.Types
 
@@ -27,16 +28,13 @@ import Stg.Machine.Types
 splitHeapWith
     :: GarbageCollectionAlgorithm
     -> StgState
-    -> (Tagged Dead Heap, StgState)
-splitHeapWith (GarbageCollectionAlgorithm gc) = gc
+    -> (Set MemAddr, Map MemAddr MemAddr, StgState)
+splitHeapWith (GarbageCollectionAlgorithm _name gc) = gc
 
-newtype GarbageCollectionAlgorithm
-  = GarbageCollectionAlgorithm (StgState -> (Tagged Dead Heap, StgState))
-
--- | Tag for dead things
-data Dead
-
-
+data GarbageCollectionAlgorithm = GarbageCollectionAlgorithm
+    Text
+    (StgState -> (Set MemAddr, Map MemAddr MemAddr, StgState))
+        -- ^ Dead addresses, moved addresses, new state
 
 -- | Collect all mentioned addresses in a machine element.
 --
