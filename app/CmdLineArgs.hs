@@ -21,7 +21,10 @@ data Options = Options
 defOptions :: Options
 defOptions = Options { optAnsi      = Nothing
                      , optNumStates = Nothing
-                     , optVerbosity = 1 }
+                     , optVerbosity = defaultVerbosity }
+
+defaultVerbosity :: Int
+defaultVerbosity = 2
 
 options :: [OptDescr (Options -> Options)]
 options =
@@ -52,7 +55,7 @@ options =
             (\x ->
                 let parsed = case x >>= readMaybe of
                         Just n | 0 <= n && n <= 2 -> n
-                        _otherwise                -> 1
+                        _otherwise                -> defaultVerbosity
                 in \opts -> opts { optVerbosity = parsed } )
             "0,1,2" )
         "Verbosity" ]
