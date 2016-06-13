@@ -4,25 +4,56 @@ STGi - STG interpreter
 STGi is a visual STG implementation to help understand Haskell's execution
 model.
 
+It does this by guiding through the runnning of a program, showing stack and
+heap, and giving explanations of the applied transition rules. Here what an
+intermediate state looks like:
+
 ![](screenshot.png)
 
 [![](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
+
+Table of contents
+-----------------
+
+- [Quickstart guide](#quickstart-guide)
+- [About the machine](#about-the-machine)
+- [Useful applications](#useful-applications)
+- [Language introduction](#language-introduction)
+	- [Top-level](#top-level)
+    - [The `main` value, termination](#the-main-value-termination)
+	- [Expressions](#expressions)
+	- [Updates](#updates)
+	- [Pitfalls](#pitfalls)
+	- [Code example](#code-example)
+	- [Marshalling values](#marshalling-values)
+- [Runtime behaviour](#runtime-behaviour)
+	- [Code segment](#code-segment)
+	- [Stack](#stack)
+	- [Heap](#heap)
+    - [Black holes](#black-holes)
+    - [Garbage collection](#garbage-collection)
+	- [Unhelpful error message?](#unhelpful-error-message)
+- [Differences from the 1992 paper](#differences-from-the-1992-paper)
+	- [Grammar](#grammar)
+	- [Evaluation](#evaluation)
+- [GHC's current STG](#ghcs-current-stg)
 
 
 Quickstart guide
 ----------------
 
-If you're impatient, here is how to get going:
+If you want to have a quick look at the STG, here is what you need to get going.
+The program should build with both [`stack`][stack] and [`cabal`][cabal].
 
-The `app/Main.hs` file is written so you can easily switch out the `prog` value.
-The `Stg.ExamplePrograms` module provides a number of programs that might be
-worth having a look, and are a good starting point for modifications or adding
-your own programs.
+The `app/Main.hs` file is written so you can easily switch out the `prog` value
+for other `Program`s that contain a `main` definition. The `Stg.ExamplePrograms`
+module provides a number of examples that might be worth having a look, and are
+a good starting point for modifications or adding your own programs.
 
 When you're happy with your `app/Main.hs`, run
 
 ```bash
-stack build --exec "stg-exe --colour=true" | less -R
+stack build --exec "stgi-exe --colour=true --verbosity=2" | less -R
 ```
 
 to get coloured output in `less`. Type `/====` to search for `====`, which
@@ -67,12 +98,24 @@ The STG is
 Useful applications
 -------------------
 
-These are some of the questions STGi answers:
+STGi was started to teach myself about the STG. Not long into the project, I
+decided to extend it to save others the many detours I had to take to implement
+it. In that sense, it can be a useful tool if you're interested in the
+lower-level properties of a Haskell implementation. I did my best to keep the
+code readable, and added some decent Haddock/comment coverage. Speaking of
+Haddock: it's an excellent tool to start looking around the project before
+digging into the source!
 
-1. Does this leak memory? If yes, then on the heap or on the stack, and why?
-2. I heard GHC doesn't have a call stack. How does that work?
+The other benefit is for teaching others: instead (or in addition to!) of
+explaining certain common Haskell issues on a whiteboard with boxes and arrows,
+you can share an interactive view of common programs with others. The example
+programs feature some interesting cases.
+
+1. Does this leak memory? On the stack or the heap?
+2. I heard GHC doesn't have a call stack?!
 3. Why is this value not garbage collected?
 4. Why are lists sometimes not very performant?
+5. How many steps does this small, innocent function take to produce a result?
 
 
 Language introduction
@@ -109,8 +152,6 @@ zero = \ -> Int# 0#
 ```
 
 
-
-
 ### Top-level
 
 An STG program consists of a set of bindings, which each have the form
@@ -127,6 +168,14 @@ usual lambda from Haskell.
     global. This means that variables from the parent scope are not
     automatically in scope, but you can get them into scope by adding them to
     the free variables list.
+
+### The `main` value, termination
+
+In the default configuration, program execution starts by moving the definitions
+given in the source code onto the heap, and then evaluating the `main` value. It
+will continue to run until there is no rule applicable to the current state. Due
+to the lazy IO implementation, you can load indefinitely running programs in
+your pager application and step as long forward as you want.
 
 ### Expressions
 
@@ -366,13 +415,60 @@ be careful doing it at that.
 
 
 
-Special runtime conditions
---------------------------
+Runtime behaviour
+-----------------
 
-### Unhelpful error message?
+The following steps are an overview of the evaluation rules. Running the STG in
+verbose mode (`-v2`) will provide a more detailed description of what happened
+each particular step.
 
-The goal of this project is being useful to human readers. If you find an error
-message that is unhelpful or even misleading, please report it as a bug!
+### Code segment
+
+The code segment is the current instruction the machine evaluates.
+
+- **Eval** evaluates expressions.
+    - **function application** pushes the function's arguments on the stack
+      and **Enter**s the address of the function.
+	- **constructor applications** simply transition into the
+	  **ReturnCon** state when evaluated.
+	- Similarly, **primitive ints** transitions into the **ReturnInt** state.
+	- **case** pushes a return frame, and proceeds evaluating the scrutinee.
+	- **let(rec)** allocates heap closures, and extends the local environment
+	  with the new bindings.
+- **Enter** evaluates memory addresses by looking up the value at a memory
+  address on the heap, and evaluating its body.
+  	- If the closure entered is updatable, push an update frame so it can later
+	  be overwritten with the value it evaluates to.
+	- If the closure takes any arguments, supply it with values taken from
+	  argument frames.
+- **ReturnCon** instructs the machine to branch depending on which constructor
+  is present, by popping a return frame.
+- **ReturnInt** does the same, but for primitive values.
+
+### Stack
+
+The stack has three different types of frames.
+
+- **Argument frames** store peding function arguments. They are pushed when a
+  function applied to arguments is evaluated, and popped when entering a closure
+  that has a non-empty argument list.
+- **Return frames** are pushed when evaluating a `case` expression, in order to
+  know where to continue once the scrutinee has been evaluated. They are popped
+  when evaluating constructors or primitive values.
+- **Update frames** block access to argument and return frames. If an evaluation
+  step needs to pop one of them but there is an update frame in the way, it can
+  get rid the update frame by overriding the memory address pointed to by it
+  with the current value being evaluated, and retrying the evaluation now that
+  the update frame is gone. This mechanism is what enables lazy evaluation in
+  the STG.
+
+### Heap
+
+The heap is a mapping from memory addresses to heap objects, which can be
+closures or black holes (see below). To help the user, closures are annotated
+with `Fun` (takes arguments), `Con` (data constructors), and `Thunk` (suspended
+computations).
+
 
 ### Black holes
 
@@ -403,6 +499,26 @@ thunk is currently evaluated, but have two useful technical benefits:
  interpreter to catch some non-terminating computations with a useful error
 
 
+### Garbage collection
+
+Currently, two garbage collection algorithms are implemented:
+
+- Tri-state tracing: free all unused memory addresses, and does not touch
+  the others.
+- Two-space copying: move all used memory addresses to the beginning of the
+  heap, and discard all those that weren't moved. This has the advantage of
+  reordering the heap roughly in the order the closures will be accessed by the
+  program again, but the disadvantage of making things harder to track, since
+  for example the `main` value might appear in several different locations
+  throughout the run of a program.
+
+
+### Unhelpful error message?
+
+The goal of this project is being useful to human readers. If you find an error
+message that is unhelpful or even misleading, please report it as a bug!
+
+
 
 Differences from the 1992 paper
 -------------------------------
@@ -427,16 +543,12 @@ Differences from the 1992 paper
   synchronously anyway. This makes the current location in the evaluation much
   clearer, since the stack is always popped from the top. For example, having a
   return frame at the top means the program is close to a `case` expression.
-- There are different objects on the heap, not just closures:
-    - Closures are all represented alike, but classified for the user in the
-      visual output:
-        - Constructors are closures with a constructor application body, and
-          only free variables.
-        - Other closures with only free variables are thunks.
-        - Closures with non-empty argument lists are functions.
-    - Black holes overwrite updatable closures upon entering, allowing for
-      `<<loop>>` detection and avoiding certain space leaks (... apparently,
-      at least the 1992 paper says so).
+- Although heap closures are all represented alike, they are classified for the
+  user in the visual output:
+    - Constructors are closures with a constructor application body, and
+      only free variables.
+    - Other closures with only free variables are thunks.
+    - Closures with non-empty argument lists are functions.
 
 
 
@@ -450,6 +562,8 @@ but it's on my list of long-term goals (alongside the current push/enter).
 
 
 
-[ghc]: https://www.haskell.org/ghc/
-[stg1992]: http://research.microsoft.com/apps/pubs/default.aspx?id=67083
+[cabal]: https://www.haskell.org/cabal/
 [fastcurry]: http://research.microsoft.com/en-us/um/people/simonpj/papers/eval-apply/
+[ghc]: https://www.haskell.org/ghc/
+[stack]: http://haskellstack.org/
+[stg1992]: http://research.microsoft.com/apps/pubs/default.aspx?id=67083
