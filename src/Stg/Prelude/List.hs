@@ -262,7 +262,7 @@ replicate = [program|
 -- Not quite as pretty as the Haskell version, but functionally equivalent. :-)
 --
 -- This implementation is particularly efficient when the input contains runs of
--- already sorted elements. For comparison, sorting [1..100] takes  6496 steps,
+-- already sorted elements. For comparison, sorting [1..100] takes 6496 steps,
 -- whereas 'naiveSort' requires 268082.
 --
 -- @

@@ -53,7 +53,7 @@ a good starting point for modifications or adding your own programs.
 When you're happy with your `app/Main.hs`, run
 
 ```bash
-stack build --exec "stgi-exe --colour=true --verbosity=2" | less -R
+stack build --exec "stgi-exe --colour=true" | less -R
 ```
 
 to get coloured output in `less`. Type `/====` to search for `====`, which
