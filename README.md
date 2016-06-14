@@ -10,7 +10,7 @@ intermediate state looks like:
 
 ![](screenshot.png)
 
-[![](https://travis-ci.org/quchen/stg.svg?branch=master)](https://travis-ci.org/quchen/stg)
+[![](https://travis-ci.org/quchen/stgi.svg?branch=master)](https://travis-ci.org/quchen/stgi)
 
 Table of contents
 -----------------
