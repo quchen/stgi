@@ -32,6 +32,10 @@ module Stg.Language (
     Atom           (..),
     Constr         (..),
     Pretty         (..),
+
+    -- * Meta information
+    classify,
+    LambdaType(..),
 ) where
 
 
@@ -120,6 +124,26 @@ instance Show Binds where
 -- LambdaForm [Var "x"] NoUpdate [Var "y",Var "z"] (AppF (Var "expr") [AtomVar (Var "x"),AtomVar (Var "z")])
 data LambdaForm = LambdaForm ![Var] !UpdateFlag ![Var] !Expr
     deriving (Eq, Ord, Show, Generic)
+
+-- | Possible classification of lambda forms.
+data LambdaType =
+      LambdaCon   -- ^ Data constructor ('AppC' as body)
+    | LambdaFun   -- ^ Function (lambda with non-empty argument list)
+    | LambdaThunk -- ^ Thunk (everything else)
+    deriving (Eq, Ord, Show)
+
+instance Pretty LambdaType where
+    pretty = \case
+        LambdaCon -> "Con"
+        LambdaFun -> "Fun"
+        LambdaThunk -> "Thunk"
+
+-- | Classify the type of a lambda form based on its shape.
+classify :: LambdaForm -> LambdaType
+classify = \case
+    LambdaForm _ _ [] AppC{} -> LambdaCon
+    LambdaForm _ _ (_:_) _   -> LambdaFun
+    LambdaForm _ _ []    _   -> LambdaThunk
 
 -- | The update flag distinguishes updateable from non-updateable lambda forms.
 --

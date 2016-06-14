@@ -196,15 +196,10 @@ instance FromStg a => FromStg [a] where
 liftToMatcher :: Either e a -> Either (Maybe e) a
 liftToMatcher = first Just
 
-isNotCon :: Closure -> Bool
-isNotCon (Closure lf _) = case lf of
-    LambdaForm _ _ [] AppC{} -> False
-    LambdaForm{}             -> True
-
 -- | Like 'matchCon2', but for nullary 'Constr'uctors.
 matchCon0 :: Constr -> Closure -> Either (Maybe FromStgError) ()
-matchCon0 _ closure
-    | isNotCon closure = Left (Just IsNotCon)
+matchCon0 _ (Closure lambdaForm _)
+    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
 matchCon0 wantedCon (Closure (LambdaForm _ _ _ (AppC actualCon args)) _)
     | wantedCon == actualCon = case args of
         []  -> Right ()
@@ -213,8 +208,8 @@ matchCon0 _ _ = Left Nothing
 
 -- | Like 'matchCon2', but for unary 'Constr'uctors.
 matchCon1 :: Constr -> Closure -> Either (Maybe FromStgError) (Atom, Locals)
-matchCon1 _ closure
-    | isNotCon closure = Left (Just IsNotCon)
+matchCon1 _ (Closure lambdaForm _)
+    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
 matchCon1 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x] -> Right (x, makeLocals freeVars freeVals)
@@ -230,8 +225,8 @@ matchCon1 _ _ = Left Nothing
 -- * If the constructor fails due to a non-recoverable error, such as wrong
 --   arity, abort with the corresponding error.
 matchCon2 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom), Locals)
-matchCon2 _ closure
-    | isNotCon closure = Left (Just IsNotCon)
+matchCon2 _ (Closure lambdaForm _)
+    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
 matchCon2 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y] -> Right ((x,y), makeLocals freeVars freeVals)
@@ -240,8 +235,8 @@ matchCon2 _ _ = Left Nothing
 
 -- | Like 'matchCon2', but for ternary 'Constr'uctors.
 matchCon3 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom), Locals)
-matchCon3 _ closure
-    | isNotCon closure = Left (Just IsNotCon)
+matchCon3 _ (Closure lambdaForm _)
+    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
 matchCon3 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z] -> Right ((x,y,z), makeLocals freeVars freeVals)
@@ -250,8 +245,8 @@ matchCon3 _ _ = Left Nothing
 
 -- | Like 'matchCon2', but for 4-ary 'Constr'uctors.
 matchCon4 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom, Atom), Locals)
-matchCon4 _ closure
-    | isNotCon closure = Left (Just IsNotCon)
+matchCon4 _ (Closure lambdaForm _)
+    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
 matchCon4 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z,w] -> Right ((x,y,z,w), makeLocals freeVars freeVals)
@@ -260,8 +255,8 @@ matchCon4 _ _ = Left Nothing
 
 -- | Like 'matchCon2', but for 5-ary 'Constr'uctors.
 matchCon5 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom, Atom, Atom), Locals)
-matchCon5 _ closure
-    | isNotCon closure = Left (Just IsNotCon)
+matchCon5 _ (Closure lambdaForm _)
+    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
 matchCon5 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z,w,v] -> Right ((x,y,z,w,v), makeLocals freeVars freeVals)

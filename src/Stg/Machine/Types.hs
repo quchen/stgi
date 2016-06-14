@@ -496,20 +496,14 @@ data HeapObject =
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty HeapObject where
-    pretty ho = closureType style (typeOf ho) <+> pprHo ho
+    pretty ho = typeOf ho <+> pprHo ho
       where
         pprHo = \case
             HClosure closure -> align (pretty closure)
             Blackhole tick   -> "(from step" <+> integer tick <> ")"
         typeOf = \case
-            HClosure (Closure lf _free) -> case lf of
-                LambdaForm _ _ [] AppC{} -> "Con"
-                LambdaForm _ _ (_:_) _   -> "Fun"
-                LambdaForm _ _ []    _   -> "Thunk"
-                LambdaForm{} -> "CLASSIFICATION ERROR"
-                               -- Fallthrough pattern to silence incorrect
-                               -- inexhaustive warning by GHC 7.10.3.
-            Blackhole _ -> "Blackhole"
+            HClosure (Closure lf _free) -> pretty (classify lf)
+            Blackhole _ -> closureType style "Blackhole"
 
 instance NFData StgState
 instance NFData StackFrame
