@@ -2,7 +2,6 @@
 module Stg.Machine.Heap (
     -- * Info
     size,
-    addresses,
 
     -- * Management
     lookup,
@@ -17,7 +16,6 @@ module Stg.Machine.Heap (
 import qualified Data.List   as L
 import qualified Data.Map    as M
 import           Data.Monoid
-import           Data.Set    (Set)
 import           Prelude     hiding (lookup)
 
 import Stg.Machine.Types
@@ -59,7 +57,3 @@ allocMany heapObjects (Heap heap) = (addrs, heap')
                     [smallestUnusedAddr ..]
                     heapObjects
     heap' = Heap (heap <> M.fromList (zip addrs heapObjects))
-
--- | All addresses allocated on the heap.
-addresses :: Heap -> Set MemAddr
-addresses (Heap h) = M.keysSet h

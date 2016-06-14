@@ -3,9 +3,6 @@
 {-# LANGUAGE QuasiQuotes       #-}
 
 module Stg.Prelude.Number (
-    -- * Convenience
-    int,
-
     -- * Arithmetic
     add,
     sub,
@@ -40,16 +37,6 @@ import Stg.Parser.QuasiQuoter
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XQuasiQuotes
 -- >>> :module +Stg.Language.Prettyprint
-
-
-
--- | Boxed int generator to abbreviate simple number generation.
---
--- >>> prettyprintPlain (int "one" 1)
--- "one = \\ -> Int# 1#"
-int :: Text -> Integer -> Program
-int name i = Program (Binds [(Var name, LambdaForm [] NoUpdate []
-    (AppC (Constr "Int#") [AtomLit (Literal i)]) )])
 
 
 
