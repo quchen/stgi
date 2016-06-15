@@ -192,11 +192,11 @@ stgRule s@StgState
 
 
 
--- (18) Shortcut for matching primops, given before the general case rule (4)
--- so it takes precedence.
+-- (18, 19) Shortcut for matching primops, given before the general case rule
+-- (4) so it takes precedence.
 --
--- This rule, along with (19), allows evaluating primops without the overhead
--- of allocating an intermediate return stack frame.
+-- This rule allows evaluating primops without the overhead of allocating an
+-- intermediate return stack frame.
 --
 -- When reading the source here for educational purposes, you should skip this
 -- rule until you've seen the normal case rule (4) and the normal
@@ -209,28 +209,17 @@ stgRule s@StgState
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
     , Success opXY <- applyPrimOp op xVal yVal
-    , Left defaultAlt <- lookupPrimitiveAlt alts (Literal opXY)
 
-  = let (locals', expr) = case defaultAlt of
-            DefaultBound pat e -> (addLocals [Mapping pat (PrimInt opXY)] locals, e)
-            DefaultNotBound e -> (locals, e)
+  = let (locals', expr) = case lookupPrimitiveAlt alts (Literal opXY) of
+            Left (DefaultBound pat e)
+                -> (addLocals [Mapping pat (PrimInt opXY)] locals, e)
+            Left (DefaultNotBound e)
+                -> (locals, e)
+            Right (PrimitiveAlt _opXY e)
+                -> (locals, e)
 
     in s { stgCode = Eval expr locals'
          , stgInfo = Info (StateTransition Eval_Case_Primop_DefaultBound) [] }
-
-
-
--- (19) Like (18) a shortcut for evaluating primops. See (18) for more
--- information.
-stgRule s@StgState
-    { stgCode = Eval (Case (AppP op x y) alts) locals }
-    | Success (PrimInt xVal) <- localVal locals x
-    , Success (PrimInt yVal) <- localVal locals y
-    , Success opXY <- applyPrimOp op xVal yVal
-    , Right (PrimitiveAlt _opXY expr) <- lookupPrimitiveAlt alts (Literal opXY)
-
-  = s { stgCode = Eval expr locals
-      , stgInfo = Info (StateTransition Eval_Case_Primop_Normal) [] }
 
 
 
