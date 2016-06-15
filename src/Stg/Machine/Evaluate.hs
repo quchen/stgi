@@ -39,27 +39,29 @@ mkDetail_UnusedLocalVariables usedVars locals =
 lookupAlgebraicAlt
     :: Alts
     -> Constr
-    -> Either DefaultAlt AlgebraicAlt
+    -> Maybe (Either DefaultAlt AlgebraicAlt)
 lookupAlgebraicAlt (Alts (AlgebraicAlts alts) def) constr
-  = case L.find matchingAlt alts of
-    Just alt   -> Right alt
-    _otherwise -> Left def
+  = Just (case L.find matchingAlt alts of
+        Just alt   -> Right alt
+        _otherwise -> Left def )
   where
     matchingAlt (AlgebraicAlt c _ _) = c == constr
-lookupAlgebraicAlt (Alts _ def) _ = Left def
+lookupAlgebraicAlt (Alts PrimitiveAlts{} _) _ = Nothing
+lookupAlgebraicAlt (Alts NoNonDefaultAlts{} def) _ = Just (Left def)
 
--- | 'lookupPrimitiveAlt' for primitive literals.
+-- | 'lookupAlgebraicAlt' for primitive literals.
 lookupPrimitiveAlt
     :: Alts
     -> Literal
-    -> Either DefaultAlt PrimitiveAlt
+    -> Maybe (Either DefaultAlt PrimitiveAlt)
 lookupPrimitiveAlt (Alts (PrimitiveAlts alts) def) lit
-  = case L.find matchingAlt alts of
-    Just alt   -> Right alt
-    _otherwise -> Left def
+  = Just (case L.find matchingAlt alts of
+        Just alt   -> Right alt
+        _otherwise -> Left def )
   where
     matchingAlt (PrimitiveAlt lit' _) = lit' == lit
-lookupPrimitiveAlt (Alts _ def) _ = Left def
+lookupPrimitiveAlt (Alts AlgebraicAlts{} _) _ = Nothing
+lookupPrimitiveAlt (Alts NoNonDefaultAlts{} def) _ = Just (Left def)
 
 liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure
 liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
@@ -207,8 +209,9 @@ stgRule s@StgState
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
     , Success opXY <- applyPrimOp op xVal yVal
+    , Just altLookup <- lookupPrimitiveAlt alts (Literal opXY)
 
-  = let (locals', expr) = case lookupPrimitiveAlt alts (Literal opXY) of
+  = let (locals', expr) = case altLookup of
             Left (DefaultBound pat e)
                 -> (addLocals [Mapping pat (PrimInt opXY)] locals, e)
             Left (DefaultNotBound e)
@@ -252,7 +255,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Right (AlgebraicAlt _con vars expr) <- lookupAlgebraicAlt alts con
+    | Just (Right (AlgebraicAlt _con vars expr)) <- lookupAlgebraicAlt alts con
 
   = let locals' = addLocals (zipWith Mapping vars ws) locals
 
@@ -267,7 +270,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = ReturnCon con _ws
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Left (DefaultNotBound expr) <- lookupAlgebraicAlt alts con
+    | Just (Left (DefaultNotBound expr)) <- lookupAlgebraicAlt alts con
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
@@ -281,7 +284,7 @@ stgRule s@StgState
     , stgStack = ReturnFrame alts locals :< stack'
     , stgHeap  = heap
     , stgSteps = steps }
-    | Left (DefaultBound v expr) <- lookupAlgebraicAlt alts con
+    | Just (Left (DefaultBound v expr)) <- lookupAlgebraicAlt alts con
 
   = let locals' = addLocals [Mapping v (Addr addr)] locals
         (addr, heap') = H.alloc (HClosure closure) heap
@@ -317,7 +320,7 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Right (PrimitiveAlt _k expr) <- lookupPrimitiveAlt alts (Literal k)
+    | Just (Right (PrimitiveAlt _k expr)) <- lookupPrimitiveAlt alts (Literal k)
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
@@ -329,7 +332,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Left (DefaultBound v expr) <- lookupPrimitiveAlt alts (Literal k)
+    | Just (Left (DefaultBound v expr)) <- lookupPrimitiveAlt alts (Literal k)
 
   = let locals' = addLocals [Mapping v (PrimInt k)] locals
 
@@ -344,7 +347,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Left (DefaultNotBound expr) <- lookupPrimitiveAlt alts (Literal k)
+    | Just (Left (DefaultNotBound expr)) <- lookupPrimitiveAlt alts (Literal k)
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
@@ -491,7 +494,7 @@ noRuleApplies s@StgState
 
 -- Page 39, 4th paragraph: "It is not possible for the ReturnInt state to see an
 -- empty return stack, because that would imply that a closure should be updated
--- with a primitive value; but no closure has a primitive type.
+-- with a primitive value; but no closure has a primitive type."
 noRuleApplies s@StgState
     { stgCode  = ReturnInt{}
     , stgStack = Empty }
@@ -524,7 +527,7 @@ noRuleApplies s@StgState
 -- Algebraic constructor return, but primitive alternative on return frame
 noRuleApplies s@StgState
     { stgCode  = ReturnCon{}
-    , stgStack = ReturnFrame (Alts AlgebraicAlts{} _) _ :< _ }
+    , stgStack = ReturnFrame (Alts PrimitiveAlts{} _) _ :< _ }
 
   = s { stgInfo = Info (StateError AlgReturnToPrimAlts) [] }
 
@@ -533,7 +536,7 @@ noRuleApplies s@StgState
 -- Primitive return, but algebraic alternative on return frame
 noRuleApplies s@StgState
     { stgCode  = ReturnInt _
-    , stgStack = ReturnFrame (Alts PrimitiveAlts{} _) _ :< _ }
+    , stgStack = ReturnFrame (Alts AlgebraicAlts{} _) _ :< _ }
 
   = s { stgInfo = Info (StateError PrimReturnToAlgAlts) [] }
 
