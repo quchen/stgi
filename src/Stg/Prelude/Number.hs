@@ -25,7 +25,7 @@ module Stg.Prelude.Number (
 
 
 
-import Prelude (Integer)
+import Prelude ()
 
 import Data.Monoid ((<>))
 import Data.Text   (Text)
