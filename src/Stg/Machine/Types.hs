@@ -501,9 +501,9 @@ instance Pretty HeapObject where
         pprHo = \case
             HClosure closure -> align (pretty closure)
             Blackhole tick   -> "(from step" <+> integer tick <> ")"
-        typeOf = \case
+        typeOf = closureType style . \case
             HClosure (Closure lf _free) -> pretty (classify lf)
-            Blackhole _ -> closureType style "Blackhole"
+            Blackhole _ -> "Blackhole"
 
 instance NFData StgState
 instance NFData StackFrame
