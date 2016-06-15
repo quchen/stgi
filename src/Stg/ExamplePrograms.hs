@@ -80,7 +80,7 @@ addTwoNumbers x y = mconcat
     , toStg "x" x
     , toStg "y" y
     , [program|
-    main = \ => case add x y of r -> r
+    main = \ => add x y
     |]]
 
 -- | A program that measures the length of a list.

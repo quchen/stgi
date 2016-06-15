@@ -68,7 +68,7 @@ data StgState = StgState
     , stgGlobals :: Globals
         -- ^ The environment consisting of the top-level definitions.
 
-    , stgSteps :: Integer
+    , stgSteps :: !Integer
         -- ^ A counter, used to generte fresh variable names from.
 
     , stgInfo :: Info
@@ -360,6 +360,7 @@ data InfoDetail =
     | Detail_EnterNonUpdatable MemAddr [Mapping Var Value]
     | Detail_EvalLet [Var] [MemAddr]
     | Detail_EvalCase
+    | Detail_ReturnCon_Match Constr [Var]
     | Detail_ReturnConDefBound Var MemAddr
     | Detail_ReturnIntDefBound Var Integer
     | Detail_EnterUpdatable MemAddr
@@ -411,6 +412,9 @@ instance Pretty InfoDetail where
 
         Detail_EvalCase ->
             ["Save alternatives and local environment as a stack frame"]
+
+        Detail_ReturnCon_Match con args ->
+            ["Pattern" <+> pretty (AppC con (map AtomVar args)) <+> "matches, follow its branch"]
 
         Detail_ReturnConDefBound var addr ->
             [ "Allocate closure at" <+> pretty addr <+> "for the bound value"

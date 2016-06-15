@@ -67,9 +67,6 @@ liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
         Success freeVals   -> Success (Closure lf freeVals)
         Failure notInScope -> Failure (mconcat notInScope)
 
-boolToPrim :: (a -> b -> Bool) -> a -> b -> Integer
-boolToPrim p a b = if p a b then 1 else 0
-
 data PrimError = Div0
 
 applyPrimOp :: PrimOp -> Integer -> Integer -> Validate PrimError Integer
@@ -77,6 +74,7 @@ applyPrimOp Div _ 0 = Failure Div0
 applyPrimOp Mod _ 0 = Failure Div0
 applyPrimOp op x y = Success (opToFunc op x y)
   where
+    boolToPrim p a b = if p a b then 1 else 0
     opToFunc = \case
         Add -> (+)
         Sub -> (-)
@@ -250,7 +248,7 @@ stgRule s@StgState
 
 
 
--- (6) Algebraic constructor return, standard match found
+-- (6) Algebraic constructor return, standard match
 stgRule s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack' }
@@ -260,7 +258,8 @@ stgRule s@StgState
 
     in s { stgCode  = Eval expr locals'
          , stgStack = stack'
-         , stgInfo  = Info (StateTransition ReturnCon_Match) [] }
+         , stgInfo  = Info (StateTransition ReturnCon_Match)
+                           [Detail_ReturnCon_Match con vars] }
 
 
 
