@@ -437,7 +437,7 @@ stgRule s@StgState
     | Just (HClosure (Closure (LambdaForm _vs NoUpdate xs _body) _wsf))
         <- H.lookup addrEnter heap
     , Just (argFrames, UpdateFrame addrUpdate :< stack')
-        <- popArgsUntilUpdate stack xs
+        <- popArgsUntilUpdate stack
 
   = let xs1 = zipWith const xs (F.toList argFrames)
         f = Var ("upd17a_" <> show' steps)
@@ -460,17 +460,12 @@ stgRule s@StgState
 
     -- | Are there enough 'ArgumentFrame's on the stack to fill the args
     -- parameter? If so, return those frames, along with the rest of the stack.
-    popArgsUntilUpdate withArgsStack args
+    popArgsUntilUpdate withArgsStack
         = let (argFrames, argsPoppedStack) = S.span isArgFrame withArgsStack
-          in if argFrames `enoughFor` args
-              then Nothing -- Enough args present, no need for update
-              else Just ( filter isArgFrame (F.toList argFrames)
-                        , argsPoppedStack)
+          in Just ( filter isArgFrame (F.toList argFrames)
+                  , argsPoppedStack)
 
-    -- | Are there enough frames to fill the args?
-    enoughFor (_:<fs) (_:as) = enoughFor fs as
-    enoughFor Empty   (_:_)  = False
-    enoughFor _       _      = True
+
 
 stgRule s = noRuleApplies s
 
