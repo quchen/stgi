@@ -206,17 +206,6 @@ data DefaultAlt =
 newtype Literal = Literal Integer
     deriving (Eq, Ord, Show, Generic)
 
-instance Num Literal where
-    Literal x + Literal y = Literal (x + y)
-    Literal x * Literal y = Literal (x * y)
-    Literal x - Literal y = Literal (x - y)
-
-    abs    (Literal i) = Literal (abs i)
-    signum (Literal i) = Literal (abs i)
-    negate (Literal i) = Literal (negate i)
-
-    fromInteger = Literal . fromInteger
-
 -- | Primitive operations.
 data PrimOp =
       Add -- ^ @+@

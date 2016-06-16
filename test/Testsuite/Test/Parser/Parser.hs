@@ -57,13 +57,13 @@ simpleParses = testGroup "Well-written programs"
     [ shouldParseTo "Simple binding to boxed literal"
         "one = \\ -> Int# 1#"
         (Binds [("one", LambdaForm [] NoUpdate []
-                          (AppC "Int#" [AtomLit 1]) )])
+                          (AppC "Int#" [AtomLit (Literal 1)]) )])
 
     , shouldParseTo "Constructor application"
         "con = \\ -> Maybe b 1#"
         (Binds [("con", LambdaForm [] NoUpdate []
                           (AppC "Maybe"
-                                 [AtomVar "b" , AtomLit 1] ))])
+                                 [AtomVar "b" , AtomLit (Literal 1)] ))])
 
     , shouldParseTo "Bound pattern"
         "id = \\ x -> case x of y -> y"
@@ -75,7 +75,7 @@ simpleParses = testGroup "Well-written programs"
     , shouldParseTo "Primitive function application"
         "add1 = \\n -> case +# n 1# of n' -> Int# n'"
         (Binds [("add1", LambdaForm [] NoUpdate ["n"]
-                            (Case (AppP Add (AtomVar "n") (AtomLit 1))
+                            (Case (AppP Add (AtomVar "n") (AtomLit (Literal 1)))
                                 (Alts NoNonDefaultAlts
                                       (DefaultBound "n'" (AppC "Int#" [AtomVar "n'"])))))])
 
