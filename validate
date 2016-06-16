@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-stack test                    --ghc-options -Werror
+stack test --coverage          --ghc-options -Werror
 stack test --flag stgi:doctest --ghc-options -Werror
 stack haddock --no-haddock-deps
 stack sdist
