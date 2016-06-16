@@ -53,7 +53,7 @@ class FromStg value where
 data FromStgError =
       TypeMismatch        -- ^ e.g. asking for an @Int#@ at an address
                           --   that contains a @Cons@
-    | IsNotCon            -- ^ Tried retrieving a thunk
+    | IsWrongLambdaType LambdaType -- ^ Tried retrieving a non-constructor
     | IsBlackhole         -- ^ Tried retrieving a black hole
     | BadConArity         -- ^ e.g. @Cons x y z@
     | NotFound NotInScope -- ^ An unsuccessful variable lookup
@@ -199,7 +199,8 @@ liftToMatcher = first Just
 -- | Like 'matchCon2', but for nullary 'Constr'uctors.
 matchCon0 :: Constr -> Closure -> Either (Maybe FromStgError) ()
 matchCon0 _ (Closure lambdaForm _)
-    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
+    | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
+    | classify lambdaForm == LambdaFun   = Left (Just (IsWrongLambdaType LambdaFun))
 matchCon0 wantedCon (Closure (LambdaForm _ _ _ (AppC actualCon args)) _)
     | wantedCon == actualCon = case args of
         []  -> Right ()
@@ -209,7 +210,8 @@ matchCon0 _ _ = Left Nothing
 -- | Like 'matchCon2', but for unary 'Constr'uctors.
 matchCon1 :: Constr -> Closure -> Either (Maybe FromStgError) (Atom, Locals)
 matchCon1 _ (Closure lambdaForm _)
-    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
+    | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
+    | classify lambdaForm == LambdaFun   = Left (Just (IsWrongLambdaType LambdaFun))
 matchCon1 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x] -> Right (x, makeLocals freeVars freeVals)
@@ -226,7 +228,8 @@ matchCon1 _ _ = Left Nothing
 --   arity, abort with the corresponding error.
 matchCon2 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom), Locals)
 matchCon2 _ (Closure lambdaForm _)
-    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
+    | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
+    | classify lambdaForm == LambdaFun   = Left (Just (IsWrongLambdaType LambdaFun))
 matchCon2 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y] -> Right ((x,y), makeLocals freeVars freeVals)
@@ -236,7 +239,8 @@ matchCon2 _ _ = Left Nothing
 -- | Like 'matchCon2', but for ternary 'Constr'uctors.
 matchCon3 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom), Locals)
 matchCon3 _ (Closure lambdaForm _)
-    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
+    | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
+    | classify lambdaForm == LambdaFun   = Left (Just (IsWrongLambdaType LambdaFun))
 matchCon3 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z] -> Right ((x,y,z), makeLocals freeVars freeVals)
@@ -246,7 +250,8 @@ matchCon3 _ _ = Left Nothing
 -- | Like 'matchCon2', but for 4-ary 'Constr'uctors.
 matchCon4 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom, Atom), Locals)
 matchCon4 _ (Closure lambdaForm _)
-    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
+    | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
+    | classify lambdaForm == LambdaFun   = Left (Just (IsWrongLambdaType LambdaFun))
 matchCon4 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z,w] -> Right ((x,y,z,w), makeLocals freeVars freeVals)
@@ -256,7 +261,8 @@ matchCon4 _ _ = Left Nothing
 -- | Like 'matchCon2', but for 5-ary 'Constr'uctors.
 matchCon5 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom, Atom, Atom), Locals)
 matchCon5 _ (Closure lambdaForm _)
-    | classify lambdaForm /= LambdaCon = Left (Just IsNotCon)
+    | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
+    | classify lambdaForm == LambdaFun   = Left (Just (IsWrongLambdaType LambdaFun))
 matchCon5 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z,w,v] -> Right ((x,y,z,w,v), makeLocals freeVars freeVals)
