@@ -7,7 +7,6 @@ module Test.Machine.Evaluate.TestTemplates.MachineState (
     MachineStateTestSpec(..),
     defSpec,
     machineStateTest,
-    (===>),
 ) where
 
 
@@ -68,7 +67,7 @@ data MachineStateTestSpec = MachineStateTestSpec
 defSpec :: MachineStateTestSpec
 defSpec = MachineStateTestSpec
     { testName             = "Default machine state test template"
-    , successPredicate     = "main" ===> [stg| \ -> Success |]
+    , successPredicate     = "main" `isLambdaForm` [stg| \ -> Success |]
     , failPredicate        = const False
     , allSatisfied         = []
     , source               = [stg| main = \ -> DummySource |]

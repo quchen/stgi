@@ -10,7 +10,6 @@ module Test.Machine.Evaluate.TestTemplates.HaskellReference (
     HaskellReferenceTestSpec(..),
     defSpec,
     haskellReferenceTest,
-    (===>),
 ) where
 
 
@@ -63,7 +62,7 @@ defSpec = HaskellReferenceTestSpec
     { testName = "Default Haskell reference test spec template"
     , maxSteps = 1024
     , failWithInfo = False
-    , successPredicate = "main" ===> [stg| \ -> Success |]
+    , successPredicate = "main" `isLambdaForm` [stg| \ -> Success |]
     , failPredicate = const False
     , source = \_ -> [stg| main = \ -> DummySource |] }
 

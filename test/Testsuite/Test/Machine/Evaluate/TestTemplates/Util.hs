@@ -2,7 +2,8 @@
 {-# LANGUAGE RankNTypes        #-}
 
 module Test.Machine.Evaluate.TestTemplates.Util (
-    (===>),
+    hasValue,
+    isLambdaForm,
     PrettyprinterDict(..),
 ) where
 
@@ -16,14 +17,24 @@ import Stg.Language
 import Stg.Machine.Env
 import Stg.Machine.Heap  as H
 import Stg.Machine.Types
+import Stg.Marshal
 import Stg.Util
 
 
 
+-- | Check whether a variable has a certain value in an STG state.
+hasValue
+    :: (Eq value, FromStg value)
+    => Var
+    -> value
+    -> StgState
+    -> Bool
+var `hasValue` x = \state -> fromStg state var == Right x
+
 -- | Build a state predicate that asserts that a certain 'Var' maps to
 -- a 'LambdaForm' in the heap.
-(===>) :: Var -> LambdaForm -> StgState -> Bool
-var ===> lambdaForm = \state -> case varLookup state var of
+isLambdaForm :: Var -> LambdaForm -> StgState -> Bool
+var `isLambdaForm` lambdaForm = \state -> case varLookup state var of
     VarLookupClosure (Closure lf _) -> lf == lambdaForm
     _otherwise                      -> False
 

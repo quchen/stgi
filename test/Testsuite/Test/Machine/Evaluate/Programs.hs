@@ -22,6 +22,7 @@ import qualified Stg.Prelude            as Stg
 
 import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
 import           Test.Machine.Evaluate.TestTemplates.MachineState
+import           Test.Machine.Evaluate.TestTemplates.Util
 import           Test.Orphans                                         ()
 import           Test.QuickCheck.Modifiers
 import           Test.Tasty
@@ -135,7 +136,7 @@ meanTestTemplate =
         { HRef.testName = "Mena test template"
         , HRef.maxSteps = 1024
         , HRef.failWithInfo = False
-        , HRef.successPredicate = "main" ===> [stg| \ -> Success |]
+        , HRef.successPredicate = "main" `isLambdaForm` [stg| \ -> Success |]
         , HRef.failPredicate = const False
         , HRef.source = \(NonEmpty inputList) -> mconcat
                 [ Stg.eq_Int
