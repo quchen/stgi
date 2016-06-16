@@ -44,20 +44,21 @@ prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprint
 
 splitHeapTest :: GarbageCollectionAlgorithm -> TestTree
 splitHeapTest algorithm = testGroup "Split heap in dead/alive"
-    [ unusedIsCollected
-    , usedIsNotCollected
-    , heapSplit ]
+    [ deadAddressesFound
+    , deadAndAliveContainAll ]
   where
-    (~>) = (,)
+    addr ~> closure = (MemAddr addr, HClosure closure)
     dirtyHeap = Heap
-        [ MemAddr 0 ~> HClosure (Closure [stg| \(used1) -> Used used1 |]
-                                [Addr (MemAddr 1)] )
-        , MemAddr 1 ~> HClosure (Closure [stg| \(used2 prim) -> Used used2 prim |]
-                                [Addr (MemAddr 2), PrimInt 1] )
-        , MemAddr 2 ~> HClosure (Closure [stg| \ -> Used   |] [])
-        , MemAddr 3 ~> HClosure (Closure [stg| \ -> Unused |] []) ]
-    globals = Globals
-        [ "main"  ~> Addr (MemAddr 0) ]
+        [ 0 ~> Closure [stg| \(cyclic used1) -> Used cyclic used1 |]
+                       [Addr (MemAddr addr) | addr <- [4,1] ]
+        , 1 ~> Closure [stg| \(used2 prim) -> Used used2 prim |]
+                       [Addr (MemAddr 2), PrimInt 1]
+        , 2 ~> Closure [stg| \ -> Used   |] []
+        , 3 ~> Closure [stg| \ -> Unused |] []
+        , 4 ~> Closure [stg| \(cyclic) -> Used cyclic |]
+                       [Addr (MemAddr 4)] ]
+    globals = Globals [("main", Addr (MemAddr 0))]
+    expectedDead = [MemAddr 3]
 
     dummyState = StgState
         { stgCode    = ReturnInt 1
@@ -67,7 +68,7 @@ splitHeapTest algorithm = testGroup "Split heap in dead/alive"
         , stgSteps   = 0
         , stgInfo    = Info GarbageCollection [] }
 
-    errorMsg cleanHeap = T.unlines
+    errorMsg = T.unlines
         [ "Globals:"
         , prettyIndented globals
         , "Dirty heap:"
@@ -75,31 +76,24 @@ splitHeapTest algorithm = testGroup "Split heap in dead/alive"
         , "Clean heap:"
         , prettyIndented cleanHeap ]
 
-    unusedIsCollected = testCase "Dead address is found" test
+    (deadAddrs, _forwards, StgState{stgHeap = cleanHeap})
+      = splitHeapWith algorithm dummyState
+
+    deadAddressesFound = testCase "Dead addresses are found" test
       where
-        expectedDead = S.singleton (MemAddr 3)
-        (actualDead, _forwards, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
-        test = assertEqual (T.unpack (errorMsg cleanHeap))
+        test = assertEqual (T.unpack errorMsg)
                            expectedDead
-                           actualDead
+                           deadAddrs
 
-    usedIsNotCollected = testCase "Alives are kept" test
+    deadAndAliveContainAll = testCase "Heap shrinks by number of dead addresses" test
       where
-        expectedHeap = let Heap h = dirtyHeap
-                       in Heap (M.delete (MemAddr 3) h)
-        (_dead, _forwards, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
-        test = assertEqual (T.unpack (errorMsg cleanHeap))
-                           expectedHeap
-                           cleanHeap
-
-    heapSplit = testCase "dead+alive contain all previous addresses" test
-      where
-        expected = M.keysSet (let Heap h = dirtyHeap in h)
-        actual = deadAddrs <> M.keysSet (let Heap h = cleanHeap in h)
-        (deadAddrs, _forwards, StgState{stgHeap = cleanHeap}) = splitHeapWith algorithm dummyState
-        test = assertEqual (T.unpack (errorMsg cleanHeap))
-                           expected
-                           actual
+        expectedNewHeapSize = let Heap old = dirtyHeap
+                              in M.size old - S.size deadAddrs
+        actualNewHeapSize = let Heap new = cleanHeap
+                            in M.size new
+        test = assertEqual (T.unpack errorMsg)
+                           expectedNewHeapSize
+                           actualNewHeapSize
 
 
 fibonacciSumTest :: GarbageCollectionAlgorithm -> TestTree

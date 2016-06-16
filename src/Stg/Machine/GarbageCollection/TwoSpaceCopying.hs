@@ -86,9 +86,10 @@ garbageCollect stgState@StgState
             , toEvacuate = rootAddrs }
         finalState = execGc evacuateScavengeLoop heap initialState
     in case finalState of
-        GcState {toHeap = heap'@(Heap alive'), forwards = forwards'} ->
-            let deadAddrs = let Heap old = heap
-                            in M.keysSet (old `M.difference` alive')
+        GcState {toHeap = heap', forwards = forwards'} ->
+            let deadFormerAddrs
+                  = let Heap old = heap
+                    in M.keysSet old `S.difference` M.keysSet forwards'
 
                 forward addr = M.findWithDefault forwardErr addr forwards'
                 forwardErr = error "Invalid forward in GC; please report this as a bug"
@@ -100,7 +101,7 @@ garbageCollect stgState@StgState
                     , stgStack   = updateAddrs forward stack
                     , stgGlobals = updateAddrs forward globals
                     , stgHeap    = heap' }
-            in (deadAddrs, removeIdentities forwards', stgState')
+            in (deadFormerAddrs, removeIdentities forwards', stgState')
 
 evacuateScavengeLoop :: Gc ()
 evacuateScavengeLoop = initialEvacuation >> scavengeLoop
