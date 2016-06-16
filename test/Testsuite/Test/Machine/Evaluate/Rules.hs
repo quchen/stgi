@@ -269,7 +269,7 @@ primops = HRef.haskellReferenceTest HRef.HaskellReferenceTestSpec
     { HRef.testName = "Primops"
     , HRef.maxSteps = 1024
     , HRef.failWithInfo = True
-    , HRef.successPredicate = "main" `isLambdaForm` [stg| \ -> Success |]
+    , HRef.successPredicate = \_input -> "main" `isLambdaForm` [stg| \ -> Success |]
     , HRef.failPredicate = const False
     , HRef.source = \(op, arg1, NonZero arg2) ->
             -- arg2 is nonzero or the div/mod tests fail. Having their own tests

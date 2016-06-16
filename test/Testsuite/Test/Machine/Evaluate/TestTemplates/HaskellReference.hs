@@ -39,7 +39,7 @@ data HaskellReferenceTestSpec a = HaskellReferenceTestSpec
     { testName :: Text
         -- ^ The reference function's name. Used only for display purposes.
 
-    , successPredicate :: StgState -> Bool
+    , successPredicate :: a -> StgState -> Bool
         -- ^ Test predicate to determine whether the desired state has been
         -- reached.
 
@@ -62,7 +62,7 @@ defSpec = HaskellReferenceTestSpec
     { testName = "Default Haskell reference test spec template"
     , maxSteps = 1024
     , failWithInfo = False
-    , successPredicate = "main" `isLambdaForm` [stg| \ -> Success |]
+    , successPredicate = \_ -> "main" `isLambdaForm` [stg| \ -> Success |]
     , failPredicate = const False
     , source = \_ -> [stg| main = \ -> DummySource |] }
 
@@ -84,7 +84,7 @@ haskellReferenceTest testSpec = askOption (\htmlOpt ->
         let program = initialState "main" (source testSpec input)
             states = evalsUntil
                 (RunForMaxSteps (maxSteps testSpec))
-                (HaltIf (successPredicate testSpec))
+                (HaltIf (successPredicate testSpec input))
                 (PerformGc (const Nothing))
                 program
             finalState = NE.last states

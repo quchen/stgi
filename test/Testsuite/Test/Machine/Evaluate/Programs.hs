@@ -136,7 +136,7 @@ meanTestTemplate =
         { HRef.testName = "Mena test template"
         , HRef.maxSteps = 1024
         , HRef.failWithInfo = False
-        , HRef.successPredicate = "main" `isLambdaForm` [stg| \ -> Success |]
+        , HRef.successPredicate = \_ -> "main" `isLambdaForm` [stg| \ -> Success |]
         , HRef.failPredicate = const False
         , HRef.source = \(NonEmpty inputList) -> mconcat
                 [ Stg.eq_Int
