@@ -43,6 +43,7 @@ tests = testGroup "Programs"
 add3 :: TestTree
 add3 = machineStateTest defSpec
     { testName = "add3 x y z = x+y+z"
+    , successPredicate = "main" `hasValue` (6 :: Integer)
     , source = [stg|
         add3 = \x y z -> case x of
             Int# i -> case y of
@@ -57,21 +58,18 @@ add3 = machineStateTest defSpec
         one   = \ -> Int# 1#;
         two   = \ -> Int# 2#;
         three = \ -> Int# 3#;
-        main = \ => case add3 one two three of
-            Int# i -> case i of
-                6# -> Success;
-                wrongResult -> TestFail wrongResult;
-            badInt -> Error badInt
+        main = \ => add3 one two three
         |] }
 
 takeRepeat :: TestTree
 takeRepeat = machineStateTest defSpec
     { testName = "take 2 (repeat ())"
+    , successPredicate = "twoUnits" `hasValue` replicate 2 ()
     , source = toStg "two" (2 :: Integer)
             <> Stg.take
             <> Stg.repeat
             <> Stg.foldr
-            <> Stg.seq
+            <> Stg.force
             <> [stg|
 
         consBang = \x xs -> case xs of v -> Cons x v;
@@ -85,40 +83,34 @@ takeRepeat = machineStateTest defSpec
                 take2 = \(repeated) => take two repeated
             in forceSpine take2;
 
-        main = \ => case twoUnits of
-            Cons x xs -> case xs of
-                Cons y ys -> case ys of
-                    Nil -> Success;
-                    default -> TestFailure;
-                default -> TestFailure;
-            default -> TestFailure
+        main = \ -> force twoUnits
         |] }
 
 fibonacci :: TestTree
 fibonacci = machineStateTest defSpec
     { testName = "Fibonacci sequence"
-    , source = Stg.equals_List_Int
-            <> toStg "zero" (0 :: Int)
+    , successPredicate = "main" `hasValue` take numFibos fibo
+    , maxSteps = 10000
+    , failWithInfo = True
+    , source = toStg "zero" (0 :: Int)
             <> toStg "one" (1 :: Int)
             <> toStg "numFibos" (numFibos :: Int)
-            <> toStg "expectedFibos" (take numFibos fibo)
             <> Stg.add
             <> Stg.take
             <> Stg.zipWith
+            <> Stg.force
             <> [stg|
 
         main = \ =>
             letrec
-                fibos = \(fibo) -> take numFibos fibo;
+                fibos = \(fibo) => take numFibos fibo;
                 fibo = \ =>
                     letrec
                         fib0 = \(fib1) -> Cons zero fib1;
                         fib1 = \(fib2) -> Cons one fib2;
                         fib2 = \(fib0 fib1) => zipWith add fib0 fib1
                     in fib0
-            in case equals_List_Int fibos expectedFibos of
-                True -> Success;
-                err -> TestFail err
+            in force fibos
         |] }
   where
     fibo :: [Integer]
