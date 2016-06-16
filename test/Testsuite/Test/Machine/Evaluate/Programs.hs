@@ -128,23 +128,16 @@ meanTestTemplate =
         { HRef.testName = "Mena test template"
         , HRef.maxSteps = 1024
         , HRef.failWithInfo = False
-        , HRef.successPredicate = \_ -> "main" `isLambdaForm` [stg| \ -> Success |]
+        , HRef.successPredicate = \(NonEmpty inputList) ->
+            "main" `hasValue` mean inputList
         , HRef.failPredicate = const False
         , HRef.source = \(NonEmpty inputList) -> mconcat
-                [ Stg.eq_Int
-                , Stg.add
+                [ Stg.add
                 , Stg.div
                 , toStg "zero" (0 :: Int)
                 , toStg "one"  (1 :: Int)
                 , toStg "inputList" inputList
-                , toStg "expectedOutput" (mean inputList) ]
-            <> [stg|
-            main = \ => case mean inputList of
-                actual -> case eq_Int actual expectedOutput of
-                    True -> Success;
-                    False -> TestFailure actual;
-                    badBool -> Error_badBool badBool
-        |] }
+                , [stg| main = \ => mean inputList |] ]}
 
 meanNaive :: TestTree
 meanNaive = HRef.haskellReferenceTest meanTestTemplate
