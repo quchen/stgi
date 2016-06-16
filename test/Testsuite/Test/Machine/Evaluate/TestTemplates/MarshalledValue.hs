@@ -4,8 +4,9 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | Defines tests of STG programs that are meant to match their Haskell
--- sibling's behaviours.
+-- | Defines tests of STG programs that are based on marshalling a value into
+-- the STG, forcing a value, and marshalling that value out again for comparison
+-- with a reference.
 module Test.Machine.Evaluate.TestTemplates.MarshalledValue (
     MarshalledValueTestSpec(..),
     defSpec,
@@ -41,7 +42,7 @@ data MarshalledValueTestSpec input output = MarshalledValueTestSpec
         -- ^ The reference function's name. Used only for display purposes.
 
     , testVar :: Var
-        -- ^ The value to observe the value of
+        -- ^ The value to observe the value of, e.g. @main@.
 
     , expectedValue :: input -> output
         -- ^ The expected result value of type @b@, given the input of type @a@.

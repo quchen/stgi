@@ -17,8 +17,8 @@ import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
-import Test.Machine.Evaluate.TestTemplates.HaskellReference
-import Test.Orphans                                         ()
+import Test.Machine.Evaluate.TestTemplates.MarshalledValue
+import Test.Orphans                                        ()
 import Test.QuickCheck.Modifiers
 import Test.Tasty
 
@@ -47,124 +47,108 @@ tests = testGroup "List"
     ]
 
 testFilter :: TestTree
-testFilter = haskellReferenceTest defSpec
+testFilter = marshalledValueTest defSpec
     { testName = "filter"
-    , source = \(xs, threshold :: Int) ->
-           toStg "inputList" xs
-        <> toStg "expectedResult" (filter (> threshold) xs)
-        <> toStg "threshold" threshold
-        <> Stg.gt_Int
-        <> Stg.equals_List_Int
-        <> Stg.filter
-        <> [stg|
-
+    , expectedValue = \(xs, threshold) -> filter (> threshold) xs
+    , source = \(xs, threshold :: Integer) -> mconcat
+        [ toStg "inputList" xs
+        , toStg "threshold" threshold
+        , Stg.gt_Int
+        , Stg.force
+        , Stg.filter
+        , [stg|
         main = \ =>
             letrec
                 positive = \x -> gt_Int x threshold;
-                filtered = \(positive) -> filter positive inputList
-            in case equals_List_Int expectedResult filtered of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+                filtered = \(positive) => filter positive inputList
+            in force filtered
+        |] ]}
 
 testSort :: TestTree
-testSort = haskellReferenceTest defSpec
+testSort = marshalledValueTest defSpec
     { testName = "sort (Haskell/base version)"
     , failWithInfo = True
-    , source = \(xs :: [Int]) ->
-           toStg "inputList" xs
-        <> toStg "expectedResult" (L.sort xs)
-        <> Stg.equals_List_Int
-        <> Stg.sort
-        <> [stg|
-
+    , expectedValue = \xs -> L.sort xs
+    , source = \(xs :: [Integer]) -> mconcat
+        [ toStg "inputList" xs
+        , Stg.sort
+        , Stg.force
+        , [stg|
         main = \ =>
             let sorted = \ => sort inputList
-            in case equals_List_Int expectedResult sorted of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+            in force sorted
+        |] ]}
 
 testNaiveSort :: TestTree
-testNaiveSort = haskellReferenceTest defSpec
+testNaiveSort = marshalledValueTest defSpec
     { testName = "sort (naive version)"
-    , source = \(xs :: [Int]) ->
-           toStg "inputList" xs
-        <> toStg "expectedResult" (L.sort xs)
-        <> Stg.equals_List_Int
-        <> Stg.naiveSort
-        <> [stg|
+    , expectedValue = \xs -> L.sort xs
+    , source = \(xs :: [Integer]) -> mconcat
+        [ toStg "inputList" xs
+        , Stg.naiveSort
+        , Stg.force
+        , [stg|
 
         main = \ =>
             let sorted = \ => naiveSort inputList
-            in case equals_List_Int expectedResult sorted of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+            in force sorted
+        |] ]}
 
 testMap :: TestTree
-testMap = haskellReferenceTest defSpec
+testMap = marshalledValueTest defSpec
     { testName = "map"
-    , source = \(xs, offset :: Int) ->
-           Stg.add
-        <> Stg.map
-        <> toStg "offset" offset
-        <> toStg "inputList" xs
-        <> toStg "expectedResult" (map (+offset) xs)
-        <> Stg.equals_List_Int
-        <> [stg|
-
+    , expectedValue = \(xs, offset) -> map (+offset) xs
+    , source = \(xs, offset :: Integer) -> mconcat
+        [ Stg.add
+        , Stg.map
+        , Stg.force
+        , toStg "offset" offset
+        , toStg "inputList" xs
+        , [stg|
         main = \ =>
             letrec
                 plusOffset = \n -> add n offset;
-                actual = \(plusOffset) => map plusOffset inputList
-            in case equals_List_Int actual expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+                result = \(plusOffset) => map plusOffset inputList
+            in force result
+        |] ]}
 
 testZip :: TestTree
-testZip = haskellReferenceTest defSpec
+testZip = marshalledValueTest defSpec
     { testName = "zip, map"
-    , source = \(list1, list2 :: [Int]) ->
-           Stg.equals_List_Int
-        <> toStg "list1" list1
-        <> toStg "list2" list2
-        <> toStg "expectedResult" (zipWith (+) list1 list2)
-        <> Stg.add
-        <> Stg.map
-        <> Stg.uncurry
-        <> Stg.zip
-        <> [stg|
+    , expectedValue = \(list1, list2) -> zipWith (+) list1 list2
+    , source = \(list1, list2 :: [Integer]) -> mconcat
+        [ toStg "list1" list1
+        , toStg "list2" list2
+        , Stg.add
+        , Stg.map
+        , Stg.uncurry
+        , Stg.zip
+        , Stg.force
+        , [stg|
 
         main = \ =>
             letrec
                 zipped   = \ -> zip list1 list2;
                 addTuple = \ -> uncurry add;
-                summed   = \(addTuple zipped) -> map addTuple zipped
-            in case equals_List_Int summed expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+                summed   = \(addTuple zipped) => map addTuple zipped
+            in force summed
+        |] ]}
 
 testZipWith :: TestTree
-testZipWith = haskellReferenceTest defSpec
+testZipWith = marshalledValueTest defSpec
     { testName = "zipWith (+)"
-    , source = \(list1, list2 :: [Int]) ->
-           Stg.equals_List_Int
-        <> toStg "list1" list1
-        <> toStg "list2" list2
-        <> toStg "expectedResult" (zipWith (+) list1 list2)
-        <> Stg.add
-        <> Stg.zipWith
-        <> [stg|
-
+    , expectedValue = \(list1, list2) -> zipWith (+) list1 list2
+    , source = \(list1, list2 :: [Integer]) -> mconcat
+        [ toStg "list1" list1
+        , toStg "list2" list2
+        , Stg.add
+        , Stg.zipWith
+        , Stg.force
+        , [stg|
         main = \ =>
-            let zipped = \ -> zipWith add list1 list2
-            in case equals_List_Int zipped expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+            let zipped = \ => zipWith add list1 list2
+            in force zipped
+        |] ]}
 
 
 testFoldr, testFoldl, testFoldl' :: TestTree
@@ -200,168 +184,143 @@ foldSumTemplate
 
     -> TestTree
 foldSumTemplate foldName foldF foldStg failP
-  = haskellReferenceTest defSpec
+  = marshalledValueTest defSpec
     { testName = foldName
     , maxSteps = 1024
-    , failWithInfo = False
     , failPredicate = failP
-    , source = \(z :: Int, xs) ->
-           foldStg
-        <> Stg.add
-        <> Stg.eq_Int
-        <> toStg "z" z
-        <> toStg "input" xs
-        <> toStg "expected" (foldF (+) z xs)
-        <> [stg|
+    , expectedValue = \(z, xs) -> foldF (+) z xs
+    , source = \(z :: Integer, xs) -> mconcat
+        [ foldStg
+        , Stg.add
+        , Stg.force
+        , toStg "z" z
+        , toStg "input" xs
+        , [stg|
         main = \ =>
-            let actual = \ => fold add z input
-            in case eq_Int actual expected of
-                True  -> Success;
-                defau -> TestFail
-        |] }
+            let result = \ => fold add z input
+            in force result
+        |] ]}
 
 testConcat2 :: TestTree
-testConcat2 = haskellReferenceTest defSpec
+testConcat2 = marshalledValueTest defSpec
     { testName = "(++)"
-    , source = \(list1, list2 :: [Int]) ->
-           Stg.equals_List_Int
-        <> toStg "list1" list1
-        <> toStg "list2" list2
-        <> toStg "expectedResult" (list1 ++ list2)
-        <> Stg.concat2
-        <> [stg|
-
+    , expectedValue = \(list1, list2) -> list1 ++ list2
+    , source = \(list1, list2 :: [Integer]) -> mconcat
+        [ toStg "list1" list1
+        , toStg "list2" list2
+        , Stg.concat2
+        , Stg.force
+        , [stg|
         main = \ =>
-            let concatenated = \ -> concat2 list1 list2
-            in case equals_List_Int concatenated expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+            let concatenated = \ => concat2 list1 list2
+            in force concatenated
+        |] ]}
 
 testReverse :: TestTree
-testReverse = haskellReferenceTest defSpec
+testReverse = marshalledValueTest defSpec
     { testName = "reverse"
     , maxSteps = 1024
-    , failWithInfo = True
-    , failPredicate = const False
-    , source = \(xs :: [Int]) ->
-           Stg.equals_List_Int
-        <> toStg "input" xs
-        <> toStg "expectedResult" (reverse xs)
-        <> Stg.reverse
-        <> [stg|
-
+    , expectedValue = \xs -> reverse xs
+    , source = \(xs :: [Integer]) -> mconcat
+        [ toStg "input" xs
+        , Stg.reverse
+        , Stg.force
+        , [stg|
         main = \ =>
-            let reversed = \ -> reverse input
-            in case equals_List_Int reversed expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+            let reversed = \ => reverse input
+            in force reversed
+        |] ]}
 
 testCycle :: TestTree
-testCycle = haskellReferenceTest defSpec
+testCycle = marshalledValueTest defSpec
     { testName = "cycle (+take)"
-    , source = \(NonEmpty (list :: [Int]), NonNegative n) ->
-           Stg.equals_List_Int
-        <> toStg "n" n
-        <> toStg "list" list
-        <> toStg "expectedResult" (take n (cycle list))
-        <> Stg.take
-        <> Stg.cycle
-        <> [stg|
-
+    , expectedValue = \(NonEmpty (list :: [Integer]), NonNegative n)
+        -> take n (cycle list)
+    , source = \(NonEmpty (list :: [Integer]), NonNegative n) -> mconcat
+        [ toStg "n" n
+        , toStg "list" list
+        , Stg.take
+        , Stg.cycle
+        , Stg.force
+        , [stg|
         main = \ =>
             letrec
                 cycled = \ -> cycle list;
-                takeCycled = \(cycled) -> take n cycled
-            in case equals_List_Int takeCycled expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+                takeCycled = \(cycled) => take n cycled
+            in force takeCycled
+        |] ]}
 
 testRepeat :: TestTree
-testRepeat = haskellReferenceTest defSpec
+testRepeat = marshalledValueTest defSpec
     { testName = "repeat (+take)"
-    , source = \(item :: Int, NonNegative n) ->
-           Stg.equals_List_Int
-        <> toStg "n" n
-        <> toStg "item" item
-        <> toStg "expectedResult" (replicate n item)
-        <> Stg.take
-        <> Stg.repeat
-        <> [stg|
-
+    , expectedValue = \(item, NonNegative n) -> replicate n item
+    , source = \(item :: Integer, NonNegative n) -> mconcat
+        [ toStg "n" n
+        , toStg "item" item
+        , Stg.take
+        , Stg.repeat
+        , Stg.force
+        , [stg|
         main = \ =>
             letrec
                 repeated = \ -> repeat item;
-                takeRepeated = \(repeated) -> take n repeated
-            in case equals_List_Int takeRepeated expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+                takeRepeated = \(repeated) => take n repeated
+            in force takeRepeated
+        |] ]}
 
 testReplicate :: TestTree
-testReplicate = haskellReferenceTest defSpec
+testReplicate = marshalledValueTest defSpec
     { testName = "replicate"
-    , maxSteps = 1024
     , failWithInfo = True
+    , maxSteps = 1024
     , failPredicate = \stgState -> case stgCode stgState of
         Eval AppP {} _ -> True
         _ -> False
-    , source = \(item :: Int, n) ->
-           Stg.equals_List_Int
-        <> toStg "n" n
-        <> toStg "item" item
-        <> toStg "expectedResult" (replicate n item)
-        <> Stg.take
-        <> Stg.replicate
-        <> [stg|
-
+    , expectedValue = \(item, n) -> replicate n item
+    , source = \(item :: Integer, n) -> mconcat
+        [ toStg "n" n
+        , toStg "item" item
+        , Stg.replicate
+        , Stg.force
+        , [stg|
         main = \ =>
-            let replicated = \ -> replicate n item
-            in case equals_List_Int replicated expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+            let replicated = \ => replicate n item
+            in force replicated
+        |] ]}
 
 testIterate :: TestTree
-testIterate = haskellReferenceTest defSpec
+testIterate = marshalledValueTest defSpec
     { testName = "iterate (+take)"
-    , source = \(seed, offset :: Int, NonNegative n) ->
-           Stg.equals_List_Int
-        <> toStg "n" n
-        <> toStg "offset" offset
-        <> toStg "seed" seed
-        <> toStg "expectedResult" (take n (iterate (+offset) seed) )
-        <> Stg.add
-        <> Stg.take
-        <> Stg.iterate
-        <> [stg|
-
+    , expectedValue = \(seed, offset, NonNegative n)
+        -> take n (iterate (+offset) seed)
+    , source = \(seed, offset :: Integer, NonNegative n) -> mconcat
+        [ toStg "n" n
+        , toStg "offset" offset
+        , toStg "seed" seed
+        , Stg.add
+        , Stg.take
+        , Stg.iterate
+        , Stg.force
+        , [stg|
         main = \ =>
             letrec
                 addOffset = \ -> add offset;
                 iterated = \(addOffset) -> iterate addOffset seed;
-                takeIterated = \(iterated) -> take n iterated
-            in case equals_List_Int takeIterated expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+                takeIterated = \(iterated) => take n iterated
+            in force takeIterated
+        |] ]}
 
 
 testLength :: TestTree
-testLength = haskellReferenceTest defSpec
+testLength = marshalledValueTest defSpec
     { testName = "length"
-    , source = \(xs :: [Int]) ->
-           Stg.eq_Int
-        <> toStg "expectedResult" (length xs)
-        <> toStg "input" xs
-        <> Stg.length
-        <> [stg|
-
+    , expectedValue = \xs -> fromIntegral (length xs) :: Integer
+    , source = \(xs :: [Integer]) -> mconcat
+        [ toStg "input" xs
+        , Stg.length
+        , Stg.force
+        , [stg|
         main = \ =>
-            let len = \ -> length input
-            in case eq_Int len expectedResult of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+            let len = \ => length input
+            in force len
+        |] ]}
