@@ -6,7 +6,8 @@
 
 -- | Defines tests of STG programs that are meant to match their Haskell
 -- sibling's behaviours.
-module Test.Machine.Evaluate.TestTemplates.HaskellReference (
+module Test.Machine.Evaluate.TestTemplates.HaskellReference
+       {-# DEPRECATED "Use Test.Machine.Evaluate.TestTemplates.MarshalledValue instead" #-} (
     HaskellReferenceTestSpec(..),
     defSpec,
     haskellReferenceTest,
