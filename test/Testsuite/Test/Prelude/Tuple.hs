@@ -7,15 +7,14 @@ module Test.Prelude.Tuple (tests) where
 
 
 
-import           Data.Monoid
-import qualified Data.Tuple  as T
+import qualified Data.Tuple as T
 
 import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
-import Test.Machine.Evaluate.TestTemplates.HaskellReference
-import Test.Orphans                                         ()
+import Test.Machine.Evaluate.TestTemplates.MarshalledValue
+import Test.Orphans                                        ()
 import Test.Tasty
 
 
@@ -30,93 +29,67 @@ tests = testGroup "Tuple"
     ]
 
 testFst :: TestTree
-testFst = haskellReferenceTest defSpec
+testFst = marshalledValueTest defSpec
     { testName = "fst"
     , failWithInfo = True
-    , source = \(tuple :: (Int, Int)) ->
-           toStg "tuple" tuple
-        <> toStg "expectedResult" (fst tuple)
-        <> Stg.fst
-        <> Stg.eq_Int
-        <> [stg|
-        main = \ =>
-            let actualFst = \ -> fst tuple
-            in case eq_Int expectedResult actualFst of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+    , sourceSpec = \(tuple :: (Integer, Integer)) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = fst tuple
+        , source = mconcat
+            [ toStg "tuple" tuple
+            , Stg.fst
+            , [stg| main = \ => fst tuple |] ]}}
 
 testSnd :: TestTree
-testSnd = haskellReferenceTest defSpec
+testSnd = marshalledValueTest defSpec
     { testName = "snd"
-    , source = \(tuple :: (Int, Int)) ->
-           toStg "tuple" tuple
-        <> toStg "expectedResult" (snd tuple)
-        <> Stg.snd
-        <> Stg.eq_Int
-        <> [stg|
-
-        main = \ =>
-            let actualSnd = \ -> snd tuple
-            in case eq_Int expectedResult actualSnd of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+    , sourceSpec = \(tuple :: (Integer, Integer)) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = snd tuple
+        , source = mconcat
+            [ toStg "tuple" tuple
+            , Stg.snd
+            , [stg| main = \ => snd tuple |] ]}}
 
 testCurry :: TestTree
-testCurry = haskellReferenceTest defSpec
+testCurry = marshalledValueTest defSpec
     { testName = "curry"
-    , source = \(x,y :: Int) ->
-           toStg "x" x
-        <> toStg "y" y
-        <> toStg "expectedResult" (x+y)
-        <> Stg.curry
-        <> Stg.add
-        <> Stg.eq_Int
-        <> [stg|
+    , sourceSpec = \(x,y :: Integer) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = x+y
+        , source = mconcat
+            [ toStg "x" x
+            , toStg "y" y
+            , Stg.curry
+            , Stg.add
+            , [stg|
+            addPair = \tuple -> case tuple of
+                Pair a b -> add a b;
+                badPair  -> Error_addPair badTuple;
 
-        addPair = \tuple -> case tuple of
-            Pair a b -> add a b;
-            badPair  -> Error_addPair badTuple;
-
-        main = \ =>
-            let actual = \ -> curry addPair x y
-            in case eq_Int expectedResult actual of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+            main = \ => curry addPair x y
+            |] ]}}
 
 testUncurry :: TestTree
-testUncurry = haskellReferenceTest defSpec
+testUncurry = marshalledValueTest defSpec
     { testName = "uncurry"
-    , source = \(tuple :: (Int, Int)) ->
-           toStg "tuple" tuple
-        <> toStg "expectedResult" (uncurry (+) tuple)
-        <> Stg.uncurry
-        <> Stg.add
-        <> Stg.eq_Int
-        <> [stg|
-
-        main = \ =>
-            let actual = \ -> uncurry add tuple
-            in case eq_Int expectedResult actual of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+    , sourceSpec = \(tuple :: (Integer, Integer)) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = uncurry (+) tuple
+        , source = mconcat
+            [ toStg "tuple" tuple
+            , Stg.uncurry
+            , Stg.add
+            , [stg| main = \ => uncurry add tuple |] ]}}
 
 testSwap :: TestTree
-testSwap = haskellReferenceTest defSpec
+testSwap = marshalledValueTest defSpec
     { testName = "swap"
-    , source = \(tuple :: (Int, Int)) ->
-           toStg "tuple" tuple
-        <> toStg "expectedResult" (T.swap tuple)
-        <> Stg.swap
-        <> Stg.equals_Pair_Int
-        <> [stg|
-
-        main = \ =>
-            let actual = \ -> swap tuple
-            in case eq_Pair_Int expectedResult actual of
-                True  -> Success;
-                wrong -> TestFail wrong
-        |] }
+    , sourceSpec = \(tuple :: (Integer, Integer)) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = T.swap tuple
+        , source = mconcat
+            [ toStg "tuple" tuple
+            , Stg.swap
+            , Stg.equals_Pair_Int
+            , [stg| main = \ => swap tuple |] ]}}
