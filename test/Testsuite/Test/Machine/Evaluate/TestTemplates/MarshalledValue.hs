@@ -110,7 +110,7 @@ marshalledValueTest testSpec = askOption (\htmlOpt ->
                         "Critial error in test: found a constructor, expected\
                         \ a constructor, but still ran into the failure case\
                         \ somehow. Please report this as a bug."
-                    BadConArity -> fail_conArity pprDict testSpec input state
+                    BadArity -> fail_conArity pprDict testSpec input state
                     NotFound{} -> fail_notFound pprDict testSpec input state
                     AddrNotOnHeap -> fail_addrNotOnHeap pprDict testSpec input state
                     NoConstructorMatch -> fail_NoConstructorMatch pprDict testSpec input state

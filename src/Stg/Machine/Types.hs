@@ -339,6 +339,7 @@ data StateError =
     | UpdateClosureWithPrimitive
     | NonAlgPrimScrutinee
     | DivisionByZero
+    | BadConArity Int Int
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty StateError where
@@ -353,6 +354,17 @@ instance Pretty StateError where
         UpdateClosureWithPrimitive -> "Update closure with primitive value"
         NonAlgPrimScrutinee -> "Non-algebraic/primitive case scrutinee"
         DivisionByZero -> "Division by zero"
+        BadConArity retArity altArity -> "Return" <+> pprArity retArity
+                                     <+> "constructor to" <+> pprArity altArity
+                                     <+> "alternative"
+
+pprArity :: Int -> Doc
+pprArity = \case
+    0 -> "nullary"
+    1 -> "unary"
+    2 -> "binary"
+    3 -> "ternary"
+    n -> int n <> "-ary"
 
 data InfoDetail =
       Detail_FunctionApplication Var [Atom]
@@ -371,6 +383,7 @@ data InfoDetail =
     | Detail_GarbageCollected Text (Set MemAddr) (Map MemAddr MemAddr)
     | Detail_EnterBlackHole MemAddr Integer
     | Detail_UpdateClosureWithPrimitive
+    | Detail_BadConArity
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty InfoDetail where
@@ -462,7 +475,10 @@ instance Pretty InfoDetail where
             , "GHC reports this condition as \"<<loop>>\"" ]
 
         Detail_UpdateClosureWithPrimitive ->
-            [ "A closure never has primitive type, so it cannot be updated with a primitive value" ] )
+            [ "A closure never has primitive type, so it cannot be updated with a primitive value" ]
+
+        Detail_BadConArity ->
+            [ "Constructors always have to be fully applied." ] )
 
 -- | A closure is a lambda form, together with the values of its free variables.
 data Closure = Closure LambdaForm [Value]

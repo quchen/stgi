@@ -33,6 +33,7 @@ tests = testGroup "Error conditions"
     , testGroup "Invalid operations"
         [ divisionByZero
         , moduloZero ]
+    , badConArity
     ]
 
 updatableClosureWithArgs :: TestTree
@@ -144,4 +145,19 @@ moduloZero = machineStateTest defSpec
         |]
     , successPredicate = \state -> case stgInfo state of
         Info (StateError DivisionByZero) _ -> True
+        _otherwise -> False }
+
+badConArity :: TestTree
+badConArity = machineStateTest defSpec
+    { testName = "Bad constructor arity"
+    , failWithInfo = False
+    , source = [stg|
+        x = \ -> Unit;
+        y = \ -> Unit;
+        main = \ => case Cons x y of
+            Cons x -> Bad;
+            default -> Baaad
+        |]
+    , successPredicate = \state -> case stgInfo state of
+        Info (StateError BadConArity{}) _ -> True
         _otherwise -> False }

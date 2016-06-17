@@ -55,7 +55,7 @@ data FromStgError =
                           --   that contains a @Cons@
     | IsWrongLambdaType LambdaType -- ^ Tried retrieving a non-constructor
     | IsBlackhole         -- ^ Tried retrieving a black hole
-    | BadConArity         -- ^ e.g. @Cons x y z@
+    | BadArity         -- ^ e.g. @Cons x y z@
     | NotFound NotInScope -- ^ An unsuccessful variable lookup
     | AddrNotOnHeap
     | NoConstructorMatch  -- ^ None of the given alternatives matched the given
@@ -204,7 +204,7 @@ matchCon0 _ (Closure lambdaForm _)
 matchCon0 wantedCon (Closure (LambdaForm _ _ _ (AppC actualCon args)) _)
     | wantedCon == actualCon = case args of
         []  -> Right ()
-        _xs -> Left (Just BadConArity)
+        _xs -> Left (Just BadArity)
 matchCon0 _ _ = Left Nothing
 
 -- | Like 'matchCon2', but for unary 'Constr'uctors.
@@ -215,7 +215,7 @@ matchCon1 _ (Closure lambdaForm _)
 matchCon1 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x] -> Right (x, makeLocals freeVars freeVals)
-        _xs -> Left (Just BadConArity)
+        _xs -> Left (Just BadArity)
 matchCon1 _ _ = Left Nothing
 
 -- | Match a 'Closure' for a binary 'Constr'uctor.
@@ -233,7 +233,7 @@ matchCon2 _ (Closure lambdaForm _)
 matchCon2 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y] -> Right ((x,y), makeLocals freeVars freeVals)
-        _xs   -> Left (Just BadConArity)
+        _xs   -> Left (Just BadArity)
 matchCon2 _ _ = Left Nothing
 
 -- | Like 'matchCon2', but for ternary 'Constr'uctors.
@@ -244,7 +244,7 @@ matchCon3 _ (Closure lambdaForm _)
 matchCon3 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z] -> Right ((x,y,z), makeLocals freeVars freeVals)
-        _xs     -> Left (Just BadConArity)
+        _xs     -> Left (Just BadArity)
 matchCon3 _ _ = Left Nothing
 
 -- | Like 'matchCon2', but for 4-ary 'Constr'uctors.
@@ -255,7 +255,7 @@ matchCon4 _ (Closure lambdaForm _)
 matchCon4 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z,w] -> Right ((x,y,z,w), makeLocals freeVars freeVals)
-        _xs       -> Left (Just BadConArity)
+        _xs       -> Left (Just BadArity)
 matchCon4 _ _ = Left Nothing
 
 -- | Like 'matchCon2', but for 5-ary 'Constr'uctors.
@@ -266,5 +266,5 @@ matchCon5 _ (Closure lambdaForm _)
 matchCon5 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) freeVals)
     | wantedCon == actualCon = case args of
         [x,y,z,w,v] -> Right ((x,y,z,w,v), makeLocals freeVars freeVals)
-        _xs         -> Left (Just BadConArity)
+        _xs         -> Left (Just BadArity)
 matchCon5 _ _ = Left Nothing

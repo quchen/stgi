@@ -256,6 +256,7 @@ stgRule s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack' }
     | Just (Right (AlgebraicAlt _con vars expr)) <- lookupAlgebraicAlt alts con
+    , length ws == length vars
 
   = let locals' = addLocals (zipWith Mapping vars ws) locals
 
@@ -263,6 +264,7 @@ stgRule s@StgState
          , stgStack = stack'
          , stgInfo  = Info (StateTransition ReturnCon_Match)
                            [Detail_ReturnCon_Match con vars] }
+
 
 
 
@@ -583,6 +585,16 @@ noRuleApplies s@StgState
     , Failure Div0 <- applyPrimOp op xVal yVal
 
   = s { stgInfo  = Info (StateError DivisionByZero) [] }
+
+-- (6) Algebraic constructor return, standard match
+noRuleApplies s@StgState
+    { stgCode  = ReturnCon con ws
+    , stgStack = ReturnFrame alts _ :< _ }
+    | Just (Right (AlgebraicAlt _con vars _)) <- lookupAlgebraicAlt alts con
+    , length ws /= length vars
+
+  = s { stgInfo  = Info (StateError (BadConArity (length ws) (length vars)))
+                                    [Detail_BadConArity] }
 
 
 
