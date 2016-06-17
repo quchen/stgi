@@ -22,7 +22,14 @@ env:
     - ARGS="--resolver lts-5"
     - ARGS="--resolver lts-6"
     - ARGS="--resolver lts"
+    - ARGS="--resolver nightly"
     # - ARGS="--resolver nightly"
+
+matrix:
+    fast_finish: true
+    allow_failures:
+        - env: ARGS="--resolver nightly"
+
 
 before_install:
     # Download and unpack the stack executable
