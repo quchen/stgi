@@ -7,14 +7,13 @@ module Test.Prelude.Bool (tests) where
 
 
 import Data.Bool
-import Data.Monoid
 
 import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
-import Test.Machine.Evaluate.TestTemplates.HaskellReference
-import Test.Orphans                                         ()
+import Test.Machine.Evaluate.TestTemplates.MarshalledValue
+import Test.Orphans                                        ()
 import Test.Tasty
 
 
@@ -27,72 +26,52 @@ tests = testGroup "Bool"
     , testBool ]
 
 testAnd2 :: TestTree
-testAnd2 = haskellReferenceTest defSpec
+testAnd2 = marshalledValueTest defSpec
     { testName = "and2 (&&)"
-    , source = \(b1, b2) ->
-           toStg "b1" b1
-        <> toStg "b2" b2
-        <> toStg "expectedResult" (b1 && b2)
-        <> Stg.eq_Bool
-        <> Stg.and2
-        <> [stg|
-        main = \ => case and2 b1 b2 of
-            result -> case eq_Bool result expectedResult of
-                True    -> Success;
-                False   -> TestFail result;
-                badBool -> Error badBool
-        |] }
+    , failWithInfo = True
+    , sourceSpec = \(b1, b2) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = b1 && b2
+        , source = mconcat
+            [ toStg "b1" b1
+            , toStg "b2" b2
+            , Stg.and2
+            , [stg| main = \ => and2 b1 b2 |] ]}}
 
 testOr2 :: TestTree
-testOr2 = haskellReferenceTest defSpec
+testOr2 = marshalledValueTest defSpec
     { testName = "or2 (||)"
-    , source = \(b1, b2) ->
-           toStg "b1" b1
-        <> toStg "b2" b2
-        <> toStg "expectedResult" (b1 || b2)
-        <> Stg.eq_Bool
-        <> Stg.or2
-        <> [stg|
-        main = \ => case or2 b1 b2 of
-            result -> case eq_Bool result expectedResult of
-                True -> Success;
-                False -> TestFail result;
-                badBool -> Error badBool
-        |] }
+    , sourceSpec = \(b1, b2) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = b1 || b2
+        , source = mconcat
+            [ toStg "b1" b1
+            , toStg "b2" b2
+            , Stg.or2
+            , [stg| main = \ => or2 b1 b2 |] ]}}
 
 testNot :: TestTree
-testNot = haskellReferenceTest defSpec
+testNot = marshalledValueTest defSpec
     { testName = "not"
-    , source = \b ->
-           toStg "b" b
-        <> toStg "expectedResult" (not b)
-        <> Stg.eq_Bool
-        <> Stg.not
-        <> [stg|
-        main = \ => case not b of
-            result -> case eq_Bool result expectedResult of
-                True -> Success;
-                False -> TestFail result;
-                badBool -> Error badBool
-        |] }
+    , sourceSpec = \b -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = not b
+        , source = mconcat
+            [ toStg "b" b
+            , Stg.not
+            , [stg| main = \ => not b |] ]}}
 
 testBool :: TestTree
-testBool = haskellReferenceTest defSpec
+testBool = marshalledValueTest defSpec
     { testName = "bool"
     , maxSteps = 1024
-    , failWithInfo = True
     , failPredicate = const False
-    , source = \(t :: Integer, f, p) ->
-           toStg "p" p
-        <> toStg "t" t
-        <> toStg "f" f
-        <> toStg "expectedResult" (bool t f p)
-        <> Stg.eq_Int
-        <> Stg.bool
-        <> [stg|
-        main = \ => case bool t f p of
-            result -> case eq_Int result expectedResult of
-                True -> Success;
-                False -> TestFail result;
-                badBool -> Error badBool
-        |] }
+    , sourceSpec = \(t :: Integer, f, p) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = bool t f p
+        , source = mconcat
+            [ toStg "p" p
+            , toStg "t" t
+            , toStg "f" f
+            , Stg.bool
+            , [stg| main = \ => bool t f p |] ]}}

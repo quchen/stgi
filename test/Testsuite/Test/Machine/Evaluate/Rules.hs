@@ -1,8 +1,9 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NumDecimals       #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE NumDecimals         #-}
+{-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Tests for each of the STG rules. The scope should be as small as possible
 -- around the actual test subject as possible. (To test return-after-case
@@ -18,11 +19,10 @@ import Stg.Machine
 import Stg.Machine.Types
 import Stg.Parser.QuasiQuoter (stg)
 
-import qualified Test.Machine.Evaluate.TestTemplates.HaskellReference as HRef
-import           Test.Machine.Evaluate.TestTemplates.MachineState     hiding
+import           Test.Machine.Evaluate.TestTemplates.MachineState    hiding
     (defSpec)
-import qualified Test.Machine.Evaluate.TestTemplates.MachineState     as MachineTest
-import           Test.Machine.Evaluate.TestTemplates.Util
+import qualified Test.Machine.Evaluate.TestTemplates.MachineState    as MachineTest
+import qualified Test.Machine.Evaluate.TestTemplates.MarshalledValue as MVal
 
 import Test.Orphans              ()
 import Test.QuickCheck.Modifiers
@@ -265,21 +265,21 @@ literalApplication = machineStateTest defSpec
         |] }
 
 primops :: TestTree
-primops = HRef.haskellReferenceTest HRef.HaskellReferenceTestSpec
-    { HRef.testName = "Primops"
-    , HRef.maxSteps = 1024
-    , HRef.failWithInfo = True
-    , HRef.successPredicate = \_input -> "main" `isLambdaForm` [stg| \ -> Success |]
-    , HRef.failPredicate = const False
-    , HRef.source = \(op, arg1, NonZero arg2) ->
+primops = MVal.marshalledValueTest MVal.MarshalledValueTestSpec
+    { MVal.testName = "Primops"
+    , MVal.maxSteps = 1024
+    , MVal.failWithInfo = True
+    , MVal.failPredicate = const False
+    , MVal.sourceSpec = \(op, arg1 :: Integer, NonZero arg2) -> MVal.MarshalSourceSpec
             -- arg2 is nonzero or the div/mod tests fail. Having their own tests
             -- is probably not worth the code duplication, so we just throw out
             -- the baby with the bathwater here.
-        Program (Binds
+        { MVal.resultVar = "main"
+        , MVal.expectedValue = haskell op arg1 arg2
+        , MVal.source = Program (Binds
             [(Var "main", LambdaForm [] Update []
-                (Case (AppP op (AtomLit (Literal arg1)) (AtomLit (Literal arg2))) (Alts (PrimitiveAlts
-                    [PrimitiveAlt (Literal (haskell op arg1 arg2)) (AppC (Constr "Success") [])] )
-                    (DefaultBound (Var "wrong") (AppC (Constr "TestFail") [AtomVar (Var "wrong")])) )))])}
+                (Case (AppP op (AtomLit (Literal arg1)) (AtomLit (Literal arg2))) (Alts NoNonDefaultAlts
+                    (DefaultBound (Var "x") (AppC (Constr "Int#") [AtomVar (Var "x")])) )))])}}
   where
     boolToPrim op x y = if op x y then 1 else 0
     haskell = \case

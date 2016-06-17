@@ -104,8 +104,8 @@ test-suite testsuite
                      , Test.Machine.Evaluate.Errors
                      , Test.Machine.Evaluate.Programs
                      , Test.Machine.Evaluate.Rules
-                     , Test.Machine.Evaluate.TestTemplates.HaskellReference
                      , Test.Machine.Evaluate.TestTemplates.MachineState
+                     , Test.Machine.Evaluate.TestTemplates.MarshalledValue
                      , Test.Machine.Evaluate.TestTemplates.Util
                      , Test.Machine.GarbageCollection
                      , Test.Machine.Heap

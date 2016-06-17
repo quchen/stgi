@@ -249,7 +249,7 @@ replicate = [program|
                 case ># nPrim 0# of
                     0# -> Nil;
                     default ->
-                        let rest = \(replicateXPrim nPrim) ->
+                        let rest = \(replicateXPrim nPrim) =>
                                 case -# nPrim 1# of
                                     nPrimPred -> replicateXPrim nPrimPred
                         in Cons x rest
@@ -338,10 +338,10 @@ sort = mconcat [gt_Int, Func.compose, nil] <> [program|
                 Cons a as' -> case bs of
                     Cons b bs' -> case gt_Int a b of
                         True ->
-                            let mergeAsBs' = \(merge as bs') -> merge as bs'
+                            let mergeAsBs' = \(merge as bs') => merge as bs'
                             in Cons b mergeAsBs';
                         False ->
-                            let mergeAs'Bs = \(merge as' bs) -> merge as' bs
+                            let mergeAs'Bs = \(merge as' bs) => merge as' bs
                             in Cons a mergeAs'Bs;
                         badBool -> Error_sort_merge3 badBool;
                     Nil -> as;

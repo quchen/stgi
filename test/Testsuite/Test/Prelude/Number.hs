@@ -14,8 +14,8 @@ import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter
 import qualified Stg.Prelude            as Stg
 
-import Test.Machine.Evaluate.TestTemplates.HaskellReference
-import Test.Orphans                                         ()
+import Test.Machine.Evaluate.TestTemplates.MarshalledValue
+import Test.Orphans                                        ()
 import Test.QuickCheck.Modifiers
 import Test.Tasty
 
@@ -53,30 +53,23 @@ testComparison
     -> (Integer -> Integer -> Bool) -- ^ Comparison operator
     -> Program -- ^ STG definition of the comparison function, named "stgFunc"
     -> TestTree
-testComparison name  haskellRef stgFuncDef = haskellReferenceTest defSpec
+testComparison name  haskellRef stgFuncDef = marshalledValueTest defSpec
     { testName = name
-    , source = \(x, y) ->
-           toStg "x" x
-        <> toStg "y" y
-        <> toStg "expectedResult" (haskellRef x y)
-        <> Stg.eq_Bool
-        <> stgFuncDef
-        <> [stg|
-
-        main = \ =>
-            case stgFunc x y of
-                result -> case eq_Bool result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
-                    badBool -> Error_testMin badBool
-        |] }
+    , sourceSpec = \(x, y) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = haskellRef x y
+        , source = mconcat
+            [ toStg "x" x
+            , toStg "y" y
+            , stgFuncDef
+            , [stg| main = \ => stgFunc x y |] ]}}
 
 testAdd, testSub, testMul, testDiv, testMod :: TestTree
-testAdd = testArithmetic "+"   (+) (Stg.add  <> [stg| stgFunc = \ -> add |])
-testSub = testArithmetic "-"   (-) (Stg.sub  <> [stg| stgFunc = \ -> sub |])
-testMul = testArithmetic "*"   (*) (Stg.mul  <> [stg| stgFunc = \ -> mul |])
-testDiv = testArithmetic "div" div (Stg.div  <> [stg| stgFunc = \ -> div |])
-testMod = testArithmetic "mod" mod (Stg.mod  <> [stg| stgFunc = \ -> mod |])
+testAdd = testArithmetic "+"   (+) (Stg.add <> [stg| stgFunc = \ -> add |])
+testSub = testArithmetic "-"   (-) (Stg.sub <> [stg| stgFunc = \ -> sub |])
+testMul = testArithmetic "*"   (*) (Stg.mul <> [stg| stgFunc = \ -> mul |])
+testDiv = testArithmetic "div" div (Stg.div <> [stg| stgFunc = \ -> div |])
+testMod = testArithmetic "mod" mod (Stg.mod <> [stg| stgFunc = \ -> mod |])
 
 -- | Test an arithmetic operator
 testArithmetic
@@ -84,58 +77,37 @@ testArithmetic
     -> (Integer -> Integer -> Integer) -- ^ Arithmetic operator
     -> Program -- ^ STG definition of the comparison function, named "stgFunc"
     -> TestTree
-testArithmetic name  haskellRef stgFuncDef = haskellReferenceTest defSpec
+testArithmetic name  haskellRef stgFuncDef = marshalledValueTest defSpec
     { testName = name
-    , source = \(x, NonZero y) ->
-           toStg "x" x
-        <> toStg "y" y
-        <> toStg "expectedResult" (haskellRef x y)
-        <> Stg.eq_Int
-        <> stgFuncDef
-        <> [stg|
-
-        main = \ =>
-            case stgFunc x y of
-                result -> case eq_Int result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
-                    badBool -> Error_testMin badBool
-        |] }
+    , sourceSpec = \(x, NonZero y) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = haskellRef x y
+        , source = mconcat
+            [ toStg "x" x
+            , toStg "y" y
+            , stgFuncDef
+            , [stg| main = \ => stgFunc x y |] ]}}
 
 testMin :: TestTree
-testMin = haskellReferenceTest defSpec
+testMin = marshalledValueTest defSpec
     { testName = "min"
-    , source = \(x, y :: Int) ->
-           toStg "x" x
-        <> toStg "y" y
-        <> toStg "expectedResult" (min x y)
-        <> Stg.min
-        <> Stg.eq_Int
-        <> [stg|
-
-        main = \ =>
-            case min x y of
-                result -> case eq_Int result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
-                    badBool -> Error_testMin badBool
-        |] }
+    , sourceSpec = \(x, y :: Integer) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = min x y
+        , source = mconcat
+            [ toStg "x" x
+            , toStg "y" y
+            , Stg.min
+            , [stg| main = \ => min x y |] ]}}
 
 testMax :: TestTree
-testMax = haskellReferenceTest defSpec
+testMax = marshalledValueTest defSpec
     { testName = "max"
-    , source = \(x, y :: Int) ->
-           toStg "x" x
-        <> toStg "y" y
-        <> toStg "expectedResult" (max x y)
-        <> Stg.max
-        <> Stg.eq_Int
-        <> [stg|
-
-        main = \ =>
-            case max x y of
-                result -> case eq_Int result expectedResult of
-                    True -> Success;
-                    False -> TestFail result;
-                    badBool -> Error_testMin badBool
-        |] }
+    , sourceSpec = \(x, y :: Integer) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = max x y
+        , source = mconcat
+            [ toStg "x" x
+            , toStg "y" y
+            , Stg.max
+            , [stg| main = \ => max x y |] ]}}

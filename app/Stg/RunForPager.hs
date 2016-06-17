@@ -31,7 +31,7 @@ runForPager
 runForPager ppr showSteps verbosity prog =
     let allStates = evalsUntil RunIndefinitely
                                (HaltIf (const False))
-                               (PerformGc (const (Just twoSpaceCopying)))
+                               (PerformGc (const (Just triStateTracing)))
                                (initialState "main" prog)
         states = case showSteps of
             Just n | n > 0 -> NE.fromList (NE.take n allStates)
