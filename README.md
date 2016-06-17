@@ -48,7 +48,14 @@ The program should build with both [`stack`][stack] and [`cabal`][cabal].
 The `app/Main.hs` file is written so you can easily switch out the `prog` value
 for other `Program`s that contain a `main` definition. The `Stg.ExamplePrograms`
 module provides a number of examples that might be worth having a look, and are
-a good starting point for modifications or adding your own programs.
+a good starting point for modifications or adding your own programs. It's
+probably easier to read in Haddock format, so go ahead and run
+
+```bash
+stack haddock --open stgi
+```
+
+and have a look at the example programs.
 
 When you're happy with your `app/Main.hs`, run
 
@@ -427,13 +434,13 @@ each particular step.
 The code segment is the current instruction the machine evaluates.
 
 - **Eval** evaluates expressions.
-    - **function application** pushes the function's arguments on the stack
+    - **Function application** pushes the function's arguments on the stack
       and **Enter**s the address of the function.
-	- **constructor applications** simply transition into the
+	- **Constructor applications** simply transition into the
 	  **ReturnCon** state when evaluated.
 	- Similarly, **primitive ints** transitions into the **ReturnInt** state.
-	- **case** pushes a return frame, and proceeds evaluating the scrutinee.
-	- **let(rec)** allocates heap closures, and extends the local environment
+	- **Case** pushes a return frame, and proceeds evaluating the scrutinee.
+	- **Let(rec)** allocates heap closures, and extends the local environment
 	  with the new bindings.
 - **Enter** evaluates memory addresses by looking up the value at a memory
   address on the heap, and evaluating its body.
@@ -447,7 +454,7 @@ The code segment is the current instruction the machine evaluates.
 
 ### Stack
 
-The stack has three different types of frames.
+The stack has three different kinds of frames.
 
 - **Argument frames** store peding function arguments. They are pushed when a
   function applied to arguments is evaluated, and popped when entering a closure
