@@ -8,6 +8,7 @@ ignore "Eta reduce"
 ignore "Use camelCase"
 ignore "Use fromMaybe"
 ignore "Use if"
+ignore "Use const"
 ignore "Use uncurry"
 
 -- AMP fallout

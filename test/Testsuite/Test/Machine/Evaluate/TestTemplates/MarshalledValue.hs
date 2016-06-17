@@ -9,6 +9,7 @@
 -- with a reference.
 module Test.Machine.Evaluate.TestTemplates.MarshalledValue (
     MarshalledValueTestSpec(..),
+    MarshalSourceSpec(..),
     defSpec,
     marshalledValueTest,
 ) where
@@ -41,18 +42,12 @@ data MarshalledValueTestSpec input output = MarshalledValueTestSpec
     { testName :: Text
         -- ^ The reference function's name. Used only for display purposes.
 
-    , testVar :: Var
-        -- ^ The value to observe the value of, e.g. @main@.
-
-    , expectedValue :: input -> output
-        -- ^ The expected result value of type @b@, given the input of type @a@.
-
     , failPredicate :: StgState -> Bool
         -- ^ Fail if this predicate holds. This can be used to constrain the
         -- heap size during the test, for example.
 
-    , source :: input -> Program
-        -- ^ STG program to run.
+    , sourceSpec :: input -> MarshalSourceSpec output
+        --  * STG program to run
 
     , maxSteps :: Integer
         -- ^ Maximum number of steps to take
@@ -61,15 +56,22 @@ data MarshalledValueTestSpec input output = MarshalledValueTestSpec
         -- ^ Print program code and final state on test failure?
     }
 
+data MarshalSourceSpec output = MarshalSourceSpec
+    { resultVar     :: Var      -- ^ value to observe the value of, e.g. @main@
+    , expectedValue :: output   -- ^ expected result value
+    , source        :: Program  -- ^ STG program to run
+    }
+
 defSpec :: MarshalledValueTestSpec input b
 defSpec = MarshalledValueTestSpec
     { testName = "Default Haskell reference test spec template"
     , maxSteps = 1024
-    , testVar = "main"
-    , expectedValue = error "No expected value set in test!"
     , failWithInfo = False
     , failPredicate = const False
-    , source = \_ -> [stg| main = \ -> DummySource |] }
+    , sourceSpec = \_ -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = error "No expected value generator set in test"
+        , source = [stg| main = \ -> DummySource |] }}
 
 marshalledValueTest
     :: forall input output.
@@ -89,7 +91,7 @@ marshalledValueTest testSpec = askOption (\htmlOpt ->
          -> input
          -> Property
     test pprDict input =
-        let program = initialState "main" (source testSpec input)
+        let program = initialState "main" (source (sourceSpec testSpec input))
             states = evalsUntil
                 (RunForMaxSteps (maxSteps testSpec))
                 (HaltIf (const False))
@@ -98,7 +100,7 @@ marshalledValueTest testSpec = askOption (\htmlOpt ->
             verifyLoop (state :| _)
                 | failPredicate testSpec state =
                     fail_failPredicateTrue pprDict testSpec input state
-            verifyLoop (state :| rest) = case fromStg state (testVar testSpec) of
+            verifyLoop (state :| rest) = case fromStg state (resultVar (sourceSpec testSpec input)) of
                 Left err -> case err of
                     TypeMismatch -> fail_typeMismatch pprDict testSpec input state
                     IsBlackhole -> continue state rest
@@ -135,14 +137,14 @@ assertEqual
     finalState
   = counterexample failText (actual == expected)
   where
-    expected = expectedValue testSpec input
+    expected = expectedValue (sourceSpec testSpec input)
     failText = (T.unpack . pprText . vsep)
         [ "Machine produced an invalid result."
         , "Expected:" <+> pprDoc expected
         , "Actual:  " <+> pprDoc actual
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", pprDoc (source testSpec input)])
+                [ hang 4 (vsep ["Program:", pprDoc (source (sourceSpec testSpec input))])
                 , hang 4 (vsep ["Final state:", pprDoc finalState]) ]
             else failWithInfoInfoText ]
 
@@ -152,8 +154,8 @@ failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
 fail_template
     :: Doc
     -> PrettyprinterDict
-    -> MarshalledValueTestSpec a b
-    -> a
+    -> MarshalledValueTestSpec input a
+    -> input
     -> StgState
     -> Property
 fail_template
@@ -170,7 +172,7 @@ fail_template
             <+> pprDoc (stgInfo finalState)
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", pprDoc (source testSpec input)])
+                [ hang 4 (vsep ["Program:", pprDoc (source (sourceSpec testSpec input))])
                 , hang 4 (vsep ["Final state:", pprDoc finalState]) ]
             else failWithInfoInfoText ]
 

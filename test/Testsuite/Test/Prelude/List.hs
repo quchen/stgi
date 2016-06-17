@@ -49,106 +49,116 @@ tests = testGroup "List"
 testFilter :: TestTree
 testFilter = marshalledValueTest defSpec
     { testName = "filter"
-    , expectedValue = \(xs, threshold) -> filter (> threshold) xs
-    , source = \(xs, threshold :: Integer) -> mconcat
-        [ toStg "inputList" xs
-        , toStg "threshold" threshold
-        , Stg.gt_Int
-        , Stg.force
-        , Stg.filter
-        , [stg|
-        main = \ =>
-            letrec
-                positive = \x -> gt_Int x threshold;
-                filtered = \(positive) => filter positive inputList
-            in force filtered
-        |] ]}
+    , sourceSpec = \(xs, threshold :: Integer) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = filter (> threshold) xs
+        , source = mconcat
+            [ toStg "inputList" xs
+            , toStg "threshold" threshold
+            , Stg.gt_Int
+            , Stg.force
+            , Stg.filter
+            , [stg|
+            main = \ =>
+                letrec
+                    positive = \x -> gt_Int x threshold;
+                    filtered = \(positive) => filter positive inputList
+                in force filtered
+            |] ]}}
 
 testSort :: TestTree
 testSort = marshalledValueTest defSpec
     { testName = "sort (Haskell/base version)"
     , failWithInfo = True
-    , expectedValue = \xs -> L.sort xs
-    , source = \(xs :: [Integer]) -> mconcat
-        [ toStg "inputList" xs
-        , Stg.sort
-        , Stg.force
-        , [stg|
-        main = \ =>
-            let sorted = \ => sort inputList
-            in force sorted
-        |] ]}
+    , sourceSpec = \(xs :: [Integer]) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = L.sort xs
+        , source = mconcat
+            [ toStg "inputList" xs
+            , Stg.sort
+            , Stg.force
+            , [stg|
+            main = \ =>
+                let sorted = \ => sort inputList
+                in force sorted
+            |] ]}}
 
 testNaiveSort :: TestTree
 testNaiveSort = marshalledValueTest defSpec
     { testName = "sort (naive version)"
-    , expectedValue = \xs -> L.sort xs
-    , source = \(xs :: [Integer]) -> mconcat
-        [ toStg "inputList" xs
-        , Stg.naiveSort
-        , Stg.force
-        , [stg|
-
-        main = \ =>
-            let sorted = \ => naiveSort inputList
-            in force sorted
-        |] ]}
+    , sourceSpec = \(xs :: [Integer]) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = L.sort xs
+        , source = mconcat
+            [ toStg "inputList" xs
+            , Stg.naiveSort
+            , Stg.force
+            , [stg|
+            main = \ =>
+                let sorted = \ => naiveSort inputList
+                in force sorted
+            |] ]}}
 
 testMap :: TestTree
 testMap = marshalledValueTest defSpec
     { testName = "map"
-    , expectedValue = \(xs, offset) -> map (+offset) xs
-    , source = \(xs, offset :: Integer) -> mconcat
-        [ Stg.add
-        , Stg.map
-        , Stg.force
-        , toStg "offset" offset
-        , toStg "inputList" xs
-        , [stg|
-        main = \ =>
-            letrec
-                plusOffset = \n -> add n offset;
-                result = \(plusOffset) => map plusOffset inputList
-            in force result
-        |] ]}
+    , sourceSpec = \(xs, offset :: Integer) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = map (+offset) xs
+        , source = mconcat
+            [ Stg.add
+            , Stg.map
+            , Stg.force
+            , toStg "offset" offset
+            , toStg "inputList" xs
+            , [stg|
+            main = \ =>
+                letrec
+                    plusOffset = \n -> add n offset;
+                    result = \(plusOffset) => map plusOffset inputList
+                in force result
+            |] ]}}
 
 testZip :: TestTree
 testZip = marshalledValueTest defSpec
     { testName = "zip, map"
-    , expectedValue = \(list1, list2) -> zipWith (+) list1 list2
-    , source = \(list1, list2 :: [Integer]) -> mconcat
-        [ toStg "list1" list1
-        , toStg "list2" list2
-        , Stg.add
-        , Stg.map
-        , Stg.uncurry
-        , Stg.zip
-        , Stg.force
-        , [stg|
-
-        main = \ =>
-            letrec
-                zipped   = \ -> zip list1 list2;
-                addTuple = \ -> uncurry add;
-                summed   = \(addTuple zipped) => map addTuple zipped
-            in force summed
-        |] ]}
+    , sourceSpec = \(list1, list2 :: [Integer]) ->  MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = zipWith (+) list1 list2
+        , source = mconcat
+            [ toStg "list1" list1
+            , toStg "list2" list2
+            , Stg.add
+            , Stg.map
+            , Stg.uncurry
+            , Stg.zip
+            , Stg.force
+            , [stg|
+            main = \ =>
+                letrec
+                    zipped   = \ -> zip list1 list2;
+                    addTuple = \ -> uncurry add;
+                    summed   = \(addTuple zipped) => map addTuple zipped
+                in force summed
+            |] ]}}
 
 testZipWith :: TestTree
 testZipWith = marshalledValueTest defSpec
     { testName = "zipWith (+)"
-    , expectedValue = \(list1, list2) -> zipWith (+) list1 list2
-    , source = \(list1, list2 :: [Integer]) -> mconcat
-        [ toStg "list1" list1
-        , toStg "list2" list2
-        , Stg.add
-        , Stg.zipWith
-        , Stg.force
-        , [stg|
-        main = \ =>
-            let zipped = \ => zipWith add list1 list2
-            in force zipped
-        |] ]}
+    , sourceSpec = \(list1, list2 :: [Integer]) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = zipWith (+) list1 list2
+        , source = mconcat
+            [ toStg "list1" list1
+            , toStg "list2" list2
+            , Stg.add
+            , Stg.zipWith
+            , Stg.force
+            , [stg|
+            main = \ =>
+                let zipped = \ => zipWith add list1 list2
+                in force zipped
+            |] ]}}
 
 
 testFoldr, testFoldl, testFoldl' :: TestTree
@@ -188,85 +198,94 @@ foldSumTemplate foldName foldF foldStg failP
     { testName = foldName
     , maxSteps = 1024
     , failPredicate = failP
-    , expectedValue = \(z, xs) -> foldF (+) z xs
-    , source = \(z :: Integer, xs) -> mconcat
-        [ foldStg
-        , Stg.add
-        , Stg.force
-        , toStg "z" z
-        , toStg "input" xs
-        , [stg|
-        main = \ =>
-            let result = \ => fold add z input
-            in force result
-        |] ]}
+    , sourceSpec = \(z :: Integer, xs) ->  MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = foldF (+) z xs
+        , source = mconcat
+            [ foldStg
+            , Stg.add
+            , Stg.force
+            , toStg "z" z
+            , toStg "input" xs
+            , [stg|
+            main = \ =>
+                let result = \ => fold add z input
+                in force result
+            |] ]}}
 
 testConcat2 :: TestTree
 testConcat2 = marshalledValueTest defSpec
     { testName = "(++)"
-    , expectedValue = \(list1, list2) -> list1 ++ list2
-    , source = \(list1, list2 :: [Integer]) -> mconcat
-        [ toStg "list1" list1
-        , toStg "list2" list2
-        , Stg.concat2
-        , Stg.force
-        , [stg|
-        main = \ =>
-            let concatenated = \ => concat2 list1 list2
-            in force concatenated
-        |] ]}
+    , sourceSpec = \(list1, list2 :: [Integer]) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = list1 ++ list2
+        , source = mconcat
+            [ toStg "list1" list1
+            , toStg "list2" list2
+            , Stg.concat2
+            , Stg.force
+            , [stg|
+            main = \ =>
+                let concatenated = \ => concat2 list1 list2
+                in force concatenated
+            |] ]}}
 
 testReverse :: TestTree
 testReverse = marshalledValueTest defSpec
     { testName = "reverse"
     , maxSteps = 1024
-    , expectedValue = \xs -> reverse xs
-    , source = \(xs :: [Integer]) -> mconcat
-        [ toStg "input" xs
-        , Stg.reverse
-        , Stg.force
-        , [stg|
-        main = \ =>
-            let reversed = \ => reverse input
-            in force reversed
-        |] ]}
+    , sourceSpec = \(xs :: [Integer]) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = reverse xs
+        , source = mconcat
+            [ toStg "input" xs
+            , Stg.reverse
+            , Stg.force
+            , [stg|
+            main = \ =>
+                let reversed = \ => reverse input
+                in force reversed
+            |] ]}}
 
 testCycle :: TestTree
 testCycle = marshalledValueTest defSpec
     { testName = "cycle (+take)"
-    , expectedValue = \(NonEmpty (list :: [Integer]), NonNegative n)
-        -> take n (cycle list)
-    , source = \(NonEmpty (list :: [Integer]), NonNegative n) -> mconcat
-        [ toStg "n" n
-        , toStg "list" list
-        , Stg.take
-        , Stg.cycle
-        , Stg.force
-        , [stg|
-        main = \ =>
-            letrec
-                cycled = \ -> cycle list;
-                takeCycled = \(cycled) => take n cycled
-            in force takeCycled
-        |] ]}
+    , sourceSpec = \(NonEmpty (list :: [Integer]), NonNegative n) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = take n (cycle list)
+        , source = mconcat
+            [ toStg "n" n
+            , toStg "list" list
+            , Stg.take
+            , Stg.cycle
+            , Stg.force
+            , [stg|
+            main = \ =>
+                letrec
+                    cycled = \ -> cycle list;
+                    takeCycled = \(cycled) => take n cycled
+                in force takeCycled
+            |] ]}}
 
 testRepeat :: TestTree
 testRepeat = marshalledValueTest defSpec
     { testName = "repeat (+take)"
-    , expectedValue = \(item, NonNegative n) -> replicate n item
-    , source = \(item :: Integer, NonNegative n) -> mconcat
-        [ toStg "n" n
-        , toStg "item" item
-        , Stg.take
-        , Stg.repeat
-        , Stg.force
-        , [stg|
-        main = \ =>
-            letrec
-                repeated = \ -> repeat item;
-                takeRepeated = \(repeated) => take n repeated
-            in force takeRepeated
-        |] ]}
+    , sourceSpec = \(item :: Integer, NonNegative n) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue =replicate n item
+        , source = mconcat
+            [ toStg "n" n
+            , toStg "item" item
+            , Stg.take
+            , Stg.repeat
+            , Stg.force
+            , [stg|
+            main = \ =>
+                letrec
+                    repeated = \ -> repeat item;
+                    takeRepeated = \(repeated) => take n repeated
+                in force takeRepeated
+            |] ]}}
 
 testReplicate :: TestTree
 testReplicate = marshalledValueTest defSpec
@@ -276,51 +295,55 @@ testReplicate = marshalledValueTest defSpec
     , failPredicate = \stgState -> case stgCode stgState of
         Eval AppP {} _ -> True
         _ -> False
-    , expectedValue = \(item, n) -> replicate n item
-    , source = \(item :: Integer, n) -> mconcat
-        [ toStg "n" n
-        , toStg "item" item
-        , Stg.replicate
-        , Stg.force
-        , [stg|
-        main = \ =>
-            let replicated = \ => replicate n item
-            in force replicated
-        |] ]}
+    , sourceSpec = \(item :: Integer, n) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = replicate n item
+        , source = mconcat
+            [ toStg "n" n
+            , toStg "item" item
+            , Stg.replicate
+            , Stg.force
+            , [stg|
+            main = \ =>
+                let replicated = \ => replicate n item
+                in force replicated
+            |] ]}}
 
 testIterate :: TestTree
 testIterate = marshalledValueTest defSpec
     { testName = "iterate (+take)"
-    , expectedValue = \(seed, offset, NonNegative n)
-        -> take n (iterate (+offset) seed)
-    , source = \(seed, offset :: Integer, NonNegative n) -> mconcat
-        [ toStg "n" n
-        , toStg "offset" offset
-        , toStg "seed" seed
-        , Stg.add
-        , Stg.take
-        , Stg.iterate
-        , Stg.force
-        , [stg|
-        main = \ =>
-            letrec
-                addOffset = \ -> add offset;
-                iterated = \(addOffset) -> iterate addOffset seed;
-                takeIterated = \(iterated) => take n iterated
-            in force takeIterated
-        |] ]}
-
+    , sourceSpec = \(seed, offset :: Integer, NonNegative n) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = take n (iterate (+offset) seed)
+        , source = mconcat
+            [ toStg "n" n
+            , toStg "offset" offset
+            , toStg "seed" seed
+            , Stg.add
+            , Stg.take
+            , Stg.iterate
+            , Stg.force
+            , [stg|
+            main = \ =>
+                letrec
+                    addOffset = \ -> add offset;
+                    iterated = \(addOffset) -> iterate addOffset seed;
+                    takeIterated = \(iterated) => take n iterated
+                in force takeIterated
+            |] ]}}
 
 testLength :: TestTree
 testLength = marshalledValueTest defSpec
     { testName = "length"
-    , expectedValue = \xs -> fromIntegral (length xs) :: Integer
-    , source = \(xs :: [Integer]) -> mconcat
-        [ toStg "input" xs
-        , Stg.length
-        , Stg.force
-        , [stg|
-        main = \ =>
-            let len = \ => length input
-            in force len
-        |] ]}
+    , sourceSpec = \(xs :: [Integer]) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = fromIntegral (length xs) :: Integer
+        , source = mconcat
+            [ toStg "input" xs
+            , Stg.length
+            , Stg.force
+            , [stg|
+            main = \ =>
+                let len = \ => length input
+                in force len
+            |] ]}}
