@@ -39,6 +39,7 @@ library
                      , Stg.Machine.GarbageCollection.TriStateTracing
                      , Stg.Machine.GarbageCollection.TwoSpaceCopying
                      , Stg.Machine.Heap
+                     , Stg.Machine.RemoveUnusedGlobals
                      , Stg.Machine.Types
                      , Stg.Marshal
                      , Stg.Marshal.FromStg

@@ -340,6 +340,7 @@ data StateError =
     | NonAlgPrimScrutinee
     | DivisionByZero
     | BadConArity Int Int
+    | RemoveUnusedGlobals
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty StateError where
@@ -357,6 +358,7 @@ instance Pretty StateError where
         BadConArity retArity altArity -> "Return" <+> pprArity retArity
                                      <+> "constructor to" <+> pprArity altArity
                                      <+> "alternative"
+        RemoveUnusedGlobals -> "Remove unused global variables"
 
 pprArity :: Int -> Doc
 pprArity = \case
