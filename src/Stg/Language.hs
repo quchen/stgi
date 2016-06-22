@@ -22,7 +22,6 @@ module Stg.Language (
     Rec            (..),
     Expr           (..),
     Alts           (..),
-    NonDefaultAlts (..),
     AlgebraicAlt   (..),
     PrimitiveAlt   (..),
     DefaultAlt     (..),
@@ -168,23 +167,18 @@ data Expr =
     deriving (Eq, Ord, Show, Generic)
 
 -- | List of possible alternatives in a 'Case' expression.
---
--- The list of alts has to be homogeneous. This is not ensured by the type
--- system, and should be handled by the parser instead.
-data Alts = Alts !NonDefaultAlts !DefaultAlt
-    deriving (Eq, Ord, Show, Generic)
-
--- | The part of a 'Case' alternative that's not the default.
-data NonDefaultAlts =
-      NoNonDefaultAlts
-        -- ^ Used in 'case' statements that consist only of a default
-        -- alternative. These can be useful to force or unpack values.
-
-    | AlgebraicAlts !(NonEmpty AlgebraicAlt)
+data Alts =
+      AlgebraicAlts !(NonEmpty AlgebraicAlt) !(Maybe DefaultAlt)
         -- ^ Algebraic alternative, like @Cons x xs@.
 
-    | PrimitiveAlts !(NonEmpty PrimitiveAlt)
+    | PrimitiveAlts !(NonEmpty PrimitiveAlt) !(Maybe DefaultAlt)
         -- ^ Primitive alternative, like @1#@.
+
+    | DefaultOnlyAlt DefaultAlt
+        -- ^ Used in 'case' statements that consist only of a default
+        -- alternative. Useful to force values, or do computations on the
+        -- stack.
+
     deriving (Eq, Ord, Show, Generic)
 
 -- | As in @True | False@
@@ -245,15 +239,17 @@ instance IsString Constr where fromString = coerce . T.pack
 --------------------------------------------------------------------------------
 -- Lift instances
 deriveLiftMany [ ''Program, ''Literal, ''LambdaForm, ''UpdateFlag, ''Rec
-               , ''Expr, ''Alts, ''AlgebraicAlt, ''PrimitiveAlt, ''DefaultAlt
+               , ''Expr, ''AlgebraicAlt, ''PrimitiveAlt, ''DefaultAlt
                , ''PrimOp, ''Atom ]
 
-instance Lift NonDefaultAlts where
-    lift NoNonDefaultAlts = [| NoNonDefaultAlts |]
-    lift (AlgebraicAlts alts) =
-        [| AlgebraicAlts (NonEmpty.fromList $(lift (toList alts))) |]
-    lift (PrimitiveAlts alts) =
-        [| PrimitiveAlts (NonEmpty.fromList $(lift (toList alts))) |]
+instance Lift Alts where
+    lift (AlgebraicAlts alts def) =
+        [| AlgebraicAlts (NonEmpty.fromList $(lift (toList alts)))
+                         $(lift def) |]
+    lift (PrimitiveAlts alts def) =
+        [| PrimitiveAlts (NonEmpty.fromList $(lift (toList alts)))
+                         $(lift def) |]
+    lift (DefaultOnlyAlt def) = [| DefaultOnlyAlt $(lift def) |]
 
 instance Lift Binds where
     lift (Binds binds) = [| Binds (M.fromList $(lift (M.assocs binds))) |]
@@ -335,11 +331,16 @@ instance Pretty Expr where
         Lit lit -> pretty lit
 
 instance Pretty Alts where
-    pretty (Alts NoNonDefaultAlts def) = pretty def
-    pretty (Alts (AlgebraicAlts alts) def) =
-        semicolonTerminated (map pretty (toList alts) <> [pretty def])
-    pretty (Alts (PrimitiveAlts alts) def) =
-        semicolonTerminated (map pretty (toList alts) <> [pretty def])
+    pretty = \case
+        AlgebraicAlts alts m'def -> prettyAltList alts m'def
+        PrimitiveAlts alts m'def -> prettyAltList alts m'def
+        DefaultOnlyAlt def       -> pretty def
+      where
+        prettyAltList :: Pretty a => NonEmpty a -> Maybe DefaultAlt -> Doc
+        prettyAltList alts m'def = (semicolonTerminated . mconcat)
+            [ map pretty (toList alts)
+            , case m'def of Just def -> [pretty def]
+                            Nothing -> [] ]
 
 instance Pretty AlgebraicAlt where
     pretty (AlgebraicAlt con [] expr)
@@ -393,7 +394,6 @@ instance NFData UpdateFlag
 instance NFData Rec
 instance NFData Expr
 instance NFData Alts
-instance NFData NonDefaultAlts
 instance NFData AlgebraicAlt
 instance NFData PrimitiveAlt
 instance NFData DefaultAlt

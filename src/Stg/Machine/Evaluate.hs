@@ -34,34 +34,44 @@ mkDetail_UnusedLocalVariables usedVars locals =
           unused = localsMap `M.difference` used
     , not (M.null unused) && not (M.null localsMap) ]
 
+data AltLookupSuccess alt =
+      AltMatches alt
+    | DefaultMatches DefaultAlt
+
+data AltLookupError =
+      BadAlt
+    | NoMatch
+
 -- | Look up an algebraic constructor among the given alternatives, and return
--- the first match. If nothing matches, return the default alternative.
+-- the first match.
 lookupAlgebraicAlt
     :: Alts
     -> Constr
-    -> Maybe (Either DefaultAlt AlgebraicAlt)
-lookupAlgebraicAlt (Alts (AlgebraicAlts alts) def) constr
-  = Just (case L.find matchingAlt alts of
-        Just alt   -> Right alt
-        _otherwise -> Left def )
-  where
-    matchingAlt (AlgebraicAlt c _ _) = c == constr
-lookupAlgebraicAlt (Alts PrimitiveAlts{} _) _ = Nothing
-lookupAlgebraicAlt (Alts NoNonDefaultAlts{} def) _ = Just (Left def)
+    -> Validate AltLookupError (AltLookupSuccess AlgebraicAlt)
+lookupAlgebraicAlt (AlgebraicAlts alts m'def) constr
+  = let matchingAlt (AlgebraicAlt c _ _) = c == constr
+    in case L.find matchingAlt alts of
+        Just alt   -> Success (AltMatches alt)
+        _otherwise -> case m'def of
+            Nothing -> Failure NoMatch
+            Just def -> Success (DefaultMatches def)
+lookupAlgebraicAlt PrimitiveAlts{} _ = Failure BadAlt
+lookupAlgebraicAlt (DefaultOnlyAlt def) _ = Success (DefaultMatches def)
 
 -- | 'lookupAlgebraicAlt' for primitive literals.
 lookupPrimitiveAlt
     :: Alts
     -> Literal
-    -> Maybe (Either DefaultAlt PrimitiveAlt)
-lookupPrimitiveAlt (Alts (PrimitiveAlts alts) def) lit
-  = Just (case L.find matchingAlt alts of
-        Just alt   -> Right alt
-        _otherwise -> Left def )
-  where
-    matchingAlt (PrimitiveAlt lit' _) = lit' == lit
-lookupPrimitiveAlt (Alts AlgebraicAlts{} _) _ = Nothing
-lookupPrimitiveAlt (Alts NoNonDefaultAlts{} def) _ = Just (Left def)
+    -> Validate AltLookupError (AltLookupSuccess PrimitiveAlt)
+lookupPrimitiveAlt (PrimitiveAlts alts m'def) lit
+  = let matchingAlt (PrimitiveAlt lit' _) = lit' == lit
+    in case L.find matchingAlt alts of
+        Just alt   -> Success (AltMatches alt)
+        _otherwise -> case m'def of
+            Nothing -> Failure NoMatch
+            Just def -> Success (DefaultMatches def)
+lookupPrimitiveAlt AlgebraicAlts{} _ = Failure BadAlt
+lookupPrimitiveAlt (DefaultOnlyAlt def) _ = Success (DefaultMatches def)
 
 liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure
 liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
@@ -201,22 +211,19 @@ stgRule s@StgState
 -- When reading the source here for educational purposes, you should skip this
 -- rule until you've seen the normal case rule (4) and the normal
 -- primop rule (14).
---
--- This rule has the slight modification compared to the paper in that it works
--- for both bound and unbound default cases.
 stgRule s@StgState
     { stgCode = Eval (Case (AppP op x y) alts) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
     , Success opXY <- applyPrimOp op xVal yVal
-    , Just altLookup <- lookupPrimitiveAlt alts (Literal opXY)
+    , Success altLookup <- lookupPrimitiveAlt alts (Literal opXY)
 
   = let (locals', expr) = case altLookup of
-            Left (DefaultBound pat e)
+            DefaultMatches (DefaultBound pat e)
                 -> (addLocals [Mapping pat (PrimInt opXY)] locals, e)
-            Left (DefaultNotBound e)
+            DefaultMatches (DefaultNotBound e)
                 -> (locals, e)
-            Right (PrimitiveAlt _opXY e)
+            AltMatches (PrimitiveAlt _opXY e)
                 -> (locals, e)
 
     in s { stgCode = Eval expr locals'
@@ -255,7 +262,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Just (Right (AlgebraicAlt _con vars expr)) <- lookupAlgebraicAlt alts con
+    | Success (AltMatches (AlgebraicAlt _con vars expr)) <- lookupAlgebraicAlt alts con
     , length ws == length vars
 
   = let locals' = addLocals (zipWith Mapping vars ws) locals
@@ -272,7 +279,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = ReturnCon con _ws
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Just (Left (DefaultNotBound expr)) <- lookupAlgebraicAlt alts con
+    | Success (DefaultMatches (DefaultNotBound expr)) <- lookupAlgebraicAlt alts con
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
@@ -286,7 +293,7 @@ stgRule s@StgState
     , stgStack = ReturnFrame alts locals :< stack'
     , stgHeap  = heap
     , stgSteps = steps }
-    | Just (Left (DefaultBound v expr)) <- lookupAlgebraicAlt alts con
+    | Success (DefaultMatches (DefaultBound v expr)) <- lookupAlgebraicAlt alts con
 
   = let locals' = addLocals [Mapping v (Addr addr)] locals
         (addr, heap') = H.alloc (HClosure closure) heap
@@ -322,7 +329,7 @@ stgRule s@StgState { stgCode = Eval (AppF f []) locals }
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Just (Right (PrimitiveAlt _k expr)) <- lookupPrimitiveAlt alts (Literal k)
+    | Success (AltMatches (PrimitiveAlt _k expr)) <- lookupPrimitiveAlt alts (Literal k)
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
@@ -334,7 +341,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Just (Left (DefaultBound v expr)) <- lookupPrimitiveAlt alts (Literal k)
+    | Success (DefaultMatches (DefaultBound v expr)) <- lookupPrimitiveAlt alts (Literal k)
 
   = let locals' = addLocals [Mapping v (PrimInt k)] locals
 
@@ -349,7 +356,7 @@ stgRule s@StgState
 stgRule s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
-    | Just (Left (DefaultNotBound expr)) <- lookupPrimitiveAlt alts (Literal k)
+    | Success (DefaultMatches (DefaultNotBound expr)) <- lookupPrimitiveAlt alts (Literal k)
 
   = s { stgCode  = Eval expr locals
       , stgStack = stack'
@@ -524,7 +531,7 @@ noRuleApplies s@StgState
 -- Algebraic constructor return, but primitive alternative on return frame
 noRuleApplies s@StgState
     { stgCode  = ReturnCon{}
-    , stgStack = ReturnFrame (Alts PrimitiveAlts{} _) _ :< _ }
+    , stgStack = ReturnFrame PrimitiveAlts{} _ :< _ }
 
   = s { stgInfo = Info (StateError AlgReturnToPrimAlts) [] }
 
@@ -533,7 +540,7 @@ noRuleApplies s@StgState
 -- Primitive return, but algebraic alternative on return frame
 noRuleApplies s@StgState
     { stgCode  = ReturnInt _
-    , stgStack = ReturnFrame (Alts AlgebraicAlts{} _) _ :< _ }
+    , stgStack = ReturnFrame AlgebraicAlts{} _ :< _ }
 
   = s { stgInfo = Info (StateError PrimReturnToAlgAlts) [] }
 
@@ -590,7 +597,7 @@ noRuleApplies s@StgState
 noRuleApplies s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts _ :< _ }
-    | Just (Right (AlgebraicAlt _con vars _)) <- lookupAlgebraicAlt alts con
+    | Success (AltMatches (AlgebraicAlt _con vars _)) <- lookupAlgebraicAlt alts con
     , length ws /= length vars
 
   = s { stgInfo  = Info (StateError (BadConArity (length ws) (length vars)))

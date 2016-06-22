@@ -31,7 +31,6 @@ module Stg.Parser.Parser (
     lambdaForm,
     expr,
     alts,
-    nonDefaultAlts,
     algebraicAlt,
     primitiveAlt,
     defaultAlt,
@@ -206,11 +205,22 @@ expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
     lit = Lit <$> literal <?> "literal expression"
 
 -- | Parse the alternatives given in a @case@ expression.
+--
+-- @
+-- Nil -> ...
+-- Cons x xs -> ...
+-- @
+--
+-- @
+-- 1# -> ...
+-- 2# -> ...
+-- default -> ...
+-- @
 alts :: (Monad parser, TokenParsing parser) => parser Alts
-alts = Alts
-       <$> nonDefaultAlts
-       <*> defaultAlt
-       <?> "case alternatives"
+alts = AlgebraicAlts <$> (NonEmpty.fromList <$> sepBy1 algebraicAlt semi) <*> optional (semi *> defaultAlt)
+   <|> PrimitiveAlts <$> (NonEmpty.fromList <$> sepBy1 primitiveAlt semi) <*> optional (semi *> defaultAlt)
+   <|> DefaultOnlyAlt <$> defaultAlt
+   <?> "case alternatives"
 
 atom :: (Monad parser, TokenParsing parser) => parser Atom
 atom = AtomVar <$> var
@@ -242,25 +252,6 @@ primOp = choice ops <?> "primitive function"
 literal :: TokenParsing parser => parser Literal
 literal = token (Literal <$> integer' <* char '#') <?> "integer literal"
 
-
--- | Parse non-default alternatives. The list of alternatives can be either
--- empty, all algebraic, or all primitive.
---
--- @
--- Nil -> ...
--- Cons x xs -> ...
--- @
---
--- @
--- 1# -> ...
--- 2# -> ...
--- @
-nonDefaultAlts :: (Monad parser, TokenParsing parser) => parser NonDefaultAlts
-nonDefaultAlts = AlgebraicAlts . NonEmpty.fromList <$> some algebraicAlt
-             <|> PrimitiveAlts . NonEmpty.fromList <$> some primitiveAlt
-             <|> pure NoNonDefaultAlts
-             <?> "non-default case alternatives"
-
 -- | Parse a single algebraic alternative.
 --
 -- @
@@ -271,7 +262,6 @@ algebraicAlt = try (AlgebraicAlt <$> con)
            <*> (many var >>= disallowDuplicates)
            <*  arrow
            <*> expr
-           <*  semi
            <?> "algebraic case alternative"
   where
     disallowDuplicates vars = case duplicates vars of
@@ -290,7 +280,7 @@ algebraicAlt = try (AlgebraicAlt <$> con)
 -- 1# -> ...
 -- @
 primitiveAlt :: (Monad parser, TokenParsing parser) => parser PrimitiveAlt
-primitiveAlt = try (PrimitiveAlt <$> literal) <* arrow <*> expr <* semi
+primitiveAlt = try (PrimitiveAlt <$> literal) <* arrow <*> expr
     <?> "primitive case alternative"
 
 -- | Parse the default alternative, taken if none of the other alternatives
