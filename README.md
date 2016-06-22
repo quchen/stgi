@@ -136,10 +136,9 @@ The syntax will be discussed below. For now, as an appetizer, the familiar
 Haskell code
 
 ```haskell
-foldl' f acc xs = case xs of
-    [] -> acc
-    y:ys -> case f acc y of
-        !acc' -> foldl' f acc' ys
+foldl' _ acc [] = acc
+foldl' f acc (y:ys) = case f acc y of
+	!acc' -> foldl' f acc' ys
 
 sum = foldl' add 0
 ```
@@ -161,7 +160,7 @@ zero = \ -> Int# 0#
 
 ### Top-level
 
-An STG program consists of a set of bindings, which each have the form
+An STG program consists of a set of bindings, each of the form
 
 ```haskell
 name = \(<free vars>) <bound vars> -> <expression body>
@@ -359,7 +358,7 @@ A couple of things to keep in mind:
   assuming all variables are in global scope. This means that nesting functions
   in Haskell results in a heap allocation via `let`.
 
-- Free variable values have to be explicitly given to the closure. Function
+- Free variable values have to be explicitly given to closures. Function
   composition could be implemented like
 
   ```haskell
@@ -370,6 +369,14 @@ A couple of things to keep in mind:
   Forgetting to hand `g` and `x` to the `gx` lambda form would mean that in the
   `g x` call neither of them was in scope, and the machine would halt with
   a "variable not in scope" error.
+
+  This applies even for recursive functions, which have to be given to
+  their own list of free variables, like in `rep` in the following example:
+
+  ```haskell
+  replicate = \x -> let rep = \(rep x) -> Cons x rep
+  				    in rep
+  ```
 
 
 ### Code example
@@ -456,13 +463,13 @@ The code segment is the current instruction the machine evaluates.
 
 The stack has three different kinds of frames.
 
-- **Argument frames** store peding function arguments. They are pushed when a
-  function applied to arguments is evaluated, and popped when entering a closure
+- **Argument** frames store pending function arguments. They are pushed when
+  evaluating a function applied to arguments, and popped when entering a closure
   that has a non-empty argument list.
-- **Return frames** are pushed when evaluating a `case` expression, in order to
+- **Return** frames are pushed when evaluating a `case` expression, in order to
   know where to continue once the scrutinee has been evaluated. They are popped
   when evaluating constructors or primitive values.
-- **Update frames** block access to argument and return frames. If an evaluation
+- **Update** frames block access to argument and return frames. If an evaluation
   step needs to pop one of them but there is an update frame in the way, it can
   get rid the update frame by overriding the memory address pointed to by it
   with the current value being evaluated, and retrying the evaluation now that
@@ -472,17 +479,18 @@ The stack has three different kinds of frames.
 ### Heap
 
 The heap is a mapping from memory addresses to heap objects, which can be
-closures or black holes (see below). To help the user, closures are annotated
-with `Fun` (takes arguments), `Con` (data constructors), and `Thunk` (suspended
-computations).
+closures or black holes (see below). Heap entries are allocated by `let(rec)`,
+and deallocated by garbage collection.
+
+As a visual guide to the user, closures are annotated with `Fun` (takes
+arguments), `Con` (data constructors), and `Thunk` (suspended computations).
 
 
 ### Black holes
 
-The heap does not only contain closures (lambda forms with values for the free
-variables), but also black holes. Black holes are annotated with the step in
-which they were created; this annotation is purely for display purposes, and not
-used by the machine.
+The heap does not only contain closures, but also black holes. Black holes are
+annotated with the step in which they were created; this annotation is purely
+for display purposes, and not used by the machine.
 
 At runtime, when an updatable closure is entered (evaluated), it is overwritten
 by a black hole. Black holes do not only provide better overview over what
