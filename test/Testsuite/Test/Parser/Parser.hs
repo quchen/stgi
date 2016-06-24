@@ -138,8 +138,8 @@ simpleParses = testGroup "Well-written programs"
         \    case xs of                                                      \n\
         \        Nil -> Nil;                                                 \n\
         \        Cons y ys -> let fy = \\(f y) => f y;                       \n\
-        \                           mfy = \\(f ys) => map f ys               \n\
-        \                       in Cons fy mfy;                              \n\
+        \                         mfy = \\(f ys) => map f ys                 \n\
+        \                     in Cons fy mfy;                                \n\
         \        default -> badListError                                     "
        (Binds
            [ ("map", LambdaForm [] NoUpdate ["f","xs"]
@@ -163,7 +163,7 @@ simpleParses = testGroup "Well-written programs"
          \            Nil -> Nil;                                            \n\
          \            Cons y ys -> let fy = \\(f y) => f y;                  \n\
          \                             mfy = \\(mf ys) => mf ys              \n\
-         \                           in Cons fy mfy;                         \n\
+         \                         in Cons fy mfy;                           \n\
          \            default -> badListError                                \n\
          \    in mf                                                          "
         (Binds

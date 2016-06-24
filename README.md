@@ -328,8 +328,11 @@ A couple of things to keep in mind:
 ### Pitfalls
 
 - Semicolons are an annoyance that allows the grammar to be simpler. This
-  tradeoff was chosen to keep the project's code easier to read, as it does
-  not require indentation handling in the grammar.
+  tradeoff was chosen to keep the project's code simpler, but this may change
+  in the future.
+
+  For now, the semicolon rule is that **bindings and alternatives are
+  semicolon-separated**.
 
 - Lambda forms stand for deferred computations, and as such cannot have
   primitive type, which are always in normal form. To handle primitive types,
@@ -345,7 +348,9 @@ A couple of things to keep in mind:
   three' = \ -> 3#
   ```
 
-  is invalid, and the machine would halt in an error state.
+  is invalid, and the machine would halt in an error state. You'll notice that
+  the unboxing-boxing business is quite laborious, and this is precisely the
+  reason unboxed values alone are so fast in GHC.
 
 - Function application cannot be nested, since function arguments are primitives
   or variables. Haskell's `map f (map g xs)` would be written
@@ -409,7 +414,6 @@ map = {} \n {f,xs} -> case xs of
                        mfy = {f,ys} \u {} -> map {f,ys}
                    in Cons {fy,mfy}
     badList -> Error_map {badList}
-    -- (The paper omits the default case for readability)
 ```
 
 You can find lots of further examples of standard Haskell functions implemented
@@ -423,9 +427,10 @@ this is all you should need to get started.
 The `Stg.Marshal` module provides functions to inject Haskell values into the
 STG (`toStg`), and extract them from a machine state again (`toStg`). These
 functions are tremendously useful in practice, make use of them! After chasing a
-list value on the heap manually, you'll know the value of `fromStg`, and in
-order to get data structures into the STG you have to write a lot of code, and
-be careful doing it at that.
+list value on the heap manually you'll know the value of `fromStg`, and in order
+to get data structures into the STG you have to write a lot of code, and be
+careful doing it at that. Keep in mind that `fromStg` requires the value to  be
+in normal form, or extraction will fail.
 
 
 
@@ -445,7 +450,7 @@ The code segment is the current instruction the machine evaluates.
       and **Enter**s the address of the function.
 	- **Constructor applications** simply transition into the
 	  **ReturnCon** state when evaluated.
-	- Similarly, **primitive ints** transitions into the **ReturnInt** state.
+	- Similarly, **primitive ints** transition into the **ReturnInt** state.
 	- **Case** pushes a return frame, and proceeds evaluating the scrutinee.
 	- **Let(rec)** allocates heap closures, and extends the local environment
 	  with the new bindings.
@@ -518,9 +523,9 @@ thunk is currently evaluated, but have two useful technical benefits:
 
 Currently, two garbage collection algorithms are implemented:
 
-- Tri-state tracing: free all unused memory addresses, and does not touch
-  the others.
-- Two-space copying: move all used memory addresses to the beginning of the
+- **Tri-state tracing**: free all unused memory addresses, and does not touch
+  the others. This makes following specific closures on the heap easy.
+- **Two-space copying**: move all used memory addresses to the beginning of the
   heap, and discard all those that weren't moved. This has the advantage of
   reordering the heap roughly in the order the closures will be accessed by the
   program again, but the disadvantage of making things harder to track, since
@@ -531,7 +536,8 @@ Currently, two garbage collection algorithms are implemented:
 ### Unhelpful error message?
 
 The goal of this project is being useful to human readers. If you find an error
-message that is unhelpful or even misleading, please report it as a bug!
+message that is unhelpful or even misleading, please open an issue with a
+minimal example on how to reproduce it!
 
 
 
@@ -570,10 +576,15 @@ Differences from the 1992 paper
 GHC's current STG
 -----------------
 
-Since 1992, the STG has undergone one notable revision, documented in [the 2004
-paper *How to make a fast curry*][fastcurry], which treats function application
-a bit different. I don't have plans to support this evaluation model right now,
-but it's on my list of long-term goals (alongside the current push/enter).
+The implementation here uses the *push/enter* evaluation model of the STG, which
+is fairly elegant, and was initially thought to also be top in terms of
+performance. As it turned out, the latter is not the case, and another
+evaluation model called *eval/apply*, which treats (only) function application a
+bit different, is faster in practice.
+
+This notable revision is documented in [the 2004 paper *How to make a fast
+curry*][fastcurry]. I don't have plans to support this evaluation model right
+now, but it's on my list of long-term goals (alongside the current push/enter).
 
 
 
