@@ -319,7 +319,7 @@ A couple of things to keep in mind:
 
 - Closures with non-empty argument lists and constructors are already in WHNF,
   so they are never updatable.
-- When a value is only entered once, updating it is unnessecary work. Deciding
+- When a value is only entered once, updating it is unnecessary work. Deciding
   whether a potentially updatable closure should actually be updatable is what
   the *update analysis* would do in a compiler when translating into the STG.
 
