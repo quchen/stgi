@@ -4,10 +4,10 @@ STGi - STG interpreter
 STGi is a visual STG implementation to help understand Haskell's execution
 model.
 
-It does this by guiding through the runnning of a program, showing stack and
+It does this by guiding through the running of a program, showing stack and
 heap, and giving explanations of the applied transition rules. Here what an
 intermediate state looks like:
-
+J
 ![](screenshot.png)
 
 [![](https://travis-ci.org/quchen/stgi.svg?branch=master)](https://travis-ci.org/quchen/stgi)
@@ -169,7 +169,7 @@ name = \(<free vars>) <bound vars> -> <expression body>
 The right-hand side is called a *lambda form*, and is closely related to the
 usual lambda from Haskell.
 
-  - Bound variables are the lambda paramaters just like in Haskell.
+  - Bound variables are the lambda parameters just like in Haskell.
   - Free variables are the variables used in the `body` that are not bound or
     global. This means that variables from the parent scope are not
     automatically in scope, but you can get them into scope by adding them to
