@@ -180,16 +180,12 @@ arrow = skipToken (symbol "->")
 expr :: (Monad parser, TokenParsing parser) => parser Expr
 expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
   where
-    letHead
-        :: (Monad parser, TokenParsing parser)
-        => parser (Binds -> Expr -> Expr)
     let', case', appF, appC, appP, lit
         :: (Monad parser, TokenParsing parser)
         => parser Expr
 
-    letHead = reserved "letrec" *> pure (Let Recursive)
-          <|> reserved "let"    *> pure (Let NonRecursive)
-    let' = letHead
+    let' = Let
+        <$> (Recursive <$ reserved "letrec" <|> NonRecursive <$ reserved "let")
         <*> binds
         <*  reserved "in"
         <*> expr
@@ -217,7 +213,6 @@ atom = AtomVar <$> var
    <|> AtomLit <$> literal
    <?> "atom (variable or literal)"
 
-
 -- | Parse a primitive operation.
 --
 -- @
@@ -241,7 +236,6 @@ primOp = choice ops <?> "primitive function"
 
 literal :: TokenParsing parser => parser Literal
 literal = token (Literal <$> integer' <* char '#') <?> "integer literal"
-
 
 -- | Parse non-default alternatives. The list of alternatives can be either
 -- empty, all algebraic, or all primitive.
