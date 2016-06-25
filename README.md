@@ -5,7 +5,7 @@ STGi is a visual STG implementation to help understand Haskell's execution
 model.
 
 It does this by guiding through the running of a program, showing stack and
-heap, and giving explanations of the applied transition rules. Here what an
+heap, and giving explanations of the applied transition rules. Here is what an
 intermediate state looks like:
 J
 ![](screenshot.png)
