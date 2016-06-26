@@ -6,6 +6,7 @@ import Data.Monoid
 
 import           Stg.Language.Prettyprint
 import qualified Stg.Machine.Heap         as Heap
+import           Stg.Machine.Types
 
 import Test.Orphans          ()
 import Test.Tasty
@@ -26,7 +27,7 @@ tests = testGroup "Heap"
     , testProperty "Update heap overwrites old values"
         (\closure1 closure2 heap ->
             let (addr1, heap1) = Heap.alloc closure1 heap
-                heap2 = Heap.update addr1 closure2 heap1
+                heap2 = Heap.update (Mapping addr1 closure2) heap1
             in counterexample (show (pretty heap2)
                                 <> "\ndoes not contain "
                                 <> show (pretty closure2))

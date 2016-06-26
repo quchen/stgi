@@ -31,13 +31,13 @@ lookup :: MemAddr -> Heap -> Maybe HeapObject
 lookup addr (Heap heap) = M.lookup addr heap
 
 -- | Update a value on the heap.
-update :: MemAddr -> HeapObject -> Heap -> Heap
-update addr obj (Heap h) = Heap (M.adjust (const obj) addr h)
+update :: Mapping MemAddr HeapObject -> Heap -> Heap
+update (Mapping addr obj) (Heap h) = Heap (M.adjust (const obj) addr h)
 
 -- | Update many values on the heap.
-updateMany :: [MemAddr] -> [HeapObject] -> Heap -> Heap
-updateMany addrs objs heap =
-    L.foldl' (\h (addr, obj) -> update addr obj h) heap (zip addrs objs)
+updateMany :: [Mapping MemAddr HeapObject] -> Heap -> Heap
+updateMany mappings heap =
+    L.foldl' (\h mapping -> update mapping h) heap mappings
 
 -- | Store a value in the heap at an unused address.
 alloc :: HeapObject -> Heap -> (MemAddr, Heap)

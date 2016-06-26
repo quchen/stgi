@@ -201,7 +201,7 @@ scavenge = \scavengeAddr -> do
     updateClosure :: MemAddr -> Closure -> Gc ()
     updateClosure addr closure = do
         gcState@GcState { toHeap = heap } <- getGcState
-        let heap' = H.update addr (HClosure closure) heap
+        let heap' = H.update (Mapping addr (HClosure closure)) heap
         putGcState gcState { toHeap = heap' }
 
     registerForEvacuation :: [MemAddr] -> Gc ()

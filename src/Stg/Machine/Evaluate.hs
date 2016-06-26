@@ -169,7 +169,8 @@ stgRule s@StgState
             in H.allocMany preallocatedObjs heap
 
         -- The local environment enriched by the definitions in the 'let'.
-        locals' = let newMappings = zipWith Mapping letVars (map Addr newAddrs)
+        locals' = let varToAddr var addr = Mapping var (Addr addr)
+                      newMappings = zipWith varToAddr letVars newAddrs
                   in makeLocals newMappings <> locals
 
         -- The local environment applicable in the lambda forms defined in the
@@ -182,9 +183,9 @@ stgRule s@StgState
         Success closures ->
                 -- As promised above, the preallocated dummy closures are now
                 -- discarded, and replaced with the newly formed closures.
-            let heap' = H.updateMany
-                    newAddrs
-                    (map HClosure closures)
+            let addrToClosure addr closure = Mapping addr (HClosure closure)
+                heap' = H.updateMany
+                    (zipWith addrToClosure newAddrs closures)
                     heapWithPreallocations
             in s { stgCode = Eval expr locals'
                  , stgHeap = heap'
@@ -409,7 +410,7 @@ stgRule s@StgState
 
   = let stack' = UpdateFrame addr :< stack
         locals = makeLocals (zipWith Mapping free freeVals)
-        heap' = H.update addr (Blackhole tick) heap
+        heap' = H.update (Mapping addr (Blackhole tick)) heap
 
     in s { stgCode  = Eval body locals
          , stgStack = stack'
@@ -429,7 +430,7 @@ stgRule s@StgState
   = let vs = let newVar _old i = Var ("upd16_" <> show' steps <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
-        heap' = H.update addr (HClosure (Closure lf ws)) heap
+        heap' = H.update (Mapping addr (HClosure (Closure lf ws))) heap
 
     in s { stgCode  = ReturnCon con ws
          , stgStack = stack'
@@ -459,7 +460,7 @@ stgRule s@StgState
             freeVars
         updatedClosure = Closure (LambdaForm freeVars NoUpdate [] fxs1) freeVals
 
-        heap' = H.update addrUpdate (HClosure updatedClosure) heap
+        heap' = H.update (Mapping addrUpdate (HClosure updatedClosure)) heap
 
     in s { stgCode  = Enter addrEnter
          , stgStack = argFrames <>> stack'
@@ -474,7 +475,7 @@ stgRule s@StgState
     popArgsUntilUpdate withArgsStack
         = let (argFrames, argsPoppedStack) = S.span isArgFrame withArgsStack
           in Just ( filter isArgFrame (F.toList argFrames)
-                  , argsPoppedStack)
+                  , argsPoppedStack )
 
 
 

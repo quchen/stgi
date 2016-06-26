@@ -199,6 +199,8 @@ instance Pretty Code where
         ReturnInt i -> "ReturnInt" <+> pretty (Literal i)
 
 -- | A single key -> value association.
+--
+-- Used to make 2-tuples to be inserted  into association maps clearer.
 data Mapping k v = Mapping k v
     deriving (Eq, Ord, Show, Generic)
 
