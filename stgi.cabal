@@ -2,7 +2,18 @@ name:                stgi
 version:             1
 synopsis:            Educational implementation of the STG (Spineless Tagless
                      G-machine)
-description:         See README.md
+description:         STGi is a visual STG implementation to help understand
+                     Haskell's execution model.
+                     .
+                     It does this by guiding through the running of a program,
+                     showing stack and heap, and giving explanations of the
+                     applied transition rules.
+                     .
+                     Here is what an intermediate state looks like:
+                     .
+                     <<http://i.imgur.com/ouPwfgW.png>>
+                     .
+                     For further information, see README.md.
 homepage:            https://github.com/quchen/stgi#readme
 license:             BSD3
 license-file:        LICENSE.md

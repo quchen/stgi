@@ -7,10 +7,13 @@ model.
 It does this by guiding through the running of a program, showing stack and
 heap, and giving explanations of the applied transition rules. Here is what an
 intermediate state looks like:
-J
+
 ![](screenshot.png)
 
-[![](https://travis-ci.org/quchen/stgi.svg?branch=master)](https://travis-ci.org/quchen/stgi)
+[![Master build](https://img.shields.io/travis/quchen/stgi/master.svg?style=flat-square&label=Master build)](https://travis-ci.org/quchen/stgi)
+[![BSD3](https://img.shields.io/badge/License-BSD-blue.svg?style=flat-square)](https://en.wikipedia.org/wiki/BSD_License)
+[![Hackage](https://img.shields.io/hackage/v/stgi.svg?style=flat-square)](http://hackage.haskell.org/packages/search?terms=stgi)
+
 
 Table of contents
 -----------------
