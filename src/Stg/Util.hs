@@ -31,7 +31,7 @@ show' = T.pack . show
 
 
 
--- | The validation version of 'Either'.
+-- | 'Either' with an accumulating 'Applicative' instance
 data Validate err a = Failure err | Success a
 
 instance Functor (Validate a) where
@@ -45,7 +45,7 @@ instance Bifunctor Validate where
     bimap f _ (Failure l) = Failure (f l)
     bimap _ g (Success r) = Success (g r)
 
--- ^ Return success or the accumulation of all failures
+-- | Return success or the accumulation of all failures
 instance Monoid a => Applicative (Validate a) where
     pure = Success
     Success f <*> Success x = Success (f x)

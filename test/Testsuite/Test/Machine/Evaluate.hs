@@ -3,10 +3,6 @@
 
 module Test.Machine.Evaluate (tests) where
 
--- TODO: Important tests to add:
---   - Only case does evaluation
---   - Don't forget to add the variables closed over in let(rec)
-
 
 
 import qualified Test.Machine.Evaluate.Errors   as Errors

@@ -581,7 +581,7 @@ noRuleApplies s@StgState
 -- Non-algebraic scrutinee
 --
 -- For more information on this, see 'Stg.Prelude.seq'.
-noRuleApplies s@StgState -- TODO: Make sure this catches the right states
+noRuleApplies s@StgState
     { stgCode  = Enter _
     , stgStack = ReturnFrame{} :< _}
 
@@ -596,7 +596,8 @@ noRuleApplies s@StgState
 
   = s { stgInfo  = Info (StateError DivisionByZero) [] }
 
--- (6) Algebraic constructor return, standard match
+-- Bad constructor arity: different number of arguments in code segment
+-- and in return frame
 noRuleApplies s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts _ :< _ }
