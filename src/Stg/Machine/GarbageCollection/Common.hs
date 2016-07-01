@@ -22,9 +22,9 @@ import Stg.Machine.Types
 
 
 
--- | Split the heap contained in a machine state in two parts: the dead objects
--- that can safely be discarded, and the alive ones that are still needed by
--- the program.
+-- | Split the heap contained in a machine state in three parts: the dead
+-- objects that can safely be discarded, a maping from old to new addresses if
+-- definitions were moved, and the final state with a cleaned up heap.
 splitHeapWith
     :: GarbageCollectionAlgorithm
     -> StgState
@@ -39,7 +39,7 @@ data GarbageCollectionAlgorithm = GarbageCollectionAlgorithm
 -- | Collect all mentioned addresses in a machine element.
 --
 -- Note that none of the types in "Stg.Language" contain addresses, since an
--- address is not something present in the STG _language_, only in the execution
+-- address is not something present in the STG __language__, only in the execution
 -- contest the language is put in in the "Stg.Machine" modules.
 class Addresses a where
     -- | All contained addresses in the order they appear, but without
@@ -49,6 +49,8 @@ class Addresses a where
 
     -- | All contained addresses in the order they appear, with duplicates.
     addrs' :: a -> Seq MemAddr
+
+    {-# MINIMAL addrs' #-}
 
 nubSeq :: Ord a => Seq a -> Seq a
 nubSeq = go mempty
