@@ -371,24 +371,20 @@ sort = mconcat [gt_Int, Func.compose, nil] <> [program|
 -- @
 -- naiveSort : [Int] -> [Int]
 -- @
-naiveSort = mconcat [leq_Int, gt_Int, filter, concat2] <> [program|
+naiveSort = mconcat [leq_Int, gt_Int, partition, concat2] <> [program|
     naiveSort = \xs -> case xs of
         Nil -> Nil;
         Cons pivot xs' ->
-            let beforePivotSorted = \(pivot xs') =>
+            let leqPivot = \(pivot) y -> leq_Int y pivot
+            in case partition leqPivot xs' of
+                Pair leqPivotXs gtPivotXs ->
                     letrec
-                        atMostPivot = \(pivot) y -> leq_Int  y pivot;
-                        beforePivot = \(xs' atMostPivot) => filter atMostPivot xs'
-                    in naiveSort beforePivot;
-
-                afterPivotSorted = \(pivot xs') =>
-                    letrec
-                        moreThanPivot = \(pivot) y -> gt_Int y pivot;
-                        afterPivot    = \(xs' moreThanPivot) => filter moreThanPivot  xs'
-                    in naiveSort afterPivot
-            in  let fromPivotOn = \(pivot afterPivotSorted) -> Cons pivot afterPivotSorted
-                in concat2 beforePivotSorted fromPivotOn;
-        badList -> Error_sort badList |]
+                        leqPivotSorted = \(leqPivotXs) => naiveSort leqPivotXs;
+                        gtPivotSorted = \(gtPivotXs) => naiveSort gtPivotXs;
+                        fromPivotOn = \(pivot gtPivotSorted) -> Cons pivot gtPivotSorted
+                    in concat2 leqPivotSorted fromPivotOn;
+                badPair -> Error_sort_badPair badPair;
+        badList -> Error_sort_badList badList |]
 
 -- | Apply a function to each element of a list.
 --
