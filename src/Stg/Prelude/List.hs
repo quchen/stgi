@@ -13,6 +13,7 @@ module Stg.Prelude.List (
     cycle,
     take,
     filter,
+    partition,
     repeat,
     replicate,
     sort,
@@ -45,7 +46,7 @@ import Stg.Prelude.Number     as Num
 
 nil, concat2, foldl, foldl', foldr, iterate, cycle, take, filter,
     repeat, replicate, sort, map, equals_List_Int, length, zip, zipWith,
-    reverse, forceSpine, naiveSort :: Program
+    reverse, forceSpine, naiveSort, partition :: Program
 
 
 -- | The empty list as a top-level closure.
@@ -194,6 +195,20 @@ filter = [program|
                 in Cons x rest;
             badBool -> Error_filter_1 badBool;
         badList -> Error_filter_2 badList
+    |]
+
+partition = nil <> [program|
+    partition = \p xs -> case xs of
+        Nil -> Pair nil nil;
+        Cons y ys -> case partition p ys of
+            Pair yes no -> case p y of
+                True  -> let yes' = \(y yes) -> Cons y yes
+                         in Pair yes' no;
+                False -> let no' = \(y no) -> Cons y no
+                         in Pair yes no';
+                badBool -> Error_partition1 badBool;
+            badPair -> Error_partition2 badPair;
+        badList -> Error_partition3 badList
     |]
 
 -- | reverse a list.

@@ -37,6 +37,7 @@ tests = testGroup "List"
         [ testSort
         , testNaiveSort ]
     , testFilter
+    , testPartition
     , testMap
     , testZip
     , testZipWith
@@ -64,6 +65,26 @@ testFilter = marshalledValueTest defSpec
                     positive = \x -> gt_Int x threshold;
                     filtered = \(positive) => filter positive inputList
                 in force filtered
+            |] ]}}
+
+testPartition :: TestTree
+testPartition = marshalledValueTest defSpec
+    { testName = "filter"
+    , sourceSpec = \(xs, threshold :: Integer) -> MarshalSourceSpec
+        { resultVar = "main"
+        , expectedValue = L.partition (> threshold) xs
+        , source = mconcat
+            [ toStg "inputList" xs
+            , toStg "threshold" threshold
+            , Stg.gt_Int
+            , Stg.force
+            , Stg.partition
+            , [stg|
+            main = \ =>
+                letrec
+                    positive = \x -> gt_Int x threshold;
+                    partitioned = \(positive) => partition positive inputList
+                in force partitioned
             |] ]}}
 
 testSort :: TestTree

@@ -21,6 +21,7 @@ module Stg.Prelude (
     cycle,
     take,
     filter,
+    partition,
     repeat,
     replicate,
     sort,
