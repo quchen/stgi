@@ -16,7 +16,7 @@
 --     e.g. with @Int#@.
 --   * A lambda's head is written @\\(free) bound -> body@, where @free@ and
 --     @bound@ are space-separated variable lists, instead of the paper's
---     @(free) \\n (bound) -> body@, which uses comma-separated lists. The
+--     @{free} \\n {bound} -> body@, which uses comma-separated lists. The
 --     update flag @\\u@ is signified using a double arrow @=>@ instead of the
 --     normal arrow @->@.
 module Stg.Parser.Parser (
