@@ -10,9 +10,12 @@ intermediate state looks like:
 
 ![](screenshot.png)
 
-[![Master build](https://img.shields.io/travis/quchen/stgi/master.svg?style=flat-square&label=Master build)](https://travis-ci.org/quchen/stgi)
-[![BSD3](https://img.shields.io/badge/License-BSD-blue.svg?style=flat-square)](https://en.wikipedia.org/wiki/BSD_License)
+[![Release](https://img.shields.io/github/release/quchen/stgi.svg?style=flat-square&label=Current version)](https://github.com/quchen/stgi/releases)
 [![Hackage](https://img.shields.io/hackage/v/stgi.svg?style=flat-square)](http://hackage.haskell.org/packages/search?terms=stgi)
+[![BSD3](https://img.shields.io/badge/License-BSD-blue.svg?style=flat-square)](https://en.wikipedia.org/wiki/BSD_License)
+
+[![Master build](https://img.shields.io/travis/quchen/stgi/master.svg?style=flat-square&label=Master build)](https://travis-ci.org/quchen/stgi)
+
 
 
 Table of contents

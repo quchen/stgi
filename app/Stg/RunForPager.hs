@@ -49,9 +49,9 @@ runForPager ppr showSteps verbosity prog =
                 printInfo ppr verbosity state line
                 T.putStrLn (ppr state)
                 case rest of
-                    [] -> pure state
+                    [] -> pure ()
                     (s:ss) -> loop (s:|ss)
-        _finalState <- loop states
+        loop states
         T.putStrLn fatLine
 
 printInfo
