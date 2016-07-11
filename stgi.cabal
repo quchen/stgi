@@ -63,6 +63,7 @@ library
                      , Stg.Prelude.Maybe
                      , Stg.Prelude.Number
                      , Stg.Prelude.Tuple
+                     , Stg.StaticAnalysis
                      , Stg.Util
   ghc-options:         -Wall
   build-depends:       base >= 4.8 && < 5
@@ -136,6 +137,7 @@ test-suite testsuite
                      , Test.Prelude.Number
                      , Test.Prelude.Tuple
                      , Test.Stack
+                     , Test.StaticAnalysis
                      , Test.Util
                      , Test.UtilTH
   build-depends:       base
