@@ -30,6 +30,9 @@ class FreeVariables ast where
 instance (Foldable f, FreeVariables a) => FreeVariables (f a) where
     freeVariables = foldMap freeVariables
 
+instance FreeVariables Program where
+    freeVariables (Program prog) = freeVariables prog
+
 instance FreeVariables Binds where
     freeVariables (Binds bs) = freeVariables bs
 
@@ -47,7 +50,11 @@ instance FreeVariables Expr where
         Lit lit             -> freeVariables lit
 
 instance FreeVariables LambdaForm where
-    freeVariables (LambdaForm frees _upd bound expr)
+    -- The free variables of a lambda form are the set of explicitly named
+    -- free variables, and all the globals used in it. We ignore the explicit
+    -- free variable list here, so that we retain the flexibility of analyzing
+    -- which free variables were global later.
+    freeVariables (LambdaForm _frees _upd bound expr)
       = freeVariables expr -<> freeVariables bound
 
 instance FreeVariables Alts where

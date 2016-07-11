@@ -24,6 +24,8 @@ import Test.Orphans     ()
 import Test.Tasty
 import Test.Tasty.HUnit
 
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+
 
 
 tests :: TestTree
@@ -42,6 +44,7 @@ tests = testGroup "Static analysis"
             , testPrimop
             , testLit
             ]
+        , testShadowGlobal
         ]
     ]
 
@@ -127,6 +130,17 @@ testLit :: TestTree
 testLit = testCase "Literal" test
   where
     source = [expr| 1# |]
+    expected = []
+    actual = freeVariables source
+    test = assertFreeVariablesEqual expected actual
+
+testShadowGlobal :: TestTree
+testShadowGlobal = testCase "Shadowing a global" test
+  where
+    source = [program|
+        id = \b -> b;
+        main = \ -> let f = \id -> id
+                    in f |]
     expected = []
     actual = freeVariables source
     test = assertFreeVariablesEqual expected actual
