@@ -242,7 +242,7 @@ stgRule s@StgState
   = let stack' = ReturnFrame alts (removeUnusedLocals locals) :< stack
 
         removeUnusedLocals (Locals unpackedLocals) =
-            let freeInBody var = \_val -> var `S.member` freeVariables alts
+            let freeInBody var _val = var `S.member` explicitlyFree (freeVariables alts)
             in Locals (M.filterWithKey freeInBody unpackedLocals)
 
     in s { stgCode  = Eval expr locals
