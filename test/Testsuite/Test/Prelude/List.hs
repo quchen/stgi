@@ -69,7 +69,8 @@ testFilter = marshalledValueTest defSpec
 
 testPartition :: TestTree
 testPartition = marshalledValueTest defSpec
-    { testName = "filter"
+    { testName = "partition"
+    , failWithInfo = True
     , sourceSpec = \(xs, threshold :: Integer) -> MarshalSourceSpec
         { resultVar = "main"
         , expectedValue = L.partition (> threshold) xs
@@ -90,7 +91,6 @@ testPartition = marshalledValueTest defSpec
 testSort :: TestTree
 testSort = marshalledValueTest defSpec
     { testName = "sort (Haskell/base version)"
-    , failWithInfo = True
     , sourceSpec = \(xs :: [Integer]) -> MarshalSourceSpec
         { resultVar = "main"
         , expectedValue = L.sort xs
@@ -311,7 +311,6 @@ testRepeat = marshalledValueTest defSpec
 testReplicate :: TestTree
 testReplicate = marshalledValueTest defSpec
     { testName = "replicate"
-    , failWithInfo = True
     , maxSteps = 1024
     , failPredicate = \stgState -> case stgCode stgState of
         Eval AppP {} _ -> True

@@ -90,7 +90,6 @@ fibonacci = machineStateTest defSpec
     { testName = "Fibonacci sequence"
     , successPredicate = "main" `hasValue` take numFibos fibo
     , maxSteps = 10000
-    , failWithInfo = True
     , source = mconcat
         [ toStg "zero" (0 :: Int)
         , toStg "one" (1 :: Int)

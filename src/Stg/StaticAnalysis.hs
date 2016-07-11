@@ -48,7 +48,7 @@ instance FreeVariables Expr where
 
 instance FreeVariables LambdaForm where
     freeVariables (LambdaForm frees _upd bound expr)
-      = freeVariables expr -<> (freeVariables frees <> freeVariables bound)
+      = freeVariables expr -<> freeVariables bound
 
 instance FreeVariables Alts where
     freeVariables (Alts nonDefaultAlt defaultAlt)

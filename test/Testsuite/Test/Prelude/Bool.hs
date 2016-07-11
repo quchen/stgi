@@ -28,7 +28,6 @@ tests = testGroup "Bool"
 testAnd2 :: TestTree
 testAnd2 = marshalledValueTest defSpec
     { testName = "and2 (&&)"
-    , failWithInfo = True
     , sourceSpec = \(b1, b2) -> MarshalSourceSpec
         { resultVar = "main"
         , expectedValue = b1 && b2

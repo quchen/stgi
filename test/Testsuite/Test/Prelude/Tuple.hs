@@ -31,7 +31,6 @@ tests = testGroup "Tuple"
 testFst :: TestTree
 testFst = marshalledValueTest defSpec
     { testName = "fst"
-    , failWithInfo = True
     , sourceSpec = \(tuple :: (Integer, Integer)) -> MarshalSourceSpec
         { resultVar = "main"
         , expectedValue = fst tuple

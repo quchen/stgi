@@ -55,10 +55,10 @@ assertFreeVariablesEqual expected actual = assertBool err (expected == actual)
        <> "Actual:   " <> T.unpack (pprFreeVars actual)
 
 testLet :: TestTree
-testLet = testCase "Simple lambda form" test
+testLet = testCase "Simple binding" test
   where
     source = [expr| let f = \(a) b -> a b c in f x |]
-    expected = ["c", "x"]
+    expected = ["a", "c", "x"]
     actual = freeVariables source
     test = assertFreeVariablesEqual expected actual
 
