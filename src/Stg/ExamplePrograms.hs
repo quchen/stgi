@@ -8,8 +8,11 @@ module Stg.ExamplePrograms (
 
     -- * Simple introductory programs
 
+        implies,
         addTwoNumbers,
         calculateLength,
+        mapNot,
+        mapNotForced,
 
     -- * Sum of list
 
@@ -73,6 +76,21 @@ import qualified Stg.Prelude            as Stg
 
 
 
+-- | A program that calculates @x and not y@. This is probably the simplest
+-- example program worth showing. It demonstrates how functions are evaluated,
+-- has an update for the @main@ closure, and shows how nested functions result
+-- in @let@ allocations.
+implies :: Bool -> Bool -> Program
+implies p q = mconcat
+    [ Stg.or2
+    , Stg.not
+    , toStg "p" p
+    , toStg "q" q
+    , [program|
+    main = \ => let notP = \ -> not p
+                in or2 notP q
+    |]]
+
 -- | A program that adds two numbers.
 addTwoNumbers :: Integer -> Integer -> Program
 addTwoNumbers x y = mconcat
@@ -89,7 +107,35 @@ calculateLength xs = mconcat
     [ Stg.length
     , toStg "xs" xs
     , [program|
-    main = \ => case length xs of r -> r
+    main = \ => length xs
+    |]]
+
+-- | Negate a list of booleans, but non-strictly. This program does almost
+-- nothing, because nothing forces the list.
+mapNot :: [Bool] -> Program
+mapNot xs = mconcat
+    [ Stg.not
+    , Stg.map
+    , toStg "xs" xs
+    , [program|
+    main = \ => map not xs
+    |]]
+
+-- | Negate a list of booleans strictly.
+mapNotForced :: [Bool] -> Program
+mapNotForced xs = mconcat
+    [ Stg.not
+    , Stg.map
+    , toStg "xs" xs
+    , [program|
+    main = \ => let mapped = \ => map not xs
+                in force mapped;
+    force = \bs -> case bs of
+        Nil -> Nil;
+        Cons y ys -> case y of
+            someBool -> case force ys of
+                someList -> Cons someBool someList;
+        badList -> error_force badList
     |]]
 
 

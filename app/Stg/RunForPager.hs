@@ -27,7 +27,7 @@ runForPager
     -> Maybe Int -- ^ Steps to show. Negative numbers count from the end.
     -> Int       -- ^ Verbosity level
     -> Program
-    -> IO ()
+    -> IO StgState
 runForPager ppr showSteps verbosity prog =
     let allStates = evalsUntil RunIndefinitely
                                (HaltIf (const False))
@@ -49,10 +49,12 @@ runForPager ppr showSteps verbosity prog =
                 printInfo ppr verbosity state line
                 T.putStrLn (ppr state)
                 case rest of
-                    [] -> pure ()
+                    [] -> pure state
                     (s:ss) -> loop (s:|ss)
-        loop states
+        finalState <- loop states
         T.putStrLn fatLine
+        pure finalState
+
 
 printInfo
     :: (forall a. Pretty a => a -> Text)

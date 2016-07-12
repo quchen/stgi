@@ -23,9 +23,11 @@ main = do
     let numStates = optNumStates opts
         verbosity = optVerbosity opts
 
-    let prog = Example.addTwoNumbers 1 2
+    let prog = Example.implies True False
 
-    runForPager (if ansi then prettyprint else prettyprintPlain)
-                numStates
-                verbosity
-                prog
+    _finalState <-
+        runForPager (if ansi then prettyprint else prettyprintPlain)
+                    numStates
+                    verbosity
+                    prog
+    pure ()
