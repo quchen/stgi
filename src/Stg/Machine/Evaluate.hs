@@ -10,6 +10,7 @@ module Stg.Machine.Evaluate (
 
 
 import           Data.Bifunctor
+import           Data.Foldable
 import qualified Data.Foldable  as F
 import qualified Data.List      as L
 import qualified Data.Map       as M
@@ -25,6 +26,58 @@ import           Stg.Util
 
 
 
+-- | Perform a single STG machine evaluation step.
+evalStep :: StgState -> StgState
+evalStep state = let state' = stgRule state
+                 in state' { stgSteps = stgSteps state' + 1 }
+
+-- | Transition rules detailed in the 1992 paper, along with error rules to
+-- help if none of them applies.
+rules :: [StgState -> Maybe StgState]
+rules = validTransitions <> errorTransitions
+  where
+    validTransitions =
+        [ rule1
+        , rule2
+        , rule3
+        , rule1819
+        , rule4
+        , rule5
+        , rule6
+        , rule7
+        , rule8
+        , rule9
+        , rule10
+        , rule11
+        , rule12
+        , rule13
+        , rule14
+        , rule15
+        , rule16
+        , rule17a ]
+    errorTransitions =
+        [ ruleError_updatableClosureWithArgs
+        , ruleError_returnWithEmptyReturnStack
+        , ruleError_functionArgumentNotInScope
+        , ruleError_constructorArgumentNotInScope
+        , ruleError_primopArgumentNotInScope
+        , ruleError_algReturnToPrimAlts
+        , ruleError_primReturnToAlgAlts
+        , ruleError_enterBlackhole
+        , ruleError_updateClosureWithPrimitive
+        , ruleError_nonAlgPrimScrutinee
+        , ruleError_divisionByZero
+        , ruleError_badConArity ]
+
+-- | Apply a single applicable STG evaluation rule, as specified in the 1992
+-- paper.
+stgRule :: StgState -> StgState
+stgRule state = case asum [ rule state | rule <- rules ] of
+    Nothing     -> rule_noRulesApply state
+    Just state' -> state'
+
+
+
 -- | Smart constructor to avoid generating info if nothing was discarded
 mkDetail_UnusedLocalVariables :: [Var] -> Locals -> [InfoDetail]
 mkDetail_UnusedLocalVariables usedVars locals =
@@ -34,85 +87,11 @@ mkDetail_UnusedLocalVariables usedVars locals =
           unused = localsMap `M.difference` used
     , not (M.null unused) && not (M.null localsMap) ]
 
--- | Successful alternative match, used for finding the right branch in @case@
-data AltMatch alt = AltMatches alt | DefaultMatches DefaultAlt
-
-data AltError = BadAlt -- ^ Alg/prim alternative in prim/alg case
-
--- | Look up an algebraic constructor among the given alternatives, and return
--- the first match. If nothing matches, return the default alternative.
-lookupAlgebraicAlt
-    :: Alts
-    -> Constr
-    -> Validate AltError (AltMatch AlgebraicAlt)
-lookupAlgebraicAlt (Alts (AlgebraicAlts alts) def) constr
-  = let matchingAlt (AlgebraicAlt c _ _) = c == constr
-    in Success (case L.find matchingAlt alts of
-        Just alt   -> AltMatches alt
-        _otherwise -> DefaultMatches def )
-lookupAlgebraicAlt (Alts PrimitiveAlts{} _) _ = Failure BadAlt
-lookupAlgebraicAlt (Alts NoNonDefaultAlts{} def) _ = Success (DefaultMatches def)
-
--- | 'lookupAlgebraicAlt' for primitive literals.
-lookupPrimitiveAlt
-    :: Alts
-    -> Literal
-    -> Validate AltError (AltMatch PrimitiveAlt)
-lookupPrimitiveAlt (Alts (PrimitiveAlts alts) def) lit
-  = let matchingAlt (PrimitiveAlt lit' _) = lit' == lit
-    in Success (case L.find matchingAlt alts of
-        Just alt   -> AltMatches alt
-        _otherwise -> DefaultMatches def )
-lookupPrimitiveAlt (Alts AlgebraicAlts{} _) _ = Failure BadAlt
-lookupPrimitiveAlt (Alts NoNonDefaultAlts{} def) _ = Success (DefaultMatches def)
-
-liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure
-liftLambdaToClosure localsLift lf@(LambdaForm free _ _ _) =
-    case traverse (first (:[]) . localVal localsLift . AtomVar) free of
-        Success freeVals   -> Success (Closure lf freeVals)
-        Failure notInScope -> Failure (mconcat notInScope)
-
-data PrimError = Div0
-
-applyPrimOp :: PrimOp -> Integer -> Integer -> Validate PrimError Integer
-applyPrimOp Div _ 0 = Failure Div0
-applyPrimOp Mod _ 0 = Failure Div0
-applyPrimOp op x y = Success (opToFunc op x y)
-  where
-    boolToPrim p a b = if p a b then 1 else 0
-    opToFunc = \case
-        Add -> (+)
-        Sub -> (-)
-        Mul -> (*)
-        Div -> div
-        Mod -> mod
-        Eq  -> boolToPrim (==)
-        Lt  -> boolToPrim (<)
-        Leq -> boolToPrim (<=)
-        Gt  -> boolToPrim (>)
-        Geq -> boolToPrim (>=)
-        Neq -> boolToPrim (/=)
-
-isArgFrame :: StackFrame -> Bool
-isArgFrame ArgumentFrame{} = True
-isArgFrame _else           = False
 
 
-
--- | Perform a single STG machine evaluation step.
-evalStep :: StgState -> StgState
-evalStep state = let state' = stgRule state
-                 in state' { stgSteps = stgSteps state' + 1 }
-
-
-
--- | Apply a single STG evaluation rule, as specified in the 1992 paper.
-stgRule :: StgState -> StgState
-
-
-
--- (1) Function application
-stgRule s@StgState
+-- | (1) Function application
+rule1 :: StgState -> Maybe StgState
+rule1 s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgStack   = stack
     , stgGlobals = globals }
@@ -121,17 +100,27 @@ stgRule s@StgState
 
   = let stack' = map ArgumentFrame xsVals <>> stack
 
-    in s { stgCode  = Enter addr
-         , stgStack = stack'
-         , stgInfo  = Info
-             (StateTransition Eval_FunctionApplication)
-             ( Detail_FunctionApplication f xs
-             : mkDetail_UnusedLocalVariables (f : [ var | AtomVar var <- xs ]) locals )}
+    in Just (s
+        { stgCode  = Enter addr
+        , stgStack = stack'
+        , stgInfo  = Info
+            (StateTransition Eval_FunctionApplication)
+            ( Detail_FunctionApplication f xs
+            : mkDetail_UnusedLocalVariables (f : [ var | AtomVar var <- xs ]) locals )})
+
+rule1 _ = Nothing
 
 
 
--- (2) Enter non-updatable closure
-stgRule s@StgState
+isArgFrame :: StackFrame -> Bool
+isArgFrame ArgumentFrame{} = True
+isArgFrame _else           = False
+
+
+
+-- | (2) Enter non-updatable closure
+rule2 :: StgState -> Maybe StgState
+rule2 s@StgState
     { stgCode  = Enter addr
     , stgStack = stack
     , stgHeap  = heap }
@@ -145,15 +134,28 @@ stgRule s@StgState
         freeLocals = zipWith Mapping free freeVals
         boundLocals = zipWith Mapping bound args
 
-    in s { stgCode  = Eval body locals
-         , stgStack = stack'
-         , stgInfo  = Info (StateTransition Enter_NonUpdatableClosure)
-                           [Detail_EnterNonUpdatable addr boundLocals] }
+    in Just (s
+        { stgCode  = Eval body locals
+        , stgStack = stack'
+        , stgInfo  = Info (StateTransition Enter_NonUpdatableClosure)
+                          [Detail_EnterNonUpdatable addr boundLocals] })
+
+rule2 _ = Nothing
 
 
 
--- (3) let(rec)
-stgRule s@StgState
+-- | Create a 'Closure' out of a 'LambdaForm', given a local environment.
+liftLambdaToClosure :: Locals -> LambdaForm -> Validate NotInScope Closure
+liftLambdaToClosure locals lf@(LambdaForm free _ _ _) =
+    case traverse (first (:[]) . localVal locals . AtomVar) free of
+        Success freeVals   -> Success (Closure lf freeVals)
+        Failure notInScope -> Failure (mconcat notInScope)
+
+
+
+-- | (3) let(rec)
+rule3 :: StgState -> Maybe StgState
+rule3 s@StgState
     { stgCode = Eval (Let rec (Binds letBinds) expr) locals
     , stgHeap = heap }
 
@@ -179,10 +181,11 @@ stgRule s@StgState
             NonRecursive -> locals  -- New bindings are invisible
             Recursive    -> locals' -- New bindings are in scope
 
-    in case traverse (liftLambdaToClosure localsRhs) letLambdaForms of
+    in Just (case traverse (liftLambdaToClosure localsRhs) letLambdaForms of
         Success closures ->
-                -- As promised above, the preallocated dummy closures are now
-                -- discarded, and replaced with the newly formed closures.
+                -- As promised above, the preallocated dummy closures are
+                -- now discarded, and replaced with the newly formed
+                -- closures.
             let addrToClosure addr closure = Mapping addr (HClosure closure)
                 heap' = H.updateMany
                     (zipWith addrToClosure newAddrs closures)
@@ -192,71 +195,109 @@ stgRule s@StgState
                  , stgInfo = Info (StateTransition (Eval_Let rec))
                                   [Detail_EvalLet letVars newAddrs] }
         Failure notInScope ->
-            s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
+            s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] })
+
+rule3 _ = Nothing
 
 
 
--- (18, 19) Shortcut for matching primops, given before the general case rule
--- (4) so it takes precedence.
---
--- This rule allows evaluating primops without the overhead of allocating an
--- intermediate return stack frame.
---
--- When reading the source here for educational purposes, you should skip this
--- rule until you've seen the normal case rule (4) and the normal
--- primop rule (14).
---
--- This rule has the slight modification compared to the paper in that it works
--- for both bound and unbound default cases.
-stgRule s@StgState
-    { stgCode = Eval (Case (AppP op x y) alts) locals }
-    | Success (PrimInt xVal) <- localVal locals x
-    , Success (PrimInt yVal) <- localVal locals y
-    , Success opXY <- applyPrimOp op xVal yVal
-    , Success altLookup <- lookupPrimitiveAlt alts (Literal opXY)
-
-  = let (locals', expr) = case altLookup of
-            DefaultMatches (DefaultBound pat e)
-                -> (addLocals [Mapping pat (PrimInt opXY)] locals, e)
-            DefaultMatches (DefaultNotBound e)
-                -> (locals, e)
-            AltMatches (PrimitiveAlt _opXY e)
-                -> (locals, e)
-
-    in s { stgCode = Eval expr locals'
-         , stgInfo = Info (StateTransition Eval_Case_Primop_DefaultBound) [] }
+-- | 'lookupAlgebraicAlt' for primitive literals.
+lookupPrimitiveAlt
+    :: Alts
+    -> Literal
+    -> Validate AltError (AltMatch PrimitiveAlt)
+lookupPrimitiveAlt (Alts (PrimitiveAlts alts) def) lit
+  = let matchingAlt (PrimitiveAlt lit' _) = lit' == lit
+    in Success (case L.find matchingAlt alts of
+        Just alt   -> AltMatches alt
+        _otherwise -> DefaultMatches def )
+lookupPrimitiveAlt (Alts AlgebraicAlts{} _) _ = Failure BadAlt
+lookupPrimitiveAlt (Alts NoNonDefaultAlts{} def) _ = Success (DefaultMatches def)
 
 
 
--- (4) Case evaluation
-stgRule s@StgState
+data PrimError = Div0
+
+applyPrimOp :: PrimOp -> Integer -> Integer -> Validate PrimError Integer
+applyPrimOp Div _ 0 = Failure Div0
+applyPrimOp Mod _ 0 = Failure Div0
+applyPrimOp op x y = Success (opToFunc op x y)
+  where
+    boolToPrim p a b = if p a b then 1 else 0
+    opToFunc = \case
+        Add -> (+)
+        Sub -> (-)
+        Mul -> (*)
+        Div -> div
+        Mod -> mod
+        Eq  -> boolToPrim (==)
+        Lt  -> boolToPrim (<)
+        Leq -> boolToPrim (<=)
+        Gt  -> boolToPrim (>)
+        Geq -> boolToPrim (>=)
+        Neq -> boolToPrim (/=)
+
+
+
+-- | (4) Case evaluation
+rule4 :: StgState -> Maybe StgState
+rule4 s@StgState
     { stgCode  = Eval (Case expr alts) locals
     , stgStack = stack }
 
   = let stack' = ReturnFrame alts locals :< stack
 
-    in s { stgCode  = Eval expr locals
-         , stgStack = stack'
-         , stgInfo  = Info (StateTransition Eval_Case)
-                           [Detail_EvalCase] }
+    in Just (s
+        { stgCode  = Eval expr locals
+        , stgStack = stack'
+        , stgInfo  = Info (StateTransition Eval_Case)
+                          [Detail_EvalCase] })
+
+rule4 _ = Nothing
 
 
 
--- (5) Constructor application
-stgRule s@StgState
+-- | (5) Constructor application
+rule5 :: StgState -> Maybe StgState
+rule5 s@StgState
     { stgCode    = Eval (AppC con xs) locals
     , stgGlobals = globals }
     | Success valsXs <- vals locals globals xs
 
-  = s { stgCode = ReturnCon con valsXs
-      , stgInfo = Info
-          (StateTransition Eval_AppC)
-          (mkDetail_UnusedLocalVariables [ var | AtomVar var <- xs ] locals) }
+  = Just (s
+        { stgCode = ReturnCon con valsXs
+        , stgInfo = Info
+            (StateTransition Eval_AppC)
+            (mkDetail_UnusedLocalVariables [ var | AtomVar var <- xs ] locals) })
+
+rule5 _ = Nothing
 
 
 
--- (6) Algebraic constructor return, standard match
-stgRule s@StgState
+-- | Successful alternative match, used for finding the right branch in @case@
+data AltMatch alt = AltMatches alt | DefaultMatches DefaultAlt
+
+data AltError = BadAlt -- ^ Alg/prim alternative in prim/alg case
+
+-- | Look up an algebraic constructor among the given alternatives, and return
+-- the first match. If nothing matches, return the default alternative.
+lookupAlgebraicAlt
+    :: Alts
+    -> Constr
+    -> Validate AltError (AltMatch AlgebraicAlt)
+lookupAlgebraicAlt (Alts (AlgebraicAlts alts) def) constr
+  = let matchingAlt (AlgebraicAlt c _ _) = c == constr
+    in Success (case L.find matchingAlt alts of
+        Just alt   -> AltMatches alt
+        _otherwise -> DefaultMatches def )
+lookupAlgebraicAlt (Alts PrimitiveAlts{} _) _ = Failure BadAlt
+lookupAlgebraicAlt (Alts NoNonDefaultAlts{} def) _ = Success (DefaultMatches def)
+
+
+
+-- | (6) Algebraic constructor return, standard matchrule
+rule6 :: StgState -> Maybe StgState
+rule6 s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (AltMatches (AlgebraicAlt _con vars expr)) <-
@@ -265,29 +306,36 @@ stgRule s@StgState
 
   = let locals' = addLocals (zipWith Mapping vars ws) locals
 
-    in s { stgCode  = Eval expr locals'
-         , stgStack = stack'
-         , stgInfo  = Info (StateTransition ReturnCon_Match)
-                           [Detail_ReturnCon_Match con vars] }
+    in Just (s
+        { stgCode  = Eval expr locals'
+        , stgStack = stack'
+        , stgInfo  = Info (StateTransition ReturnCon_Match)
+                          [Detail_ReturnCon_Match con vars] })
+
+rule6 _ = Nothing
 
 
 
-
--- (7) Algebraic constructor return, unbound default match
-stgRule s@StgState
+-- | (7) Algebraic constructor return, unbound default matchrule
+rule7 :: StgState -> Maybe StgState
+rule7 s@StgState
     { stgCode  = ReturnCon con _ws
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (DefaultMatches (DefaultNotBound expr)) <-
         lookupAlgebraicAlt alts con
 
-  = s { stgCode  = Eval expr locals
-      , stgStack = stack'
-      , stgInfo  = Info (StateTransition ReturnCon_DefUnbound) [] }
+  = Just (s
+        { stgCode  = Eval expr locals
+        , stgStack = stack'
+        , stgInfo  = Info (StateTransition ReturnCon_DefUnbound) [] })
+
+rule7 _ = Nothing
 
 
 
--- (8) Algebraic constructor return, bound default match
-stgRule s@StgState
+-- | (8) Algebraic constructor return, bound default matchrule
+rule8 :: StgState -> Maybe StgState
+rule8 s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack'
     , stgHeap  = heap
@@ -300,46 +348,61 @@ stgRule s@StgState
         closure = Closure (LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))) ws
         vs = let newVar _old i = Var ("alg8_" <> show' steps <> "-" <> show' i)
              in zipWith newVar ws [0::Integer ..]
-    in s { stgCode  = Eval expr locals'
+    in Just (s { stgCode  = Eval expr locals'
          , stgStack = stack'
          , stgHeap  = heap'
          , stgInfo  = Info (StateTransition ReturnCon_DefBound)
-                           [Detail_ReturnConDefBound v addr] }
+                           [Detail_ReturnConDefBound v addr] })
+
+rule8 _ = Nothing
 
 
 
--- (9) Literal evaluation
-stgRule s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
-  = s { stgCode = ReturnInt k
-      , stgInfo = Info (StateTransition Eval_Lit) [] }
+-- | (9) Literal evaluationrule
+rule9 :: StgState -> Maybe StgState
+rule9 s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
+  = Just (s
+        { stgCode = ReturnInt k
+        , stgInfo = Info (StateTransition Eval_Lit) [] })
+
+rule9 _ = Nothing
 
 
 
--- (10) Literal application
-stgRule s@StgState { stgCode = Eval (AppF f []) locals }
+-- | (10) Literal application
+rule10 :: StgState -> Maybe StgState
+rule10 s@StgState { stgCode = Eval (AppF f []) locals }
     | Success (PrimInt k) <- val locals mempty (AtomVar f)
 
-  = s { stgCode = ReturnInt k
-      , stgInfo = Info (StateTransition Eval_LitApp)
-                       (mkDetail_UnusedLocalVariables [f] locals) }
+  = Just (s
+        { stgCode = ReturnInt k
+        , stgInfo = Info (StateTransition Eval_LitApp)
+                         (mkDetail_UnusedLocalVariables [f] locals) })
+
+rule10 _ = Nothing
 
 
 
--- (11) Primitive return, standard match found
-stgRule s@StgState
+-- | (11) Primitive return, standard match found
+rule11 :: StgState -> Maybe StgState
+rule11 s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (AltMatches (PrimitiveAlt _k expr)) <-
         lookupPrimitiveAlt alts (Literal k)
 
-  = s { stgCode  = Eval expr locals
-      , stgStack = stack'
-      , stgInfo  = Info (StateTransition ReturnInt_Match) [] }
+  = Just (s
+        { stgCode  = Eval expr locals
+        , stgStack = stack'
+        , stgInfo  = Info (StateTransition ReturnInt_Match) [] })
+
+rule11 _ = Nothing
 
 
 
--- (12) Primitive return, bound default match
-stgRule s@StgState
+-- | (12) Primitive return, bound default match
+rule12 :: StgState -> Maybe StgState
+rule12 s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (DefaultMatches (DefaultBound v expr)) <-
@@ -347,27 +410,34 @@ stgRule s@StgState
 
   = let locals' = addLocals [Mapping v (PrimInt k)] locals
 
-    in s { stgCode  = Eval expr locals'
-         , stgStack = stack'
-         , stgInfo  = Info (StateTransition ReturnInt_DefBound)
-                           [Detail_ReturnIntDefBound v k] }
+    in Just ( s
+        { stgCode  = Eval expr locals'
+        , stgStack = stack'
+        , stgInfo  = Info (StateTransition ReturnInt_DefBound)
+                          [Detail_ReturnIntDefBound v k] })
+
+rule12 _ = Nothing
 
 
 
--- (13) Primitive return, unbound default match
-stgRule s@StgState
+-- | (13) Primitive return, unbound default match
+rule13 :: StgState -> Maybe StgState
+rule13 s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (DefaultMatches (DefaultNotBound expr)) <-
         lookupPrimitiveAlt alts (Literal k)
 
-  = s { stgCode  = Eval expr locals
-      , stgStack = stack'
-      , stgInfo  = Info (StateTransition ReturnInt_DefUnbound) [] }
+  = Just (s
+        { stgCode  = Eval expr locals
+        , stgStack = stack'
+        , stgInfo  = Info (StateTransition ReturnInt_DefUnbound) [] })
+
+rule13 _ = Nothing
 
 
 
--- (14) Primitive function application
+-- | (14) Primitive function application
 --
 -- This rule has been modified to take not only primitive-valued variables, but
 -- also primitive values directly as arguments.
@@ -386,21 +456,26 @@ stgRule s@StgState
 -- TODO: This rule is probably obsolete because of rules (18) and (19).
 -- Remove it after confirming this is true. I (quchen) was not able to produce
 -- a case in which (14) is still needed.
-stgRule s@StgState
+rule14 :: StgState -> Maybe StgState
+rule14 s@StgState
     { stgCode = Eval (AppP op x y) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
     , Success result <- applyPrimOp op xVal yVal
 
-  = s { stgCode = ReturnInt result
-      , stgInfo = Info (StateTransition Eval_AppP)
-                       (mkDetail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
-                                                      locals )}
+  = Just (s
+        { stgCode = ReturnInt result
+        , stgInfo = Info (StateTransition Eval_AppP)
+                         (mkDetail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
+                                                        locals )})
+
+rule14 _ = Nothing
 
 
 
--- (15) Enter updatable closure
-stgRule s@StgState
+-- | (15) Enter updatable closure
+rule15 :: StgState -> Maybe StgState
+rule15 s@StgState
     { stgCode  = Enter addr
     , stgStack = stack
     , stgHeap  = heap
@@ -412,16 +487,20 @@ stgRule s@StgState
         locals = makeLocals (zipWith Mapping free freeVals)
         heap' = H.update (Mapping addr (Blackhole tick)) heap
 
-    in s { stgCode  = Eval body locals
-         , stgStack = stack'
-         , stgHeap  = heap'
-         , stgInfo  = Info (StateTransition Enter_UpdatableClosure)
-                           [Detail_EnterUpdatable addr] }
+    in Just ( s
+        { stgCode  = Eval body locals
+        , stgStack = stack'
+        , stgHeap  = heap'
+        , stgInfo  = Info (StateTransition Enter_UpdatableClosure)
+                          [Detail_EnterUpdatable addr] })
+
+rule15 _ = Nothing
 
 
 
--- (16) Algebraic constructor return, argument/return stacks empty -> update
-stgRule s@StgState
+-- | (16) Algebraic constructor return, argument/return stacks empty -> update
+rule16 :: StgState -> Maybe StgState
+rule16 s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = UpdateFrame addr :< stack'
     , stgHeap  = heap
@@ -432,16 +511,20 @@ stgRule s@StgState
         lf = LambdaForm vs NoUpdate [] (AppC con (map AtomVar vs))
         heap' = H.update (Mapping addr (HClosure (Closure lf ws))) heap
 
-    in s { stgCode  = ReturnCon con ws
-         , stgStack = stack'
-         , stgHeap  = heap'
-         , stgInfo  = Info (StateTransition ReturnCon_Update)
-                           [Detail_ConUpdate con addr] }
+    in Just (s
+        { stgCode  = ReturnCon con ws
+        , stgStack = stack'
+        , stgHeap  = heap'
+        , stgInfo  = Info (StateTransition ReturnCon_Update)
+                          [Detail_ConUpdate con addr] })
+
+rule16 _ = Nothing
 
 
 
--- (17a) Enter partially applied closure
-stgRule s@StgState
+-- | (17a) Enter partially applied closure
+rule17a :: StgState -> Maybe StgState
+rule17a s@StgState
     { stgCode  = Enter addrEnter
     , stgStack = stack
     , stgHeap  = heap
@@ -462,11 +545,12 @@ stgRule s@StgState
 
         heap' = H.update (Mapping addrUpdate (HClosure updatedClosure)) heap
 
-    in s { stgCode  = Enter addrEnter
-         , stgStack = argFrames <>> stack'
-         , stgHeap  = heap'
-         , stgInfo  = Info (StateTransition Enter_PartiallyAppliedUpdate)
-                           [Detail_PapUpdate addrUpdate] }
+    in Just (s
+        { stgCode  = Enter addrEnter
+        , stgStack = argFrames <>> stack'
+        , stgHeap  = heap'
+        , stgInfo  = Info (StateTransition Enter_PartiallyAppliedUpdate)
+                          [Detail_PapUpdate addrUpdate] })
 
   where
 
@@ -477,144 +561,213 @@ stgRule s@StgState
           in Just ( filter isArgFrame (F.toList argFrames)
                   , argsPoppedStack )
 
-
-
-stgRule s = noRuleApplies s
+rule17a _ = Nothing
 
 
 
--- | When there are no rules, the machine halts. But there are many different
--- ways this state can be reached, so it's helpful to the user to distinguish
--- them from each other.
-noRuleApplies :: StgState -> StgState
+-- | (18, 19) Shortcut for matching primops, given before the general case rule
+-- (4) so it takes precedence.
+--
+-- This rule allows evaluating primops without the overhead of allocating an
+-- intermediate return stack frame. In order to trigger, it must be placed
+-- before rule 4 (general case evaluation) in order to take precedence.
+--
+-- When reading the source here for educational purposes, you should skip this
+-- rule until you've seen the normal case rule (4) and the normal
+-- primop rule (14).
+--
+-- This rule has the slight modification compared to the paper in that it works
+-- for both bound and unbound default cases.
+rule1819 :: StgState -> Maybe StgState
+rule1819 s@StgState
+    { stgCode = Eval (Case (AppP op x y) alts) locals }
+    | Success (PrimInt xVal) <- localVal locals x
+    , Success (PrimInt yVal) <- localVal locals y
+    , Success opXY <- applyPrimOp op xVal yVal
+    , Success altLookup <- lookupPrimitiveAlt alts (Literal opXY)
 
--- Page 39, 2nd paragraph: "[...] closures with non-empty argument lists are
+  = let (locals', expr) = case altLookup of
+            DefaultMatches (DefaultBound pat e)
+                -> (addLocals [Mapping pat (PrimInt opXY)] locals, e)
+            DefaultMatches (DefaultNotBound e)
+                -> (locals, e)
+            AltMatches (PrimitiveAlt _opXY e)
+                -> (locals, e)
+
+    in Just (
+        s { stgCode = Eval expr locals'
+          , stgInfo = Info (StateTransition Eval_Case_Primop_DefaultBound) [] })
+
+rule1819 _ = Nothing
+
+
+
+-- | Page 39, 2nd paragraph: "[...] closures with non-empty argument lists are
 -- never updatable [...]"
-noRuleApplies s@StgState
+ruleError_updatableClosureWithArgs :: StgState -> Maybe StgState
+ruleError_updatableClosureWithArgs s@StgState
     { stgCode = Enter addr
     , stgHeap = heap }
     | Just (HClosure (Closure (LambdaForm _ Update (_:_) _) _))
         <- H.lookup addr heap
-  = s { stgInfo = Info (StateError UpdatableClosureWithArgs) [] }
+
+  = Just (s { stgInfo = Info (StateError UpdatableClosureWithArgs) [] })
+
+ruleError_updatableClosureWithArgs _ = Nothing
 
 
 
--- Page 39, 4th paragraph: "It is not possible for the ReturnInt state to see an
+-- | Page 39, 4th paragraph: "It is not possible for the ReturnInt state to see an
 -- empty return stack, because that would imply that a closure should be updated
 -- with a primitive value; but no closure has a primitive type."
-noRuleApplies s@StgState
+ruleError_returnWithEmptyReturnStack :: StgState -> Maybe StgState
+ruleError_returnWithEmptyReturnStack s@StgState
     { stgCode  = ReturnInt{}
     , stgStack = Empty }
 
-  = s { stgInfo = Info (StateError ReturnIntWithEmptyReturnStack)
-                       [Detail_ReturnIntCannotUpdate] }
+  = Just (s { stgInfo = Info (StateError ReturnIntWithEmptyReturnStack)
+                             [Detail_ReturnIntCannotUpdate] })
+
+ruleError_returnWithEmptyReturnStack _ = Nothing
 
 
 
--- Function argument not in scope
-noRuleApplies s@StgState
+-- | Function argument not in scope
+ruleError_functionArgumentNotInScope :: StgState -> Maybe StgState
+ruleError_functionArgumentNotInScope s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgGlobals = globals }
     | Failure notInScope <- vals locals globals (AtomVar f : xs)
 
-  = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
+  = Just (s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] })
+
+ruleError_functionArgumentNotInScope _ = Nothing
 
 
 
--- Constructor argument not in scope
-noRuleApplies s@StgState
+-- | Constructor argument not in scope
+ruleError_constructorArgumentNotInScope :: StgState -> Maybe StgState
+ruleError_constructorArgumentNotInScope s@StgState
     { stgCode    = Eval (AppC _con xs) locals
     , stgGlobals = globals }
     | Failure notInScope <- vals locals globals xs
 
-  = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
+  = Just (s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] })
+
+ruleError_constructorArgumentNotInScope _ = Nothing
 
 
 
--- Algebraic constructor return, but primitive alternative on return frame
-noRuleApplies s@StgState
-    { stgCode  = ReturnCon{}
-    , stgStack = ReturnFrame (Alts PrimitiveAlts{} _) _ :< _ }
-
-  = s { stgInfo = Info (StateError AlgReturnToPrimAlts) [] }
-
-
-
--- Primitive return, but algebraic alternative on return frame
-noRuleApplies s@StgState
-    { stgCode  = ReturnInt _
-    , stgStack = ReturnFrame (Alts AlgebraicAlts{} _) _ :< _ }
-
-  = s { stgInfo = Info (StateError PrimReturnToAlgAlts) [] }
-
-
-
-noRuleApplies s@StgState
+-- | Primop argument not in scope
+ruleError_primopArgumentNotInScope :: StgState -> Maybe StgState
+ruleError_primopArgumentNotInScope s@StgState
     { stgCode = Eval (AppP _op x y) locals }
     | Failure notInScope <- traverse (localVal locals) ([x,y] :: [Atom])
 
-  = s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] }
+  = Just (s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] })
+
+ruleError_primopArgumentNotInScope _ = Nothing
 
 
 
--- Entering a black hole
-noRuleApplies s@StgState
+-- | Algebraic constructor return, but primitive alternative on return frame
+ruleError_algReturnToPrimAlts :: StgState -> Maybe StgState
+ruleError_algReturnToPrimAlts s@StgState
+    { stgCode  = ReturnCon{}
+    , stgStack = ReturnFrame (Alts PrimitiveAlts{} _) _ :< _ }
+
+  = Just (s { stgInfo = Info (StateError AlgReturnToPrimAlts) [] })
+
+ruleError_algReturnToPrimAlts _ = Nothing
+
+
+
+-- | Primitive return, but algebraic alternative on return frame
+ruleError_primReturnToAlgAlts :: StgState -> Maybe StgState
+ruleError_primReturnToAlgAlts s@StgState
+    { stgCode  = ReturnInt _
+    , stgStack = ReturnFrame (Alts AlgebraicAlts{} _) _ :< _ }
+
+  = Just (s { stgInfo = Info (StateError PrimReturnToAlgAlts) [] })
+
+ruleError_primReturnToAlgAlts _ = Nothing
+
+
+
+-- | Entering a black hole
+ruleError_enterBlackhole :: StgState -> Maybe StgState
+ruleError_enterBlackhole s@StgState
     { stgCode  = Enter addr
     , stgHeap  = heap }
     | Just (Blackhole bhTick) <- H.lookup addr heap
 
-  = s { stgInfo = Info (StateError EnterBlackhole)
-                       [Detail_EnterBlackHole addr bhTick] }
+  = Just (s
+        { stgInfo = Info (StateError EnterBlackhole)
+                       [Detail_EnterBlackHole addr bhTick] })
+
+ruleError_enterBlackhole _ = Nothing
 
 
 
--- Update closure with primitive value
-noRuleApplies s@StgState
+-- | Update closure with primitive value
+ruleError_updateClosureWithPrimitive :: StgState -> Maybe StgState
+ruleError_updateClosureWithPrimitive s@StgState
     { stgCode  = ReturnInt _
     , stgStack = UpdateFrame _ :< _}
 
-  = s { stgInfo  = Info (StateError UpdateClosureWithPrimitive)
-                        [Detail_UpdateClosureWithPrimitive] }
+  = Just (s
+        { stgInfo  = Info (StateError UpdateClosureWithPrimitive)
+                        [Detail_UpdateClosureWithPrimitive] })
+
+ruleError_updateClosureWithPrimitive _ = Nothing
 
 
 
--- Non-algebraic scrutinee
+-- | Non-algebraic scrutinee
 --
 -- For more information on this, see 'Stg.Prelude.seq'.
-noRuleApplies s@StgState
+ruleError_nonAlgPrimScrutinee :: StgState -> Maybe StgState
+ruleError_nonAlgPrimScrutinee s@StgState
     { stgCode  = Enter _
     , stgStack = ReturnFrame{} :< _}
 
-  = s { stgInfo  = Info (StateError NonAlgPrimScrutinee) [] }
+  = Just (s { stgInfo  = Info (StateError NonAlgPrimScrutinee) [] })
+
+ruleError_nonAlgPrimScrutinee _ = Nothing
 
 
-noRuleApplies s@StgState
+
+ruleError_divisionByZero :: StgState -> Maybe StgState
+ruleError_divisionByZero s@StgState
     { stgCode = Eval (AppP op x y) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
     , Failure Div0 <- applyPrimOp op xVal yVal
 
-  = s { stgInfo  = Info (StateError DivisionByZero) [] }
+  = Just (s { stgInfo  = Info (StateError DivisionByZero) [] })
 
--- Bad constructor arity: different number of arguments in code segment
--- and in return frame
-noRuleApplies s@StgState
+ruleError_divisionByZero _ = Nothing
+
+-- | Bad constructor arity: different number of arguments in code segment and in
+-- return frame
+ruleError_badConArity :: StgState -> Maybe StgState
+ruleError_badConArity s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts _ :< _ }
     | Success (AltMatches (AlgebraicAlt _con vars _)) <- lookupAlgebraicAlt alts con
     , length ws /= length vars
 
-  = s { stgInfo  = Info (StateError (BadConArity (length ws) (length vars)))
-                                    [Detail_BadConArity] }
+  = Just (s { stgInfo  = Info (StateError (BadConArity (length ws) (length vars)))
+                                          [Detail_BadConArity] })
+
+ruleError_badConArity _ = Nothing
 
 
 
-
-
--- Successful, ordinary termination
-noRuleApplies s@StgState { stgStack = S.Empty }
-  = s { stgInfo = Info NoRulesApply [] }
-
-
-
-noRuleApplies s = s { stgInfo = Info NoRulesApply [Detail_StackNotEmpty] }
+-- | Fallback handling all the other cases
+rule_noRulesApply :: StgState -> StgState
+rule_noRulesApply s = s { stgInfo = Info NoRulesApply detail }
+  where
+    detail = case stgStack s of
+        S.Empty -> []
+        _else   -> [Detail_StackNotEmpty]

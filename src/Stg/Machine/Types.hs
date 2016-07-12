@@ -69,7 +69,8 @@ data StgState = StgState
         -- ^ The environment consisting of the top-level definitions.
 
     , stgSteps :: !Integer
-        -- ^ A counter, used to generte fresh variable names from.
+        -- ^ A counter, used to generte fresh variable names and for orientation
+        -- purposes.
 
     , stgInfo :: Info
         -- ^ Information about the current state
