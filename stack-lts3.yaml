@@ -1,0 +1,7 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- '.'
+extra-deps:
+- tasty-html-0.4.1.1
+resolver: lts-3.22

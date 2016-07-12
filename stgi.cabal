@@ -71,7 +71,7 @@ library
                      , containers       >= 0.5
                      , deepseq          >= 1.4
                      , parsers          >= 0.12
-                     , semigroups       >= 0.18
+                     , semigroups       >= 0.16
                      , template-haskell >= 2.10
                      , text             >= 1.2
                      , th-lift          >= 0.7
@@ -145,7 +145,7 @@ test-suite testsuite
                      , ansi-wl-pprint
                      , containers >= 0.5
                      , deepseq >= 1.4
-                     , semigroups >= 0.18
+                     , semigroups >= 0.16
                      , tasty
                      , tasty-html
                      , tasty-hunit
