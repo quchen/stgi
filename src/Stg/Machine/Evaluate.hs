@@ -15,13 +15,15 @@ import qualified Data.Foldable  as F
 import qualified Data.List      as L
 import qualified Data.Map       as M
 import           Data.Monoid    hiding (Alt)
+import qualified Data.Set       as S
 
-import           Data.Stack        (Stack (..), (<>>))
-import qualified Data.Stack        as S
+import           Data.Stack         (Stack (..), (<>>))
+import qualified Data.Stack         as S
 import           Stg.Language
 import           Stg.Machine.Env
-import qualified Stg.Machine.Heap  as H
+import qualified Stg.Machine.Heap   as H
 import           Stg.Machine.Types
+import           Stg.StaticAnalysis
 import           Stg.Util
 
 
@@ -240,12 +242,20 @@ applyPrimOp op x y = Success (opToFunc op x y)
 
 
 -- | (4) Case evaluation
+--
+-- Compared to the paper, this rule was improved by removing local bindings that
+-- are not used at all in the alternatives, which would unnecessarily prolong
+-- the garbage collection lifetime of unused bindings.
 rule4 :: StgState -> Maybe StgState
 rule4 s@StgState
     { stgCode  = Eval (Case expr alts) locals
     , stgStack = stack }
 
-  = let stack' = ReturnFrame alts locals :< stack
+  = let stack' = ReturnFrame alts (removeUnusedLocals locals) :< stack
+
+        removeUnusedLocals (Locals unpackedLocals) =
+            let freeInBody var _val = var `S.member` freeVariables alts
+            in Locals (M.filterWithKey freeInBody unpackedLocals)
 
     in Just (s
         { stgCode  = Eval expr locals

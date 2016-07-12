@@ -180,7 +180,7 @@ fail_failPredicateTrue, fail_valueNotFound, fail_typeMismatch, fail_conArity,
     fail_notFound, fail_addrNotOnHeap, fail_NoConstructorMatch, fail_functionValue
     :: PrettyprinterDict -> MarshalledValueTestSpec a b -> a -> StgState -> Property
 fail_failPredicateTrue  = fail_template "Failure predicate held for an intemediate state"
-fail_valueNotFound      = fail_template "None of the machine states produce a (marshallable)\
+fail_valueNotFound      = fail_template "None of the machine states produced a (marshallable)\
                                         \ value to compare the expected value to"
 fail_typeMismatch       = fail_template "Type mismatch in input/expected output"
 fail_conArity           = fail_template "Bad constructor arity in created value"

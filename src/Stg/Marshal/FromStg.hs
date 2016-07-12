@@ -103,7 +103,7 @@ inspect
     => StgState
     -> (Closure -> [Either (Maybe FromStgError) value])
         -- ^ List of possible matches, e.g. Nil and Cons in the list case.
-        -- See e.g. 'matchCon2' in order to implement these matchers.
+        -- See e.g. @matchCon2@ in order to implement these matchers.
     -> MemAddr
     -> Either FromStgError value
 inspect stgState inspectClosure addr = case H.lookup addr (stgHeap stgState) of
@@ -196,7 +196,7 @@ instance FromStg a => FromStg [a] where
 liftToMatcher :: Either e a -> Either (Maybe e) a
 liftToMatcher = first Just
 
--- | Like 'matchCon2', but for nullary 'Constr'uctors.
+-- | Like @matchCon2@, but for nullary 'Constr'uctors.
 matchCon0 :: Constr -> Closure -> Either (Maybe FromStgError) ()
 matchCon0 _ (Closure lambdaForm _)
     | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
@@ -207,7 +207,7 @@ matchCon0 wantedCon (Closure (LambdaForm _ _ _ (AppC actualCon args)) _)
         _xs -> Left (Just BadArity)
 matchCon0 _ _ = Left Nothing
 
--- | Like 'matchCon2', but for unary 'Constr'uctors.
+-- | Like @matchCon2@, but for unary 'Constr'uctors.
 matchCon1 :: Constr -> Closure -> Either (Maybe FromStgError) (Atom, Locals)
 matchCon1 _ (Closure lambdaForm _)
     | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
@@ -236,7 +236,7 @@ matchCon2 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) fre
         _xs   -> Left (Just BadArity)
 matchCon2 _ _ = Left Nothing
 
--- | Like 'matchCon2', but for ternary 'Constr'uctors.
+-- | Like @matchCon2@, but for ternary 'Constr'uctors.
 matchCon3 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom), Locals)
 matchCon3 _ (Closure lambdaForm _)
     | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
@@ -247,7 +247,7 @@ matchCon3 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) fre
         _xs     -> Left (Just BadArity)
 matchCon3 _ _ = Left Nothing
 
--- | Like 'matchCon2', but for 4-ary 'Constr'uctors.
+-- | Like @matchCon2@, but for 4-ary 'Constr'uctors.
 matchCon4 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom, Atom), Locals)
 matchCon4 _ (Closure lambdaForm _)
     | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))
@@ -258,7 +258,7 @@ matchCon4 wantedCon (Closure (LambdaForm freeVars _ _ (AppC actualCon args)) fre
         _xs       -> Left (Just BadArity)
 matchCon4 _ _ = Left Nothing
 
--- | Like 'matchCon2', but for 5-ary 'Constr'uctors.
+-- | Like @matchCon2@, but for 5-ary 'Constr'uctors.
 matchCon5 :: Constr -> Closure -> Either (Maybe FromStgError) ((Atom, Atom, Atom, Atom, Atom), Locals)
 matchCon5 _ (Closure lambdaForm _)
     | classify lambdaForm == LambdaThunk = Left (Just (IsWrongLambdaType LambdaThunk))

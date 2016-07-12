@@ -66,7 +66,7 @@ data GcState = GcState
 
     , toScavenge :: Seq MemAddr
         -- ^ Heap objects already evacuated, but not yet scavenged. Contains
-        -- only objects that are also in the 'toHeap'.
+        -- only objects that are also in the @toHeap@.
 
     , toEvacuate :: Seq MemAddr
         -- ^ Heap objects known to be alive, but not yet evacuated.

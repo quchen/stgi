@@ -268,7 +268,7 @@ primops :: TestTree
 primops = MVal.marshalledValueTest MVal.MarshalledValueTestSpec
     { MVal.testName = "Primops"
     , MVal.maxSteps = 1024
-    , MVal.failWithInfo = True
+    , MVal.failWithInfo = False
     , MVal.failPredicate = const False
     , MVal.sourceSpec = \(op, arg1 :: Integer, NonZero arg2) -> MVal.MarshalSourceSpec
             -- arg2 is nonzero or the div/mod tests fail. Having their own tests
