@@ -55,7 +55,7 @@ lookupAlgebraicAlt (Alts (AlgebraicAlts alts) def) constr
 lookupAlgebraicAlt (Alts PrimitiveAlts{} _) _ = Failure BadAlt
 lookupAlgebraicAlt (Alts NoNonDefaultAlts{} def) _ = Success (DefaultMatches def)
 
--- | 'lookupAlgebraicAlt' for primitive literals.
+-- | @lookupAlgebraicAlt@ for primitive literals.
 lookupPrimitiveAlt
     :: Alts
     -> Literal
@@ -242,7 +242,7 @@ stgRule s@StgState
   = let stack' = ReturnFrame alts (removeUnusedLocals locals) :< stack
 
         removeUnusedLocals (Locals unpackedLocals) =
-            let freeInBody var _val = var `S.member` explicitlyFree (freeVariables alts)
+            let freeInBody var _val = var `S.member` freeVariables alts
             in Locals (M.filterWithKey freeInBody unpackedLocals)
 
     in s { stgCode  = Eval expr locals

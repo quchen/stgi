@@ -4,7 +4,6 @@
 -- | Extract Haskell values from running STG programs.
 module Stg.StaticAnalysis (
     FreeVariables (..),
-    FVars (..),
 ) where
 
 
@@ -18,25 +17,12 @@ import Stg.Language
 
 
 
-(-<>) :: FVars -> FVars -> FVars
-FVars a b -<> FVars x y= FVars (a `S.difference` x) (b `S.difference` y)
+(-<>) :: Ord a => Set a -> Set a -> Set a
+(-<>) = S.difference
 infix 6 -<> -- 6 like <>
 
-data FVars = FVars
-    { allFree :: Set Var
-        -- ^ All free variables that were found
-
-    , explicitlyFree :: Set Var
-        -- ^ Only the free variables that are in the explicit free variable
-        -- list of a lambda form
-    } deriving (Eq, Ord, Show)
-
-instance Monoid FVars where
-    mempty = FVars mempty mempty
-    FVars a b `mappend` FVars x y = FVars (a <> x) (b <> y)
-
 class FreeVariables ast where
-    freeVariables :: ast -> FVars
+    freeVariables :: ast -> Set Var
 
 instance (Foldable f, FreeVariables a) => FreeVariables (f a) where
     freeVariables = foldMap freeVariables
@@ -47,8 +33,8 @@ instance FreeVariables Program where
 instance FreeVariables Binds where
     freeVariables (Binds bs) = freeVariables bs
 
-bindNames :: Binds -> FVars
-bindNames (Binds bs) = let names = M.keysSet bs in FVars names names
+bindNames :: Binds -> Set Var
+bindNames (Binds bs) = M.keysSet bs
 
 instance FreeVariables Expr where
     freeVariables = \case
@@ -60,14 +46,11 @@ instance FreeVariables Expr where
         AppP _op arg1 arg2  -> freeVariables arg1 <> freeVariables arg2
         Lit lit             -> freeVariables lit
 
+-- | Only takes into account the explicit free variable list of the lambda. This
+-- means that globals, which are not explicitly free, will not be considered
+-- free variables.
 instance FreeVariables LambdaForm where
-    -- The free variables of a lambda form are the set of explicitly named
-    -- free variables, and all the globals used in it. We ignore the explicit
-    -- free variable list here, so that we retain the flexibility of analyzing
-    -- which free variables were global later.
-    freeVariables (LambdaForm frees _upd bound expr)
-      = FVars { allFree = allFree (freeVariables expr -<> freeVariables bound)
-              , explicitlyFree = S.fromList frees }
+    freeVariables (LambdaForm frees _upd _bound _expr) = S.fromList frees
 
 instance FreeVariables Alts where
     freeVariables (Alts nonDefaultAlt defaultAlt)
@@ -93,7 +76,7 @@ instance FreeVariables DefaultAlt where
         DefaultBound var expr -> freeVariables expr -<> freeVariables var
 
 instance FreeVariables Var where
-    freeVariables var = let x = S.singleton var in FVars x x
+    freeVariables var = S.singleton var
 
 instance FreeVariables Literal where
     freeVariables _lit = mempty
