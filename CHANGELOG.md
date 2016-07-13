@@ -7,6 +7,15 @@
 - Fixed a bug that made case evaluation/return frames unnecessarily prolong the
   lifetime of objects (#86)
 
+### Refactoring
+
+- Split evaluation into valid and error rule modules
+- Give rules more detailed names, e.g. `rule1_functionApp`
+
+### Documentation
+
+- Document each rule individually with Haddock
+
 
 
 ## 1.0.1

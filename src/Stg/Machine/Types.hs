@@ -183,7 +183,7 @@ data Code =
           -- | Load the closure at a certain heap address
         | Enter MemAddr
 
-          -- | Sub-computation terminated with algebraic constructor
+          -- | Sub-computation terminated with an algebraic 'Constr'uctor
         | ReturnCon Constr [Value]
 
           -- | Sub-computation terminated with a primitive integer
@@ -361,6 +361,18 @@ instance Pretty StateError where
                                      <+> "constructor to" <+> pprArity altArity
                                      <+> "alternative"
 
+
+
+-- | Prettyprint an arity.
+--
+-- >>> let ppr = Data.Text.IO.putStrLn . Stg.Language.Prettyprint.prettyprint
+-- >>> for_ [0..5] (ppr . pprArity)
+-- nullary
+-- unary
+-- binary
+-- ternary
+-- 4-ary
+-- 5-ary
 pprArity :: Int -> Doc
 pprArity = \case
     0 -> "nullary"

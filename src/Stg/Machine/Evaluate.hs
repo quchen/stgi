@@ -27,26 +27,31 @@ evalStep state = let state' = stgRule state
 
 -- | Transition rules detailed in the 1992 paper, along with error rules to
 -- help if none of them applies.
+--
+-- This is the place to modify the ruleset of the machine, for example
+-- 'Valid.rule1819' can be removed to yield a less efficient, yet equally
+-- correct, STG implementation.
 rules :: [StgState -> Maybe StgState]
 rules =
-    [ Valid.rule1
-    , Valid.rule2
-    , Valid.rule3
-    , Valid.rule1819
-    , Valid.rule4
-    , Valid.rule5
-    , Valid.rule6
-    , Valid.rule7
-    , Valid.rule8
-    , Valid.rule9
-    , Valid.rule10
-    , Valid.rule11
-    , Valid.rule12
-    , Valid.rule13
-    , Valid.rule14
-    , Valid.rule15
-    , Valid.rule16
-    , Valid.rule17a
+    [ Valid.rule1_functionApp
+    , Valid.rule2_enterNonUpdatable
+    , Valid.rule3_let
+    , Valid.rule1819_casePrimopShortcut -- before rule 4 because it takes
+                                        -- precedence over it in certain cases!
+    , Valid.rule4_case
+    , Valid.rule5_constructorApp
+    , Valid.rule6_algebraicNormalMatch
+    , Valid.rule7_algebraicUnboundDefaultMatch
+    , Valid.rule8_algebraicBoundDefaultMatch
+    , Valid.rule9_primitiveLiteralEval
+    , Valid.rule10_primitiveLiteralApp
+    , Valid.rule11_primitiveNormalMatch
+    , Valid.rule12_primitiveBoundDefaultMatch
+    , Valid.rule13_primitiveUnboundDefaultMatch
+    , Valid.rule14_primop
+    , Valid.rule15_enterUpdatable
+    , Valid.rule16_missingReturnUpdate
+    , Valid.rule17a_missingArgUpdate
 
     , Error.updatableClosureWithArgs
     , Error.returnWithEmptyReturnStack

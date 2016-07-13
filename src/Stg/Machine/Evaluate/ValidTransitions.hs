@@ -5,24 +5,24 @@
 -- | Valid transitions from one state to another. Error conditions are handled
 -- separately in "ErrorTransitions" if possible.
 module Stg.Machine.Evaluate.ValidTransitions (
-    rule1,
-    rule2,
-    rule3,
-    rule4,
-    rule5,
-    rule6,
-    rule7,
-    rule8,
-    rule9,
-    rule10,
-    rule11,
-    rule12,
-    rule13,
-    rule14,
-    rule15,
-    rule16,
-    rule17a,
-    rule1819,
+    rule1_functionApp,
+    rule2_enterNonUpdatable,
+    rule3_let,
+    rule4_case,
+    rule5_constructorApp,
+    rule6_algebraicNormalMatch,
+    rule7_algebraicUnboundDefaultMatch,
+    rule8_algebraicBoundDefaultMatch,
+    rule9_primitiveLiteralEval,
+    rule10_primitiveLiteralApp,
+    rule11_primitiveNormalMatch,
+    rule12_primitiveBoundDefaultMatch,
+    rule13_primitiveUnboundDefaultMatch,
+    rule14_primop,
+    rule15_enterUpdatable,
+    rule16_missingReturnUpdate,
+    rule17a_missingArgUpdate,
+    rule1819_casePrimopShortcut,
 ) where
 
 
@@ -56,9 +56,11 @@ mkDetail_UnusedLocalVariables usedVars locals =
 
 
 
--- | (1) Function application
-rule1 :: StgState -> Maybe StgState
-rule1 s@StgState
+-- | Rule 1: Function application
+--
+-- Push argument values onto the stack, and enter the function's address.
+rule1_functionApp :: StgState -> Maybe StgState
+rule1_functionApp s@StgState
     { stgCode    = Eval (AppF f xs) locals
     , stgStack   = stack
     , stgGlobals = globals }
@@ -75,7 +77,7 @@ rule1 s@StgState
             ( Detail_FunctionApplication f xs
             : mkDetail_UnusedLocalVariables (f : [ var | AtomVar var <- xs ]) locals )})
 
-rule1 _ = Nothing
+rule1_functionApp _ = Nothing
 
 
 
@@ -85,9 +87,12 @@ isArgFrame _else           = False
 
 
 
--- | (2) Enter non-updatable closure
-rule2 :: StgState -> Maybe StgState
-rule2 s@StgState
+-- | Rule 2: Enter non-updatable closure
+--
+-- Fetch all arguments from the stack, bind them to the lambda's variables, and
+-- continue evaluating the body.
+rule2_enterNonUpdatable :: StgState -> Maybe StgState
+rule2_enterNonUpdatable s@StgState
     { stgCode  = Enter addr
     , stgStack = stack
     , stgHeap  = heap }
@@ -107,7 +112,7 @@ rule2 s@StgState
         , stgInfo  = Info (StateTransition Enter_NonUpdatableClosure)
                           [Detail_EnterNonUpdatable addr boundLocals] })
 
-rule2 _ = Nothing
+rule2_enterNonUpdatable _ = Nothing
 
 
 
@@ -120,9 +125,13 @@ liftLambdaToClosure locals lf@(LambdaForm free _ _ _) =
 
 
 
--- | (3) let(rec)
-rule3 :: StgState -> Maybe StgState
-rule3 s@StgState
+-- | Rule 3: let(rec)
+--
+-- Allocate closures for each definition on the heap, making sure references to
+-- existing (or recursive) definitions are correct, and add the bindings to the
+-- local environment. Proceed by evaluating the @in@ part of the @let@.
+rule3_let :: StgState -> Maybe StgState
+rule3_let s@StgState
     { stgCode = Eval (Let rec (Binds letBinds) expr) locals
     , stgHeap = heap }
 
@@ -164,17 +173,20 @@ rule3 s@StgState
         Failure notInScope ->
             s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] })
 
-rule3 _ = Nothing
+rule3_let _ = Nothing
 
 
 
--- | (4) Case evaluation
+-- | Rule 4: Case evaluation
+--
+-- Push a return frame with the possible branches, and continue evaluating the
+-- scrutinee.
 --
 -- Compared to the paper, this rule was improved by removing local bindings that
 -- are not used at all in the alternatives, which would unnecessarily prolong
 -- the garbage collection lifetime of unused bindings.
-rule4 :: StgState -> Maybe StgState
-rule4 s@StgState
+rule4_case :: StgState -> Maybe StgState
+rule4_case s@StgState
     { stgCode  = Eval (Case expr alts) locals
     , stgStack = stack }
 
@@ -190,13 +202,15 @@ rule4 s@StgState
         , stgInfo  = Info (StateTransition Eval_Case)
                           [Detail_EvalCase] })
 
-rule4 _ = Nothing
+rule4_case _ = Nothing
 
 
 
--- | (5) Constructor application
-rule5 :: StgState -> Maybe StgState
-rule5 s@StgState
+-- | Rule 5: Constructor application
+--
+-- Simply transition into the 'ReturnCon' state.
+rule5_constructorApp :: StgState -> Maybe StgState
+rule5_constructorApp s@StgState
     { stgCode    = Eval (AppC con xs) locals
     , stgGlobals = globals }
     | Success valsXs <- vals locals globals xs
@@ -207,13 +221,16 @@ rule5 s@StgState
             (StateTransition Eval_AppC)
             (mkDetail_UnusedLocalVariables [ var | AtomVar var <- xs ] locals) })
 
-rule5 _ = Nothing
+rule5_constructorApp _ = Nothing
 
 
 
--- | (6) Algebraic constructor return, standard matchrule
-rule6 :: StgState -> Maybe StgState
-rule6 s@StgState
+-- | Rule 6: Algebraic constructor return, standard match
+--
+-- Continue with the branch of the matched constructor, extending the local
+-- environment with the matched pattern variables' values.
+rule6_algebraicNormalMatch :: StgState -> Maybe StgState
+rule6_algebraicNormalMatch s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (AltMatches (AlgebraicAlt _con vars expr)) <-
@@ -228,13 +245,16 @@ rule6 s@StgState
         , stgInfo  = Info (StateTransition ReturnCon_Match)
                           [Detail_ReturnCon_Match con vars] })
 
-rule6 _ = Nothing
+rule6_algebraicNormalMatch _ = Nothing
 
 
 
--- | (7) Algebraic constructor return, unbound default matchrule
-rule7 :: StgState -> Maybe StgState
-rule7 s@StgState
+-- | Rule 7: Algebraic constructor return, unbound default match
+--
+-- None of the given alternatives matched, so simply continue with the default
+-- branch.
+rule7_algebraicUnboundDefaultMatch :: StgState -> Maybe StgState
+rule7_algebraicUnboundDefaultMatch s@StgState
     { stgCode  = ReturnCon con _ws
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (DefaultMatches (DefaultNotBound expr)) <-
@@ -245,13 +265,17 @@ rule7 s@StgState
         , stgStack = stack'
         , stgInfo  = Info (StateTransition ReturnCon_DefUnbound) [] })
 
-rule7 _ = Nothing
+rule7_algebraicUnboundDefaultMatch _ = Nothing
 
 
 
--- | (8) Algebraic constructor return, bound default matchrule
-rule8 :: StgState -> Maybe StgState
-rule8 s@StgState
+-- | Rule 8: Algebraic constructor return, bound default match
+--
+-- None of the given alternatives matched, so continue with the default branch.
+-- Also allocate the default-matched value on the heap and extend the local
+-- environment with its binding to retain a reference to the scrutinized value.
+rule8_algebraicBoundDefaultMatch :: StgState -> Maybe StgState
+rule8_algebraicBoundDefaultMatch s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = ReturnFrame alts locals :< stack'
     , stgHeap  = heap
@@ -270,24 +294,28 @@ rule8 s@StgState
          , stgInfo  = Info (StateTransition ReturnCon_DefBound)
                            [Detail_ReturnConDefBound v addr] })
 
-rule8 _ = Nothing
+rule8_algebraicBoundDefaultMatch _ = Nothing
 
 
 
--- | (9) Literal evaluationrule
-rule9 :: StgState -> Maybe StgState
-rule9 s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
+-- | Rule 9: Literal evaluation
+--
+-- Simply transition into the 'ReturnInt' state.
+rule9_primitiveLiteralEval :: StgState -> Maybe StgState
+rule9_primitiveLiteralEval s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = Just (s
         { stgCode = ReturnInt k
         , stgInfo = Info (StateTransition Eval_Lit) [] })
 
-rule9 _ = Nothing
+rule9_primitiveLiteralEval _ = Nothing
 
 
 
--- | (10) Literal application
-rule10 :: StgState -> Maybe StgState
-rule10 s@StgState { stgCode = Eval (AppF f []) locals }
+-- | Rule 10: Literal application
+--
+-- Simply transition into the 'ReturnInt' state.
+rule10_primitiveLiteralApp :: StgState -> Maybe StgState
+rule10_primitiveLiteralApp s@StgState { stgCode = Eval (AppF f []) locals }
     | Success (PrimInt k) <- val locals mempty (AtomVar f)
 
   = Just (s
@@ -295,13 +323,15 @@ rule10 s@StgState { stgCode = Eval (AppF f []) locals }
         , stgInfo = Info (StateTransition Eval_LitApp)
                          (mkDetail_UnusedLocalVariables [f] locals) })
 
-rule10 _ = Nothing
+rule10_primitiveLiteralApp _ = Nothing
 
 
 
--- | (11) Primitive return, standard match found
-rule11 :: StgState -> Maybe StgState
-rule11 s@StgState
+-- | Rule 11: Primitive return, standard match found
+--
+-- Like 'rule4_case', but for primitives.
+rule11_primitiveNormalMatch :: StgState -> Maybe StgState
+rule11_primitiveNormalMatch s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (AltMatches (PrimitiveAlt _k expr)) <-
@@ -312,13 +342,18 @@ rule11 s@StgState
         , stgStack = stack'
         , stgInfo  = Info (StateTransition ReturnInt_Match) [] })
 
-rule11 _ = Nothing
+rule11_primitiveNormalMatch _ = Nothing
 
 
 
--- | (12) Primitive return, bound default match
-rule12 :: StgState -> Maybe StgState
-rule12 s@StgState
+-- | Rule 12: Primitive return, bound default match
+--
+-- Similar to 'rule8_algebraicBoundDefaultMatch', but for primtives. Since the
+-- bound variable is primitive, this rule is a bit sompler since we can store
+-- the value directly in its binding, instead of allocating it on the heap and
+-- storing the address.
+rule12_primitiveBoundDefaultMatch :: StgState -> Maybe StgState
+rule12_primitiveBoundDefaultMatch s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (DefaultMatches (DefaultBound v expr)) <-
@@ -332,13 +367,15 @@ rule12 s@StgState
         , stgInfo  = Info (StateTransition ReturnInt_DefBound)
                           [Detail_ReturnIntDefBound v k] })
 
-rule12 _ = Nothing
+rule12_primitiveBoundDefaultMatch _ = Nothing
 
 
 
--- | (13) Primitive return, unbound default match
-rule13 :: StgState -> Maybe StgState
-rule13 s@StgState
+-- | Rule 13: Primitive return, unbound default match
+--
+-- Like 'rule7_algebraicUnboundDefaultMatch', but for primitives.
+rule13_primitiveUnboundDefaultMatch :: StgState -> Maybe StgState
+rule13_primitiveUnboundDefaultMatch s@StgState
     { stgCode  = ReturnInt k
     , stgStack = ReturnFrame alts locals :< stack' }
     | Success (DefaultMatches (DefaultNotBound expr)) <-
@@ -349,11 +386,11 @@ rule13 s@StgState
         , stgStack = stack'
         , stgInfo  = Info (StateTransition ReturnInt_DefUnbound) [] })
 
-rule13 _ = Nothing
+rule13_primitiveUnboundDefaultMatch _ = Nothing
 
 
 
--- | (14) Primitive function application
+-- | Rule 14: Primitive function application
 --
 -- This rule has been modified to take not only primitive-valued variables, but
 -- also primitive values directly as arguments.
@@ -369,11 +406,11 @@ rule13 _ = Nothing
 -- The fast curry paper does not seem to impose this restriction.
 --
 --
--- TODO: This rule is probably obsolete because of rules (18) and (19).
--- Remove it after confirming this is true. I (quchen) was not able to produce
--- a case in which (14) is still needed.
-rule14 :: StgState -> Maybe StgState
-rule14 s@StgState
+-- This rule is shadowed by 'rule1819_casePrimopShortcut', which handles
+-- primitive application more efficiently, without the need for an intermediate
+-- 'ReturnInt' state.
+rule14_primop :: StgState -> Maybe StgState
+rule14_primop s@StgState
     { stgCode = Eval (AppP op x y) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
@@ -385,13 +422,21 @@ rule14 s@StgState
                          (mkDetail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
                                                         locals )})
 
-rule14 _ = Nothing
+rule14_primop _ = Nothing
 
 
 
--- | (15) Enter updatable closure
-rule15 :: StgState -> Maybe StgState
-rule15 s@StgState
+-- | Rule 15: Enter updatable closure
+--
+-- Evaluate the address pointed to, and store its future update in an
+-- 'UpdateFrame'.
+--
+-- In theory this could just do what 'rule2_enterNonUpdatable' does, plus the
+-- update frame. However, since lambda forms that take arguments never form
+-- updatable closures, there is no need for 'ArgumentFrame' handling in this
+-- rule.
+rule15_enterUpdatable :: StgState -> Maybe StgState
+rule15_enterUpdatable s@StgState
     { stgCode  = Enter addr
     , stgStack = stack
     , stgHeap  = heap
@@ -410,13 +455,17 @@ rule15 s@StgState
         , stgInfo  = Info (StateTransition Enter_UpdatableClosure)
                           [Detail_EnterUpdatable addr] })
 
-rule15 _ = Nothing
+rule15_enterUpdatable _ = Nothing
 
 
 
--- | (16) Algebraic constructor return, argument/return stacks empty -> update
-rule16 :: StgState -> Maybe StgState
-rule16 s@StgState
+-- | Rule 16: Update because of missing 'ReturnFrame'
+--
+-- A 'ReturnCon' state requires a 'ReturnFrame' to continue, but there is an
+-- 'UpdateFrame' in the way. The latter has to be eliminated by performing an
+-- update with the returned constructor before attempting the return once more.
+rule16_missingReturnUpdate :: StgState -> Maybe StgState
+rule16_missingReturnUpdate s@StgState
     { stgCode  = ReturnCon con ws
     , stgStack = UpdateFrame addr :< stack'
     , stgHeap  = heap
@@ -434,13 +483,17 @@ rule16 s@StgState
         , stgInfo  = Info (StateTransition ReturnCon_Update)
                           [Detail_ConUpdate con addr] })
 
-rule16 _ = Nothing
+rule16_missingReturnUpdate _ = Nothing
 
 
 
--- | (17a) Enter partially applied closure
-rule17a :: StgState -> Maybe StgState
-rule17a s@StgState
+-- | Rule 17a: Enter partially applied closure, update because of missing
+-- 'ArgumentFrame'
+--
+-- There are not enough 'ArgFrame's on the stack for a lambda's arguments,
+-- because an update frame blocks access to more.
+rule17a_missingArgUpdate :: StgState -> Maybe StgState
+rule17a_missingArgUpdate s@StgState
     { stgCode  = Enter addrEnter
     , stgStack = stack
     , stgHeap  = heap
@@ -477,25 +530,25 @@ rule17a s@StgState
           in Just ( filter isArgFrame (F.toList argFrames)
                   , argsPoppedStack )
 
-rule17a _ = Nothing
+rule17a_missingArgUpdate _ = Nothing
 
 
 
--- | (18, 19) Shortcut for matching primops, given before the general case rule
--- (4) so it takes precedence.
+-- | Rules 18, 19 Shortcut for matching primops, given before the general case
+-- 'rule4_case' so it takes precedence.
 --
 -- This rule allows evaluating primops without the overhead of allocating an
 -- intermediate return stack frame. In order to trigger, it must be placed
--- before rule 4 (general case evaluation) in order to take precedence.
+-- before 'rule4_case' (general case evaluation) in order to take precedence.
 --
 -- When reading the source here for educational purposes, you should skip this
--- rule until you've seen the normal case rule (4) and the normal
--- primop rule (14).
+-- rule until you've seen the normal case 'rule4_case' and the normal primop
+-- rule ('rule14_primop').
 --
 -- This rule has the slight modification compared to the paper in that it works
 -- for both bound and unbound default cases.
-rule1819 :: StgState -> Maybe StgState
-rule1819 s@StgState
+rule1819_casePrimopShortcut :: StgState -> Maybe StgState
+rule1819_casePrimopShortcut s@StgState
     { stgCode = Eval (Case (AppP op x y) alts) locals }
     | Success (PrimInt xVal) <- localVal locals x
     , Success (PrimInt yVal) <- localVal locals y
@@ -514,4 +567,4 @@ rule1819 s@StgState
         s { stgCode = Eval expr locals'
           , stgInfo = Info (StateTransition Eval_Case_Primop_DefaultBound) [] })
 
-rule1819 _ = Nothing
+rule1819_casePrimopShortcut _ = Nothing
