@@ -45,6 +45,9 @@ library
                      , Stg.Machine
                      , Stg.Machine.Env
                      , Stg.Machine.Evaluate
+                     , Stg.Machine.Evaluate.ErrorTransitions
+                     , Stg.Machine.Evaluate.Common
+                     , Stg.Machine.Evaluate.ValidTransitions
                      , Stg.Machine.GarbageCollection
                      , Stg.Machine.GarbageCollection.Common
                      , Stg.Machine.GarbageCollection.TriStateTracing
