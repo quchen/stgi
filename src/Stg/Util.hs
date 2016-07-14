@@ -15,6 +15,7 @@ module Stg.Util (
 
 import           Data.Bifunctor
 import           Data.Monoid
+import           Data.String
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
@@ -62,6 +63,6 @@ bulletList :: [Doc] -> Doc
 bulletList = align . vsep . map (("  - " <>) . align)
 
 -- | Add an \'s' for non-singleton lists.
-pluralS :: [a] -> Doc
+pluralS :: IsString string => [a] -> string
 pluralS [_] = ""
 pluralS _ = "s"
