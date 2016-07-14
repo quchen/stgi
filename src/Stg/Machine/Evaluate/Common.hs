@@ -26,8 +26,10 @@ import Stg.Util
 
 
 
-data PrimError = Div0
+-- |
+data PrimError = Div0 -- ^ Division by zero
 
+-- |
 applyPrimOp :: PrimOp -> Integer -> Integer -> Validate PrimError Integer
 applyPrimOp Div _ 0 = Failure Div0
 applyPrimOp Mod _ 0 = Failure Div0
@@ -53,7 +55,8 @@ applyPrimOp op x y = Success (opToFunc op x y)
 -- | Successful alternative match, used for finding the right branch in @case@
 data AltMatch alt = AltMatches alt | DefaultMatches DefaultAlt
 
-data AltError = BadAlt -- ^ Alg/prim alternative in prim/alg case
+data AltError = BadAlt -- ^ Algebraic\/primitive alternative in
+                       -- primitive\/algebraic case
 
 -- | Look up an algebraic constructor among the given alternatives, and return
 -- the first match. If nothing matches, return the default alternative.

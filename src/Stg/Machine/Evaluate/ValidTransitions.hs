@@ -534,7 +534,7 @@ rule17a_missingArgUpdate _ = Nothing
 
 
 
--- | Rules 18, 19 Shortcut for matching primops, given before the general case
+-- | Rules 18, 19: Shortcut for matching primops, given before the general case
 -- 'rule4_case' so it takes precedence.
 --
 -- This rule allows evaluating primops without the overhead of allocating an
