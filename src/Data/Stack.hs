@@ -59,8 +59,8 @@ instance NFData a => NFData (Stack a) where
 (<>>) :: [a] -> Stack a -> Stack a
 list <>> stack = foldr (:<) stack list
 
--- | For each list element, pop one element off the stack. Fail if not enough
--- elements are on the stack.
+-- | For each list element, pop one element off the 'Stack'. Fail if not enough
+-- elements are present.
 forEachPop :: [x] -> Stack a -> Maybe ([a], Stack a)
 forEachPop (_:_) Empty = Nothing
 forEachPop [] stack = Just ([], stack)

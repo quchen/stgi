@@ -21,6 +21,7 @@
 ### Documentation
 
 - Document each rule individually with Haddock
+- Add lots of docstrings
 
 
 

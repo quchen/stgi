@@ -85,11 +85,18 @@ style = StgAstStyle
 
 
 
--- | An STG program consists of bindings.
+-- | An STG 'Program' is the unit that can be loaded by the STG machine. It
+-- consists of a set of bindings.
 newtype Program = Program Binds
     deriving (Eq, Ord, Show, Generic)
 
--- | Left-biased union of the contained bindings.
+-- | __Right-biased union__ of the contained bindings. This makes for a poor man's
+-- module system by appending multiple, potentially partially incomplete,
+-- 'Programs' to each other.
+--
+-- @
+-- 'Stg.Prelude.map' <> 'Stg.Prelude.filter' <> ['Stg.Parser.QuasiQuoter.stg'| … actual source … |]
+-- @
 instance Monoid Program where
     mempty = Program mempty
     Program x `mappend` Program y = Program (x <> y)
@@ -100,15 +107,7 @@ instance Monoid Program where
 newtype Binds = Binds (Map Var LambdaForm)
     deriving (Eq, Ord, Generic)
 
--- | __Right-biased__ union of binds. This makes it easier to overwrite modify
--- definitions from other programs. For example, if you have one program that
--- has a certain definition of 'map', you can write
---
--- @
--- program' = program <> [stg| map = ... |]
--- @
---
--- to make it use your own version.
+-- | __Right-biased__ union. See 'Monoid' 'Program' for further information.
 instance Monoid Binds where
     mempty = Binds mempty
     Binds x `mappend` Binds y = Binds (y <> x)
@@ -123,6 +122,10 @@ instance Show Binds where
 -- >>> [stg| \(x) y z -> expr x z |]
 -- LambdaForm [Var "x"] NoUpdate [Var "y",Var "z"] (AppF (Var "expr") [AtomVar (Var "x"),AtomVar (Var "z")])
 data LambdaForm = LambdaForm ![Var] !UpdateFlag ![Var] !Expr
+    -- ^ * Free variables (excluding globals)
+    --   * Update flag
+    --   * Bound variables
+    --   * Body
     deriving (Eq, Ord, Show, Generic)
 
 -- | Possible classification of lambda forms.
@@ -145,16 +148,17 @@ classify = \case
     LambdaForm _ _ (_:_) _   -> LambdaFun
     LambdaForm _ _ []    _   -> LambdaThunk
 
--- | The update flag distinguishes updateable from non-updateable lambda forms.
---
--- The former will be overwritten in-place when it is evaluated, allowing
--- the calculation of a thunk to be shared among multiple uses of the
--- same value.
-data UpdateFlag = Update | NoUpdate
+-- | The update flag distinguishes updatable from non-updatable lambda forms.
+data UpdateFlag =
+      Update -- ^ Overwrite the heap object in-place with its reduced value
+             -- once available, making recurring access cheap
+    | NoUpdate -- ^ Don't touch the heap object after evaluation
     deriving (Eq, Ord, Show, Generic, Enum, Bounded)
 
 -- | Distinguishes @let@ from @letrec@.
-data Rec = NonRecursive | Recursive
+data Rec =
+      NonRecursive -- ^ Binings have no access to each other
+    | Recursive -- ^ Bindings can be given to each other as free variables
     deriving (Eq, Ord, Show, Generic, Enum, Bounded)
 
 -- | An expression in the STG language.
