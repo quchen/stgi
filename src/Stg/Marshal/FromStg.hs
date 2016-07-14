@@ -129,7 +129,7 @@ instance FromStg Bool where
         [ True  <$ matchCon0 "True"  closure
         , False <$ matchCon0 "False" closure ])
 
--- | Boxed (@Int\# 1\#@) or unboxed (@1#@)
+-- | Works for both boxed (@Int\# 1\#@) and unboxed (@1#@) integers.
 instance FromStg Integer where
     fromStg stgState var = case Env.globalVal (stgGlobals stgState) (AtomVar var) of
         Failure _ -> Left (NotFound (NotInScope [var]))

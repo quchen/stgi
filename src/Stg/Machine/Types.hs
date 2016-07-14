@@ -324,7 +324,7 @@ instance Pretty StateTransition where
         ReturnInt_DefUnbound          -> "Primitive constructor return, unbound default match"
         ReturnInt_Match               -> "Primitive constructor return, standard match found"
 
--- | Type safety wrapper.
+-- | Type safety wrapper to report variables that were not in scope.
 newtype NotInScope = NotInScope [Var]
     deriving (Eq, Ord, Show, Generic, Monoid)
 
@@ -342,7 +342,7 @@ data StateError =
     | UpdateClosureWithPrimitive
     | NonAlgPrimScrutinee
     | DivisionByZero
-    | BadConArity Int Int
+    | BadConArity Int Int -- ^ scrutinee arity, pattern arity
     deriving (Eq, Ord, Show, Generic)
 
 instance Pretty StateError where

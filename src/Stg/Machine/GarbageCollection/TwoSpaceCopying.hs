@@ -32,7 +32,8 @@ import           Stg.Machine.Types
 
 
 
--- | Remove all unused addresses by moving them to a safe location.
+-- | Move all used addresses by moving them to a safe location, and delete the
+-- leftovers.
 twoSpaceCopying :: GarbageCollectionAlgorithm
 twoSpaceCopying = GarbageCollectionAlgorithm
     "Two-space copying"

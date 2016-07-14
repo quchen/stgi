@@ -74,7 +74,7 @@ parse (StgParser p) input = case parseString (whiteSpace *> p <* eof) mempty (T.
 
 -- | Skip a certain token. Useful to consume, but not otherwise use, certain
 -- tokens.
-skipToken :: TokenParsing parser => parser a -> parser ()
+skipToken :: StgParser a -> StgParser ()
 skipToken = void . token
 
 -- | A parser for an STG syntax element.
@@ -85,7 +85,7 @@ instance TokenParsing StgParser where
     someSpace = skipMany (void (satisfy isSpace) <|> comment)
 
 -- | Syntax rules for parsing variable-looking like identifiers.
-varId :: TokenParsing parser => IdentifierStyle parser
+varId :: IdentifierStyle StgParser
 varId = IdentifierStyle
     { _styleName = "variable"
     , _styleStart = lower <|> char '_'
@@ -96,17 +96,17 @@ varId = IdentifierStyle
 
 -- | Parse a variable identifier. Variables start with a lower-case letter or
 -- @_@, followed by a string consisting of alphanumeric characters or @'@, @_@.
-var :: (Monad parser, TokenParsing parser) => parser Var
+var :: StgParser Var
 var = ident varId
 
 -- | Skip a reserved variable identifier.
-reserved :: (Monad parser, TokenParsing parser) => Text -> parser ()
+reserved :: Text -> StgParser ()
 reserved = reserveText varId
 
 -- | Parse a constructor identifier. Constructors follow the same naming
 -- conventions as variables, but start with an upper-case character instead, and
 -- may end with a @#@ symbol.
-con :: (Monad parser, TokenParsing parser) => parser Constr
+con :: StgParser Constr
 con = highlight Constructor constructor <?> "constructor"
   where
     constructor = token (do
@@ -116,18 +116,18 @@ con = highlight Constructor constructor <?> "constructor"
         (pure . Constr . T.pack) (start : body <> end) )
 
 -- | Parse an STG program.
-program :: (Monad parser, TokenParsing parser) => parser Program
+program :: StgParser Program
 program = someSpace *> fmap Program binds <* eof <?> "STG program"
 
 -- | Parse a collection of bindings, used by @let(rec)@ expressions and at the
 -- top level of a program.
-binds :: (Monad parser, TokenParsing parser) => parser Binds
+binds :: StgParser Binds
 binds = bindings <?> "non-empty list of bindings"
   where
     bindings = fmap (Binds . M.fromList) (sepBy1 binding semi)
     binding = (,) <$> var <* symbol "=" <*> lambdaForm
 
-comment :: TokenParsing parser => parser ()
+comment :: StgParser ()
 comment = skipToken (highlight Comment (lineComment <|> blockComment)) <?> ""
   where
     lineComment  = try (symbol "--") *> manyTill anyChar (char '\n')
@@ -135,10 +135,10 @@ comment = skipToken (highlight Comment (lineComment <|> blockComment)) <?> ""
 
 -- | Parse a lambda form, consisting of a list of free variables, and update
 -- flag, a list of bound variables, and the function body.
-lambdaForm :: (Monad parser, TokenParsing parser) => parser LambdaForm
+lambdaForm :: StgParser LambdaForm
 lambdaForm = lf >>= validateLambda <?> "lambda form"
   where
-    lf :: (Monad parser, TokenParsing parser) => parser LambdaForm
+    lf :: StgParser LambdaForm
     lf = (\free bound upd body -> LambdaForm free upd bound body)
          <$  token (char '\\')
          <*> (parens (some var) <|> pure [])
@@ -160,13 +160,13 @@ lambdaForm = lf >>= validateLambda <?> "lambda form"
         x -> pure x
 
     -- Parse an update flag arrow. @->@ means no update, @=>@ update.
-    updateArrow :: (Monad parser, TokenParsing parser) => parser UpdateFlag
+    updateArrow :: StgParser UpdateFlag
     updateArrow = token (symbol "->" *> pure NoUpdate
                      <|> symbol "=>" *> pure Update
                      <?> "update arrow" )
 
 -- | Parse an arrow token, @->@.
-arrow :: TokenParsing parser => parser ()
+arrow :: StgParser ()
 arrow = skipToken (symbol "->")
 
 -- | Parse an expression, which can be
@@ -177,12 +177,10 @@ arrow = skipToken (symbol "->")
 --   * constructor application, @C (...)@
 --   * primitive application, @p# (...)@
 --   * literal, @1#@
-expr :: (Monad parser, TokenParsing parser) => parser Expr
+expr :: StgParser Expr
 expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
   where
-    let', case', appF, appC, appP, lit
-        :: (Monad parser, TokenParsing parser)
-        => parser Expr
+    let', case', appF, appC, appP, lit :: StgParser Expr
 
     let' = Let
         <$> (Recursive <$ reserved "letrec" <|> NonRecursive <$ reserved "let")
@@ -202,13 +200,13 @@ expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
     lit = Lit <$> literal <?> "literal expression"
 
 -- | Parse the alternatives given in a @case@ expression.
-alts :: (Monad parser, TokenParsing parser) => parser Alts
+alts :: StgParser Alts
 alts = Alts
        <$> nonDefaultAlts
        <*> defaultAlt
        <?> "case alternatives"
 
-atom :: (Monad parser, TokenParsing parser) => parser Atom
+atom :: StgParser Atom
 atom = AtomVar <$> var
    <|> AtomLit <$> literal
    <?> "atom (variable or literal)"
@@ -218,7 +216,7 @@ atom = AtomVar <$> var
 -- @
 -- +#
 -- @
-primOp :: TokenParsing parser => parser PrimOp
+primOp :: StgParser PrimOp
 primOp = choice ops <?> "primitive function"
   where
     ops = [ "+"  ~> Add
@@ -234,7 +232,7 @@ primOp = choice ops <?> "primitive function"
           , ">"  ~> Gt ]
     op ~> val = token (try (string op <* char '#')) *> pure val
 
-literal :: TokenParsing parser => parser Literal
+literal :: StgParser Literal
 literal = token (Literal <$> integer' <* char '#') <?> "integer literal"
 
 -- | Parse non-default alternatives. The list of alternatives can be either
@@ -249,7 +247,7 @@ literal = token (Literal <$> integer' <* char '#') <?> "integer literal"
 -- 1# -> ...
 -- 2# -> ...
 -- @
-nonDefaultAlts :: (Monad parser, TokenParsing parser) => parser NonDefaultAlts
+nonDefaultAlts :: StgParser NonDefaultAlts
 nonDefaultAlts = AlgebraicAlts . NonEmpty.fromList <$> some algebraicAlt
              <|> PrimitiveAlts . NonEmpty.fromList <$> some primitiveAlt
              <|> pure NoNonDefaultAlts
@@ -260,7 +258,7 @@ nonDefaultAlts = AlgebraicAlts . NonEmpty.fromList <$> some algebraicAlt
 -- @
 -- Cons x xs -> ...
 -- @
-algebraicAlt :: (Monad parser, TokenParsing parser) => parser AlgebraicAlt
+algebraicAlt :: StgParser AlgebraicAlt
 algebraicAlt = try (AlgebraicAlt <$> con)
            <*> (many var >>= disallowDuplicates)
            <*  arrow
@@ -283,7 +281,7 @@ algebraicAlt = try (AlgebraicAlt <$> con)
 -- @
 -- 1# -> ...
 -- @
-primitiveAlt :: (Monad parser, TokenParsing parser) => parser PrimitiveAlt
+primitiveAlt :: StgParser PrimitiveAlt
 primitiveAlt = try (PrimitiveAlt <$> literal) <* arrow <*> expr <* semi
     <?> "primitive case alternative"
 
@@ -297,7 +295,7 @@ primitiveAlt = try (PrimitiveAlt <$> literal) <* arrow <*> expr <* semi
 -- @
 -- v -> ...
 -- @
-defaultAlt :: (Monad parser, TokenParsing parser) => parser DefaultAlt
+defaultAlt :: StgParser DefaultAlt
 defaultAlt = DefaultNotBound <$ reserved "default" <* arrow <*> expr
          <|> DefaultBound <$> var <* arrow <*> expr
          <?> "default alternative"

@@ -1,6 +1,12 @@
 # Changelog
 
-## Currently in development
+## Currently in development (at least >= 1.1 because of API changes)
+
+
+### Features
+
+- Monomorphize the parser module to `… -> StgParser a` for readability (was
+  `(TokenParsing parser, Monad parser) => … -> StgParser a`)
 
 ### Fixes
 
