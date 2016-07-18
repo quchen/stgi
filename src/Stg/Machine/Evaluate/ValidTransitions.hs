@@ -395,16 +395,15 @@ rule13_primitiveUnboundDefaultMatch _ = Nothing
 -- This rule has been modified to take not only primitive-valued variables, but
 -- also primitive values directly as arguments.
 --
--- Without this modification, you cannot evaluate @+# 1# 2#@, you have to
+-- Without this modification, you cannot evaluate @+\# 1\# 2\#@, you have to
 -- write
 --
 -- @
--- case 1# of one -> case 2# of two -> case +# one two of ...
+-- case 1\# of one -> case 2\# of two -> case +\# one two of ...
 -- @
 --
 -- which is a bit silly. I think this might be an oversight in the 1992 paper.
 -- The fast curry paper does not seem to impose this restriction.
---
 --
 -- This rule is shadowed by 'rule1819_casePrimopShortcut', which handles
 -- primitive application more efficiently, without the need for an intermediate
@@ -534,15 +533,14 @@ rule17a_missingArgUpdate _ = Nothing
 
 
 
--- | Rules 18, 19: Shortcut for matching primops, given before the general case
--- 'rule4_case' so it takes precedence.
+-- | Rules 18, 19: Shortcut for evaluating/matching primops
 --
 -- This rule allows evaluating primops without the overhead of allocating an
--- intermediate return stack frame. In order to trigger, it must be placed
--- before 'rule4_case' (general case evaluation) in order to take precedence.
+-- intermediate return stack frame. In order to trigger, it must be applied with
+-- higher precedence than 'rule4_case'.
 --
 -- When reading the source here for educational purposes, you should skip this
--- rule until you've seen the normal case 'rule4_case' and the normal primop
+-- rule until you've seen the normal case rule ('rule4_case') and the normal primop
 -- rule ('rule14_primop').
 --
 -- This rule has the slight modification compared to the paper in that it works
