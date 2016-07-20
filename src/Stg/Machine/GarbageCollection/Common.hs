@@ -31,10 +31,12 @@ splitHeapWith
     -> (Set MemAddr, Map MemAddr MemAddr, StgState)
 splitHeapWith (GarbageCollectionAlgorithm _name gc) = gc
 
+-- | A garbage collection algorithm is a specific way to get rid of unused heap
+-- objects.
 data GarbageCollectionAlgorithm = GarbageCollectionAlgorithm
     Text
     (StgState -> (Set MemAddr, Map MemAddr MemAddr, StgState))
-        -- ^ Dead addresses, moved addresses, new state
+        -- ^ @<Algorithm name> (<state> -> (<dead addresses>, <moved addresses>, <new state>)@
 
 -- | Collect all mentioned addresses in a machine element.
 --

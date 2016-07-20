@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
+-- | Operations on boxed integers
 module Stg.Prelude.Number (
     -- * Arithmetic
     add,
@@ -60,22 +61,22 @@ primToBool = [alts| 1# -> True; default -> False |]
 
 eq_Int, lt_Int, leq_Int, gt_Int, geq_Int, neq_Int :: Program
 
--- |
-eq_Int  = binaryOp "eq_Int"  Eq  primToBool
+-- | Equality of boxed integers
+eq_Int = binaryOp "eq_Int" Eq primToBool
 
--- |
-lt_Int  = binaryOp "lt_Int"  Lt  primToBool
+-- | Less-than for boxed integers
+lt_Int = binaryOp "lt_Int" Lt primToBool
 
--- |
+-- | Less-or-equal for boxed integers
 leq_Int = binaryOp "leq_Int" Leq primToBool
 
--- |
-gt_Int  = binaryOp "gt_Int"  Gt  primToBool
+-- | Greater-than for boxed integers
+gt_Int = binaryOp "gt_Int" Gt primToBool
 
--- |
+-- | Greater-or-equal for boxed integers
 geq_Int = binaryOp "geq_Int" Geq primToBool
 
--- |
+-- | Inequality of boxed integers
 neq_Int = binaryOp "neq_Int" Neq primToBool
 
 
@@ -85,21 +86,22 @@ primIdInt = [alts| v -> Int# v |]
 
 add, sub, mul, div, mod :: Program
 
--- |
+-- | Binary addition of boxed integers
 add = binaryOp "add" Add primIdInt
 
--- |
+-- | Difference of boxed integers
 sub = binaryOp "sub" Sub primIdInt
 
--- |
+-- | Binary multiplication of boxed integers
 mul = binaryOp "mul" Mul primIdInt
 
--- |
+-- | Boxed integer division
 div = binaryOp "div" Div primIdInt
 
--- |
+-- | Boxed integer modulo operator
 mod = binaryOp "mod" Mod primIdInt
 
+-- | Minimum of two boxed integers
 min :: Program
 min = [program|
     min = \x y -> case x of
@@ -111,6 +113,7 @@ min = [program|
         badInt -> Error_min badInt
     |]
 
+-- | Maximum of two boxed integers
 max :: Program
 max = [program|
     max = \x y -> case x of

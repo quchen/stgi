@@ -60,7 +60,8 @@ returnWithEmptyReturnStack _ = Nothing
 
 
 
--- |
+-- | A function was applied to an argument that was neither globally defined
+-- nor in the local environment
 functionArgumentNotInScope :: StgState -> Maybe StgState
 functionArgumentNotInScope s@StgState
     { stgCode    = Eval (AppF f xs) locals
@@ -73,7 +74,8 @@ functionArgumentNotInScope _ = Nothing
 
 
 
--- |
+-- | A constructor was applied to an argument that was neither globally defined
+-- nor in the local environment
 constructorArgumentNotInScope :: StgState -> Maybe StgState
 constructorArgumentNotInScope s@StgState
     { stgCode    = Eval (AppC _con xs) locals
@@ -86,7 +88,8 @@ constructorArgumentNotInScope _ = Nothing
 
 
 
--- |
+-- | A primitive operation was applied to an argument that was neither globally
+-- defined nor in the local environment
 primopArgumentNotInScope :: StgState -> Maybe StgState
 primopArgumentNotInScope s@StgState
     { stgCode = Eval (AppP _op x y) locals }
@@ -122,7 +125,8 @@ primReturnToAlgAlts _ = Nothing
 
 
 
--- |
+-- | A black hole was entered, and the infinite recursion detection triggered
+-- as a result
 enterBlackhole :: StgState -> Maybe StgState
 enterBlackhole s@StgState
     { stgCode  = Enter addr
@@ -165,7 +169,7 @@ nonAlgPrimScrutinee _ = Nothing
 
 
 
--- |
+-- | A primitive division had zero as denominator
 divisionByZero :: StgState -> Maybe StgState
 divisionByZero s@StgState
     { stgCode = Eval (AppP op x y) locals }

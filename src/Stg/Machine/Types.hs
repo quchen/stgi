@@ -128,8 +128,7 @@ prettyStack stack = (align . vsep) prettyFrames
         , align (pretty frame) ]
     prettyFrames = zipWith prettyFrame (toList stack) (reverse [1..length stack])
 
--- ^ A stack frame of the unified stack that includes arguments, returns, and
--- updates.
+-- | Stack frames unify arguments, returns, and updates.
 data StackFrame =
       ArgumentFrame Value
         -- ^ Argument frames store values on the argument stack, so that they
@@ -279,6 +278,7 @@ instance Pretty InfoShort where
         StateInitial      -> "Initial state"
         GarbageCollection -> "Garbage collection"
 
+-- | Classifies which rule has been applied in order to reach the current state.
 data StateTransition =
       Enter_NonUpdatableClosure
     | Enter_PartiallyAppliedUpdate
@@ -331,6 +331,7 @@ newtype NotInScope = NotInScope [Var]
 instance Pretty NotInScope where
     pretty (NotInScope vars) = commaSep (map pretty vars)
 
+-- | Like 'StateTransition', but for invalid transitions.
 data StateError =
       VariablesNotInScope NotInScope
     | UpdatableClosureWithArgs
@@ -381,6 +382,8 @@ pprArity = \case
     3 -> "ternary"
     n -> int n <> "-ary"
 
+-- | Used to store meta-information about state transitions in order to be
+-- rendered as a helpful hint.
 data InfoDetail =
       Detail_FunctionApplication Var [Atom]
     | Detail_UnusedLocalVariables [Var] Locals
@@ -513,6 +516,8 @@ newtype Heap = Heap (Map MemAddr HeapObject)
 instance Pretty Heap where
     pretty (Heap heap) = prettyMap heap
 
+-- | Heap objects are what is stored on the heap. The most common and also most
+-- important one are closures.
 data HeapObject =
       HClosure Closure
     | Blackhole Integer

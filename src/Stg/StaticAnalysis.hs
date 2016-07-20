@@ -21,6 +21,7 @@ import Stg.Language
 (-<>) = S.difference
 infix 6 -<> -- 6 like <>
 
+-- | Overloading class for determining the free variables of an object.
 class FreeVariables ast where
     freeVariables :: ast -> Set Var
 

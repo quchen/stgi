@@ -50,12 +50,14 @@ class FromStg value where
 
     {-# MINIMAL fromStgAddr #-}
 
+-- | Classifies the different errors that can happen when extracting a value
+-- from an STG state.
 data FromStgError =
       TypeMismatch        -- ^ e.g. asking for an @Int#@ at an address
                           --   that contains a @Cons@
     | IsWrongLambdaType LambdaType -- ^ Tried retrieving a non-constructor
     | IsBlackhole         -- ^ Tried retrieving a black hole
-    | BadArity         -- ^ e.g. @Cons x y z@
+    | BadArity            -- ^ e.g. @Cons x y z@
     | NotFound NotInScope -- ^ An unsuccessful variable lookup
     | AddrNotOnHeap
     | NoConstructorMatch  -- ^ None of the given alternatives matched the given

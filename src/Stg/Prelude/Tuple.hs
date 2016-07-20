@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
+-- | Definitions found in Haskell's "Data.Tuple"
 module Stg.Prelude.Tuple (
     fst,
     snd,
@@ -87,7 +88,7 @@ swap = [program|
             Pair a b -> Pair b a;
             badPair  -> Error_snd badPair |]
 
-
+-- | Equality of pairs of boxed integers.
 equals_Pair_Int = eq_Int <> [program|
     eq_Pair_Int = \tup1 tup2 ->
         case tup1 of

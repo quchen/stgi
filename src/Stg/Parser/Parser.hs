@@ -206,6 +206,7 @@ alts = Alts
        <*> defaultAlt
        <?> "case alternatives"
 
+-- | Parse an atom
 atom :: StgParser Atom
 atom = AtomVar <$> var
    <|> AtomLit <$> literal
@@ -232,6 +233,12 @@ primOp = choice ops <?> "primitive function"
           , ">"  ~> Gt ]
     op ~> val = token (try (string op <* char '#')) *> pure val
 
+-- | Parse an integer literal
+--
+-- @
+-- 1#
+-- -123#
+-- @
 literal :: StgParser Literal
 literal = token (Literal <$> integer' <* char '#') <?> "integer literal"
 

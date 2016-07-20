@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
+-- | Definitions found in Haskell's "Data.Function"
 module Stg.Prelude.Function (
     seq,
     id,

@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
+-- | Definitions found in Haskell's "Data.List"
 module Stg.Prelude.List (
     nil,
     concat2,
@@ -197,6 +198,15 @@ filter = [program|
         badList -> Error_filter_2 badList
     |]
 
+-- | Separate a list into parts that do and do not satisfy a predicate.
+--
+-- @
+-- partition even [1..6] = ([2,4,6], [1,3,5])
+-- @
+--
+-- @
+-- partition : (a -> Bool) -> [a] -> ([a], [a])
+-- @
 partition = nil <> [program|
     partition = \p xs -> case xs of
         Nil -> Pair nil nil;
