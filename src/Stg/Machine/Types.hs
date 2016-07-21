@@ -290,8 +290,8 @@ data StateTransition =
     | Eval_Case_Primop_DefaultBound
     | Eval_FunctionApplication
     | Eval_Let Rec
-    | Eval_Lit
-    | Eval_LitApp
+    | Eval_LitE
+    | Eval_LitEApp
     | ReturnCon_DefBound
     | ReturnCon_DefUnbound
     | ReturnCon_Match
@@ -314,8 +314,8 @@ instance Pretty StateTransition where
         Eval_FunctionApplication      -> "Function application"
         Eval_Let NonRecursive         -> "Let evaluation"
         Eval_Let Recursive            -> "Letrec evaluation"
-        Eval_Lit                      -> "Literal evaluation"
-        Eval_LitApp                   -> "Literal application"
+        Eval_LitE                     -> "Literal evaluation"
+        Eval_LitEApp                  -> "Literal application"
         ReturnCon_DefBound            -> "Algebraic constructor return, bound default match"
         ReturnCon_DefUnbound          -> "Algebraic constructor return, unbound default match"
         ReturnCon_Match               -> "Algebraic constructor return, standard match"

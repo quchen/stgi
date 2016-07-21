@@ -168,7 +168,7 @@ data Expr =
     | AppF !Var ![Atom]        -- ^ Function application @f x y z@
     | AppC !Constr ![Atom]     -- ^ Saturated constructor application @Just a@
     | AppP !PrimOp !Atom !Atom -- ^ Primitive function application @+# 1# 2#@
-    | Lit !Literal             -- ^ Literal expression @1#@
+    | LitE !Literal            -- ^ Literal expression @1#@
     deriving (Eq, Ord, Show, Generic)
 
 -- | List of possible alternatives in a 'Case' expression.
@@ -336,7 +336,7 @@ instance Pretty Expr where
 
         AppP op arg1 arg2 -> pretty op <+> pretty arg1 <+> pretty arg2
 
-        Lit lit -> pretty lit
+        LitE lit -> pretty lit
 
 instance Pretty Alts where
     pretty (Alts NoNonDefaultAlts def) = pretty def

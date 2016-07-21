@@ -107,8 +107,8 @@ instance Arbitrary StateTransition where
         , arbitrary0 Eval_Case_Primop_DefaultBound
         , arbitrary0 Eval_FunctionApplication
         , arbitrary1 Eval_Let
-        , arbitrary0 Eval_Lit
-        , arbitrary0 Eval_LitApp
+        , arbitrary0 Eval_LitE
+        , arbitrary0 Eval_LitEApp
         , arbitrary0 ReturnCon_DefBound
         , arbitrary0 ReturnCon_DefUnbound
         , arbitrary0 ReturnCon_Match

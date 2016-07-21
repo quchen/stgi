@@ -88,7 +88,7 @@ instance Arbitrary LambdaForm where
         isValid (LambdaForm _ Update (_:_) AppF{}) = False
         isValid (LambdaForm _ Update (_:_) AppC{}) = False
         isValid (LambdaForm _ _      _     AppP{}) = False
-        isValid (LambdaForm _ _      _     Lit{} ) = False
+        isValid (LambdaForm _ _      _     LitE{}) = False
         isValid _ = True
 
 instance Arbitrary UpdateFlag where
@@ -106,7 +106,7 @@ instance Arbitrary Expr where
         , arbitrary2 AppF
         , arbitrary2 AppC
         , arbitrary3 AppP
-        , arbitrary1 Lit ]
+        , arbitrary1 LitE ]
     shrink = genericShrink
 
 instance Arbitrary Alts where

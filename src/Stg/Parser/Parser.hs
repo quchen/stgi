@@ -151,7 +151,7 @@ lambdaForm = lf >>= validateLambda <?> "lambda form"
            fail "Standard constructors are never updatable"
         LambdaForm _ Update (_:_) _ ->
            fail "Lambda forms with non-empty argument lists are never updatable"
-        LambdaForm _ _ _ Lit{} ->
+        LambdaForm _ _ _ LitE{} ->
            fail "No lambda form has primitive type like 1#;\
                 \ primitives must be boxed, e.g. Int# (1#)"
         LambdaForm _ _ _ AppP{} ->
@@ -197,7 +197,7 @@ expr = choice [let', case', appF, appC, appP, lit] <?> "expression"
     appF = AppF <$> var <*> many atom <?> "function application"
     appC = AppC <$> con <*> many atom <?> "constructor application"
     appP = AppP <$> primOp <*> atom <*> atom <?> "primitive function application"
-    lit = Lit <$> literal <?> "literal expression"
+    lit = LitE <$> literal <?> "literal expression"
 
 -- | Parse the alternatives given in a @case@ expression.
 alts :: StgParser Alts

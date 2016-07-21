@@ -45,7 +45,7 @@ instance FreeVariables Expr where
         AppF f args         -> freeVariables f    <> freeVariables args
         AppC _con args      -> freeVariables args
         AppP _op arg1 arg2  -> freeVariables arg1 <> freeVariables arg2
-        Lit lit             -> freeVariables lit
+        LitE lit            -> freeVariables lit
 
 -- | Only takes into account the explicit free variable list of the lambda. This
 -- means that globals, which are not explicitly free, will not be considered

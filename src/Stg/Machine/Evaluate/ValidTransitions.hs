@@ -302,10 +302,10 @@ rule8_algebraicBoundDefaultMatch _ = Nothing
 --
 -- Simply transition into the 'ReturnInt' state.
 rule9_primitiveLiteralEval :: StgState -> Maybe StgState
-rule9_primitiveLiteralEval s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
+rule9_primitiveLiteralEval s@StgState { stgCode = Eval (LitE (Literal k)) _locals}
   = Just (s
         { stgCode = ReturnInt k
-        , stgInfo = Info (StateTransition Eval_Lit) [] })
+        , stgInfo = Info (StateTransition Eval_LitE) [] })
 
 rule9_primitiveLiteralEval _ = Nothing
 
@@ -320,7 +320,7 @@ rule10_primitiveLiteralApp s@StgState { stgCode = Eval (AppF f []) locals }
 
   = Just (s
         { stgCode = ReturnInt k
-        , stgInfo = Info (StateTransition Eval_LitApp)
+        , stgInfo = Info (StateTransition Eval_LitEApp)
                          (mkDetail_UnusedLocalVariables [f] locals) })
 
 rule10_primitiveLiteralApp _ = Nothing

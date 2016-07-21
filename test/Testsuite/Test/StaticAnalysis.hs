@@ -42,7 +42,7 @@ tests = testGroup "Static analysis"
             , testAppF
             , testCon
             , testPrimop
-            , testLit
+            , testLitE
             ]
         , testShadowGlobal
         ]
@@ -129,8 +129,8 @@ testPrimop = testCase "Primop" test
     actual = freeVariables source
     test = assertFreeVariablesEqual expected actual
 
-testLit :: TestTree
-testLit = testCase "Literal" test
+testLitE :: TestTree
+testLitE = testCase "Literal" test
   where
     source = [expr| 1# |]
     expected =   []
