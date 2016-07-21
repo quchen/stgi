@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE QuasiQuotes           #-}
@@ -85,11 +86,12 @@ instance Arbitrary LambdaForm where
         : [lambdaForm| \(y z) x w -> Con x y z w |]
         : filter isValid (genericShrink lf)
       where
-        isValid (LambdaForm _ Update (_:_) AppF{}) = False
-        isValid (LambdaForm _ Update (_:_) AppC{}) = False
-        isValid (LambdaForm _ _      _     AppP{}) = False
-        isValid (LambdaForm _ _      _     LitE{}) = False
-        isValid _ = True
+        isValid = \case
+            LambdaForm _ Update (_:_) AppF{} -> False
+            LambdaForm _ Update (_:_) AppC{} -> False
+            LambdaForm _ _      _     AppP{} -> False
+            LambdaForm _ _      _     LitE{} -> False
+            _other -> True
 
 instance Arbitrary UpdateFlag where
     arbitrary = allEnums
