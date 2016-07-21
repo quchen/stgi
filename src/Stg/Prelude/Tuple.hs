@@ -2,7 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
--- | Definitions found in Haskell's "Data.Tuple"
+-- | Definitions found in Haskell's "Data.Tuple".
+--
+-- This module should be imported qualified to avoid clashes with standard
+-- Haskell definitions.
 module Stg.Prelude.Tuple (
     fst,
     snd,

@@ -2,7 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
--- | Operations on boxed integers
+-- | Operations on boxed integers.
+--
+-- This module should be imported qualified to avoid clashes with standard
+-- Haskell definitions.
 module Stg.Prelude.Number (
     -- * Arithmetic
     add,

@@ -1,81 +1,19 @@
 {-# LANGUAGE QuasiQuotes #-}
 
+
 -- | Common Haskell functions, translated to STG. Use the 'Monoid' instance
 -- for 'Program' to mix them.
 --
--- This module should be imported qualified, since it heavily conflicts with the
--- standard Haskell "Prelude".
+-- This module should be imported qualified to avoid clashes with standard
+-- Haskell definitions.
 module Stg.Prelude (
-    -- * Maybe
-    maybe,
-    nothing,
-
-    -- * Lists
-    nil,
-    concat2,
-    reverse,
-    foldl,
-    foldl',
-    foldr,
-    iterate,
-    cycle,
-    take,
-    filter,
-    partition,
-    repeat,
-    replicate,
-    sort,
-    naiveSort,
-    map,
-    length,
-    zip,
-    zipWith,
-    forceSpine,
-    equals_List_Int,
-
-    -- * Tuples
-    fst,
-    snd,
-    curry,
-    uncurry,
-    swap,
-    equals_Pair_Int,
-
-    -- * Boolean
-    and2,
-    or2,
-    not,
-    bool,
-    eq_Bool,
-
-    -- * Numbers
-    -- ** Arithmetic
-    add,
-    sub,
-    mul,
-    div,
-    mod,
-    -- ** Comparisons
-    eq_Int,
-    lt_Int,
-    leq_Int,
-    gt_Int,
-    geq_Int,
-    neq_Int,
-
-    -- ** Other
-    min,
-    max,
-
-    -- * Functions
-    seq,
-    id,
-    const,
-    compose,
-    fix,
-
-    -- * Helpers
-    force,
+    module Stg.Prelude,
+    module Stg.Prelude.Bool,
+    module Stg.Prelude.Function,
+    module Stg.Prelude.List,
+    module Stg.Prelude.Maybe,
+    module Stg.Prelude.Number,
+    module Stg.Prelude.Tuple,
 ) where
 
 
@@ -90,6 +28,11 @@ import Stg.Prelude.List
 import Stg.Prelude.Maybe
 import Stg.Prelude.Number
 import Stg.Prelude.Tuple
+
+{-# ANN module "HLint: ignore Use import/export shortcut" #-}
+    -- Haddock doesn't like this trick :-/
+
+
 
 -- | Force a value to normal form and return it.
 --

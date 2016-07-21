@@ -2,7 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
--- | Definitions found in Haskell's "Data.List"
+-- | Definitions found in Haskell's "Data.List".
+--
+-- This module should be imported qualified to avoid clashes with standard
+-- Haskell definitions.
 module Stg.Prelude.List (
     nil,
     concat2,

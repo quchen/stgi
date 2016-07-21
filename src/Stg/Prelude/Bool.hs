@@ -2,6 +2,9 @@
 {-# LANGUAGE QuasiQuotes     #-}
 
 -- | Boolean functions, like in "Data.Bool".
+--
+-- This module should be imported qualified to avoid clashes with standard
+-- Haskell definitions.
 module Stg.Prelude.Bool (
     and2,
     or2,

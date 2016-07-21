@@ -2,7 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
--- | Functions as found in Haskell's "Data.Maybe" module
+-- | Functions as found in Haskell's "Data.Maybe" module.
+--
+-- This module should be imported qualified to avoid clashes with standard
+-- Haskell definitions.
 module Stg.Prelude.Maybe (
     nothing,
     maybe,

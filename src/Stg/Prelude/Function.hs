@@ -1,6 +1,9 @@
 {-# LANGUAGE QuasiQuotes #-}
 
--- | Definitions found in Haskell's "Data.Function"
+-- | Definitions found in Haskell's "Data.Function".
+--
+-- This module should be imported qualified to avoid clashes with standard
+-- Haskell definitions.
 module Stg.Prelude.Function (
     seq,
     id,
