@@ -114,6 +114,7 @@ test-suite testsuite
   main-is:             Main.hs
   other-modules:       Test.Language
                      , Test.Language.Prettyprint
+                     , Test.ExamplePrograms
                      , Test.Machine
                      , Test.Machine.Evaluate
                      , Test.Machine.Evaluate.Errors
