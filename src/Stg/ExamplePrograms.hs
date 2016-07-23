@@ -102,7 +102,7 @@ addTwoNumbers x y = mconcat
     |]]
 
 -- | A program that measures the length of a list.
-calculateLength :: [Integer] -> Program
+calculateLength :: ToStg a => [a] -> Program
 calculateLength xs = mconcat
     [ Stg.length
     , toStg "xs" xs
@@ -337,7 +337,7 @@ fibonacciImproved n = mconcat
     |]]
 
 -- | List concatenation example with the 'concat' definition left out.
-listConcatTemplate :: [[Integer]] -> Program
+listConcatTemplate :: ToStg a => [[a]] -> Program
 listConcatTemplate xss = mconcat
     [ toStg "xss" xss
     , Stg.concat2
@@ -363,7 +363,7 @@ listConcatTemplate xss = mconcat
 -- and store it in the @main@ closure.
 --
 -- This computation is __linear__ in the number of elements of the sublists.
-listConcatRightAssociated :: [[Integer]] -> Program
+listConcatRightAssociated :: ToStg a => [[a]] -> Program
 listConcatRightAssociated xss = mconcat
     [ listConcatTemplate xss
     , Stg.foldr
@@ -378,7 +378,7 @@ listConcatRightAssociated xss = mconcat
 -- and store it in the @main@ closure.
 --
 -- This computation is __quadratic__ in the number of elements of the sublists.
-listConcatLeftAssociated :: [[Integer]] -> Program
+listConcatLeftAssociated :: ToStg a => [[a]] -> Program
 listConcatLeftAssociated xss = mconcat
     [ listConcatTemplate xss
     , Stg.foldl'
