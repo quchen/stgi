@@ -509,9 +509,9 @@ zipWith = [program|
 forceSpine = [program|
     forceSpine = \xs ->
         letrec
-            go = \(go) ys -> case ys of
+            force = \(force) ys -> case ys of
                 Nil        -> Done;
-                Cons _ ys' -> go ys';
+                Cons _ ys' -> force ys';
                 badList    -> Error_forceSpine badList
-        in case go xs of _ -> xs
+        in case force xs of default -> xs
     |]
