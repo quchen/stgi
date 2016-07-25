@@ -49,7 +49,7 @@ options =
                         Nothing            -> Nothing
                 in \opts -> opts { optNumStates = parsed } )
             "int" )
-        "Colourize output"
+        "Number of states to show. Negative counts from the end."
     , Option ['v'] ["verbosity"]
         (OptArg
             (\x ->
