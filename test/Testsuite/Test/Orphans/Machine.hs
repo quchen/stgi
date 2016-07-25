@@ -97,25 +97,24 @@ instance Arbitrary InfoDetail where
 
 instance Arbitrary StateTransition where
     arbitrary = oneof
-        [ arbitrary0 Enter_NonUpdatableClosure
-        , arbitrary0 Enter_PartiallyAppliedUpdate
-        , arbitrary0 Enter_UpdatableClosure
-        , arbitrary0 Eval_AppC
-        , arbitrary0 Eval_AppP
-        , arbitrary0 Eval_Case
-        , arbitrary0 Eval_Case_Primop_Normal
-        , arbitrary0 Eval_Case_Primop_DefaultBound
-        , arbitrary0 Eval_FunctionApplication
-        , arbitrary1 Eval_Let
-        , arbitrary0 Eval_Lit
-        , arbitrary0 Eval_LitApp
-        , arbitrary0 ReturnCon_DefBound
-        , arbitrary0 ReturnCon_DefUnbound
-        , arbitrary0 ReturnCon_Match
-        , arbitrary0 ReturnCon_Update
-        , arbitrary0 ReturnInt_DefBound
-        , arbitrary0 ReturnInt_DefUnbound
-        , arbitrary0 ReturnInt_Match ]
+        [ arbitrary0 Rule1_Eval_FunctionApplication
+        , arbitrary0 Rule2_Enter_NonUpdatableClosure
+        , arbitrary1 Rule3_Eval_Let
+        , arbitrary0 Rule4_Eval_Case
+        , arbitrary0 Rule5_Eval_AppC
+        , arbitrary0 Rule6_ReturnCon_Match
+        , arbitrary0 Rule7_ReturnCon_DefUnbound
+        , arbitrary0 Rule8_ReturnCon_DefBound
+        , arbitrary0 Rule9_Lit
+        , arbitrary0 Rule10_LitApp
+        , arbitrary0 Rule11_ReturnInt_Match
+        , arbitrary0 Rule12_ReturnInt_DefBound
+        , arbitrary0 Rule13_ReturnInt_DefUnbound
+        , arbitrary0 Rule14_Eval_AppP
+        , arbitrary0 Rule15_Enter_UpdatableClosure
+        , arbitrary0 Rule16_ReturnCon_Update
+        , arbitrary0 Rule17a_Enter_PartiallyAppliedUpdate
+        , arbitrary0 Rule1819_Eval_Case_Primop_Shortcut ]
 
 instance Arbitrary StateError where
     arbitrary = oneof

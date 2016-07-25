@@ -73,7 +73,7 @@ rule1_functionApp s@StgState
         { stgCode  = Enter addr
         , stgStack = stack'
         , stgInfo  = Info
-            (StateTransition Eval_FunctionApplication)
+            (StateTransition Rule1_Eval_FunctionApplication)
             ( Detail_FunctionApplication f xs
             : mkDetail_UnusedLocalVariables (f : [ var | AtomVar var <- xs ]) locals )})
 
@@ -109,7 +109,7 @@ rule2_enterNonUpdatable s@StgState
     in Just (s
         { stgCode  = Eval body locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition Enter_NonUpdatableClosure)
+        , stgInfo  = Info (StateTransition Rule2_Enter_NonUpdatableClosure)
                           [Detail_EnterNonUpdatable addr boundLocals] })
 
 rule2_enterNonUpdatable _ = Nothing
@@ -168,7 +168,7 @@ rule3_let s@StgState
                     heapWithPreallocations
             in s { stgCode = Eval expr locals'
                  , stgHeap = heap'
-                 , stgInfo = Info (StateTransition (Eval_Let rec))
+                 , stgInfo = Info (StateTransition (Rule3_Eval_Let rec))
                                   [Detail_EvalLet letVars newAddrs] }
         Failure notInScope ->
             s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] })
@@ -199,7 +199,7 @@ rule4_case s@StgState
     in Just (s
         { stgCode  = Eval expr locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition Eval_Case)
+        , stgInfo  = Info (StateTransition Rule4_Eval_Case)
                           [Detail_EvalCase] })
 
 rule4_case _ = Nothing
@@ -218,7 +218,7 @@ rule5_constructorApp s@StgState
   = Just (s
         { stgCode = ReturnCon con valsXs
         , stgInfo = Info
-            (StateTransition Eval_AppC)
+            (StateTransition Rule5_Eval_AppC)
             (mkDetail_UnusedLocalVariables [ var | AtomVar var <- xs ] locals) })
 
 rule5_constructorApp _ = Nothing
@@ -242,7 +242,7 @@ rule6_algebraicNormalMatch s@StgState
     in Just (s
         { stgCode  = Eval expr locals'
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnCon_Match)
+        , stgInfo  = Info (StateTransition Rule6_ReturnCon_Match)
                           [Detail_ReturnCon_Match con vars] })
 
 rule6_algebraicNormalMatch _ = Nothing
@@ -263,7 +263,7 @@ rule7_algebraicUnboundDefaultMatch s@StgState
   = Just (s
         { stgCode  = Eval expr locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnCon_DefUnbound) [] })
+        , stgInfo  = Info (StateTransition Rule7_ReturnCon_DefUnbound) [] })
 
 rule7_algebraicUnboundDefaultMatch _ = Nothing
 
@@ -291,7 +291,7 @@ rule8_algebraicBoundDefaultMatch s@StgState
     in Just (s { stgCode  = Eval expr locals'
          , stgStack = stack'
          , stgHeap  = heap'
-         , stgInfo  = Info (StateTransition ReturnCon_DefBound)
+         , stgInfo  = Info (StateTransition Rule8_ReturnCon_DefBound)
                            [Detail_ReturnConDefBound v addr] })
 
 rule8_algebraicBoundDefaultMatch _ = Nothing
@@ -305,7 +305,7 @@ rule9_primitiveLiteralEval :: StgState -> Maybe StgState
 rule9_primitiveLiteralEval s@StgState { stgCode = Eval (Lit (Literal k)) _locals}
   = Just (s
         { stgCode = ReturnInt k
-        , stgInfo = Info (StateTransition Eval_Lit) [] })
+        , stgInfo = Info (StateTransition Rule9_Lit) [] })
 
 rule9_primitiveLiteralEval _ = Nothing
 
@@ -320,7 +320,7 @@ rule10_primitiveLiteralApp s@StgState { stgCode = Eval (AppF f []) locals }
 
   = Just (s
         { stgCode = ReturnInt k
-        , stgInfo = Info (StateTransition Eval_LitApp)
+        , stgInfo = Info (StateTransition Rule10_LitApp)
                          (mkDetail_UnusedLocalVariables [f] locals) })
 
 rule10_primitiveLiteralApp _ = Nothing
@@ -340,7 +340,7 @@ rule11_primitiveNormalMatch s@StgState
   = Just (s
         { stgCode  = Eval expr locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnInt_Match) [] })
+        , stgInfo  = Info (StateTransition Rule11_ReturnInt_Match) [] })
 
 rule11_primitiveNormalMatch _ = Nothing
 
@@ -364,7 +364,7 @@ rule12_primitiveBoundDefaultMatch s@StgState
     in Just ( s
         { stgCode  = Eval expr locals'
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnInt_DefBound)
+        , stgInfo  = Info (StateTransition Rule12_ReturnInt_DefBound)
                           [Detail_ReturnIntDefBound v k] })
 
 rule12_primitiveBoundDefaultMatch _ = Nothing
@@ -384,7 +384,7 @@ rule13_primitiveUnboundDefaultMatch s@StgState
   = Just (s
         { stgCode  = Eval expr locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnInt_DefUnbound) [] })
+        , stgInfo  = Info (StateTransition Rule13_ReturnInt_DefUnbound) [] })
 
 rule13_primitiveUnboundDefaultMatch _ = Nothing
 
@@ -418,7 +418,7 @@ rule14_primop s@StgState
 
   = Just (s
         { stgCode = ReturnInt result
-        , stgInfo = Info (StateTransition Eval_AppP)
+        , stgInfo = Info (StateTransition Rule14_Eval_AppP)
                          (mkDetail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
                                                         locals )})
 
@@ -452,7 +452,7 @@ rule15_enterUpdatable s@StgState
         { stgCode  = Eval body locals
         , stgStack = stack'
         , stgHeap  = heap'
-        , stgInfo  = Info (StateTransition Enter_UpdatableClosure)
+        , stgInfo  = Info (StateTransition Rule15_Enter_UpdatableClosure)
                           [Detail_EnterUpdatable addr] })
 
 rule15_enterUpdatable _ = Nothing
@@ -480,7 +480,7 @@ rule16_missingReturnUpdate s@StgState
         { stgCode  = ReturnCon con ws
         , stgStack = stack'
         , stgHeap  = heap'
-        , stgInfo  = Info (StateTransition ReturnCon_Update)
+        , stgInfo  = Info (StateTransition Rule16_ReturnCon_Update)
                           [Detail_ConUpdate con addr] })
 
 rule16_missingReturnUpdate _ = Nothing
@@ -518,7 +518,7 @@ rule17a_missingArgUpdate s@StgState
         { stgCode  = Enter addrEnter
         , stgStack = argFrames <>> stack'
         , stgHeap  = heap'
-        , stgInfo  = Info (StateTransition Enter_PartiallyAppliedUpdate)
+        , stgInfo  = Info (StateTransition Rule17a_Enter_PartiallyAppliedUpdate)
                           [Detail_PapUpdate addrUpdate] })
 
   where
@@ -565,6 +565,6 @@ rule1819_casePrimopShortcut s@StgState
 
     in Just (
         s { stgCode = Eval expr locals'
-          , stgInfo = Info (StateTransition Eval_Case_Primop_DefaultBound) [] })
+          , stgInfo = Info (StateTransition Rule1819_Eval_Case_Primop_Shortcut) [] })
 
 rule1819_casePrimopShortcut _ = Nothing
