@@ -53,6 +53,10 @@ import           GHC.Generics
 import           Language.Haskell.TH.Lift
 import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
+import Stg.Util
+
+
+
 -- $setup
 -- >>> :set -XQuasiQuotes
 -- >>> import Stg.Parser.QuasiQuoter
@@ -379,13 +383,13 @@ instance Pretty PrimOp where
 
 instance Pretty Var where
     pretty (Var name) = variable style (string (T.unpack name))
-    prettyList = hsep . map pretty
+    prettyList = spaceSep
 
 instance Pretty Atom where
     pretty = \case
         AtomVar var -> pretty var
         AtomLit lit -> pretty lit
-    prettyList = hsep . map pretty
+    prettyList = spaceSep
 
 instance Pretty Constr where
     pretty (Constr name) = constructor style (string (T.unpack name))

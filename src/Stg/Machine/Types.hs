@@ -173,7 +173,7 @@ instance Pretty Value where
     pretty = \case
         Addr addr -> pretty addr
         PrimInt i -> pretty (Literal i)
-    prettyList = hsep . map pretty
+    prettyList = spaceSep
 
 -- | The different code states the STG can be in.
 data Code =
