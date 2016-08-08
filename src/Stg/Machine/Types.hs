@@ -547,7 +547,7 @@ instance NFData MemAddr
 instance NFData Value
 instance NFData Code
 instance (NFData k, NFData v) => NFData (Mapping k v) where
-    rnf (Mapping k v) = rnf k `seq` rnf v `seq` ()
+    rnf (Mapping k v) = rnf (k,v)
 instance NFData Globals
 instance NFData Locals
 instance NFData Info
