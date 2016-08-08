@@ -154,7 +154,7 @@ evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc)
 -- | Check whether a state is terminal.
 terminated :: StgState -> Bool
 terminated StgState{stgInfo = Info info _} = case info of
-    StateTransition{}    -> False
+    StateTransition{}   -> False
     StateInitial{}      -> False
     GarbageCollection{} -> False
     _otherwise          -> True
