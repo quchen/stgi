@@ -296,6 +296,7 @@ data StateTransition =
     | Rule14_Eval_AppP
     | Rule15_Enter_UpdatableClosure
     | Rule16_ReturnCon_Update
+    | Rule17_Enter_PartiallyAppliedUpdate
     | Rule17a_Enter_PartiallyAppliedUpdate
     | Rule1819_Eval_Case_Primop_Shortcut
     deriving (Eq, Ord, Show, Generic)
@@ -316,9 +317,10 @@ instance Pretty StateTransition where
         Rule11_ReturnInt_Match               -> "Primitive constructor return, standard match found"
         Rule12_ReturnInt_DefBound            -> "Primitive constructor return, bound default match"
         Rule13_ReturnInt_DefUnbound          -> "Primitive constructor return, unbound default match"
-        Rule14_Eval_AppP              -> "Primitive function application"
+        Rule14_Eval_AppP                     -> "Primitive function application"
         Rule15_Enter_UpdatableClosure        -> "Enter updatable closure"
-        Rule16_ReturnCon_Update               -> "Update by constructor return"
+        Rule16_ReturnCon_Update              -> "Update by constructor return"
+        Rule17_Enter_PartiallyAppliedUpdate  -> "Enter partially applied closure"
         Rule17a_Enter_PartiallyAppliedUpdate -> "Enter partially applied closure"
         Rule1819_Eval_Case_Primop_Shortcut   -> "Case evaluation of primop: taking a shortcut"
 

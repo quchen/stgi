@@ -21,6 +21,7 @@ module Stg.Machine.Evaluate.ValidTransitions (
     rule14_primop,
     rule15_enterUpdatable,
     rule16_missingReturnUpdate,
+    rule17_missingArgUpdate,
     rule17a_missingArgUpdate,
     rule1819_casePrimopShortcut,
 ) where
@@ -487,11 +488,48 @@ rule16_missingReturnUpdate _ = Nothing
 
 
 
--- | Rule 17a: Enter partially applied closure, update because of missing
+-- | Rule 17: Enter partially applied closure, update because of missing
 -- 'ArgumentFrame'
 --
 -- There are not enough 'ArgFrame's on the stack for a lambda's arguments,
 -- because an update frame blocks access to more.
+--
+-- Although this rule is a bit simpler to understand compared to rule 17a, it is
+-- hard to implement in a real STG compiler, since a new closure has to be made
+-- up during runtime, which means runtime code generation. Rule 17a remedies
+-- this problem. This rule (17) is included for comparison anyway.
+rule17_missingArgUpdate :: StgState -> Maybe StgState
+rule17_missingArgUpdate s@StgState
+    { stgCode  = Enter addrEnter
+    , stgStack = stack
+    , stgHeap  = heap }
+    | Just (HClosure (Closure (LambdaForm vs NoUpdate xs body) wsf))
+        <- H.lookup addrEnter heap
+    , Just (argFrames, UpdateFrame addrUpdate :< stack')
+        <- popArgsUntilUpdate stack
+
+  = let (xs1, xs2) = splitAt (length argFrames) xs
+        updatedClosure =
+            let freeVars = vs <> xs1
+                freeVals = wsf <> argFrames
+            in Closure (LambdaForm freeVars NoUpdate boundVars body) freeVals
+
+        heap' = H.update (Mapping addrUpdate (HClosure updatedClosure)) heap
+
+    in Just (s
+        { stgCode  = Enter addrEnter
+        , stgStack = argFrames <>> stack'
+        , stgHeap  = heap'
+        , stgInfo  = Info (StateTransition Rule17_Enter_PartiallyAppliedUpdate)
+                          [Detail_PapUpdate addrUpdate] })
+
+
+
+-- | Rule 17a: Enter partially applied closure, update because of missing
+-- 'ArgumentFrame'
+--
+-- This is a better version of rule 17, since it does not neccessitate runtime
+-- code generation. All required closures can be precompiled.
 rule17a_missingArgUpdate :: StgState -> Maybe StgState
 rule17a_missingArgUpdate s@StgState
     { stgCode  = Enter addrEnter
@@ -506,11 +544,12 @@ rule17a_missingArgUpdate s@StgState
   = let xs1 = zipWith const xs (F.toList argFrames)
         f = Var ("upd17a_" <> show' steps)
         fxs1 = AppF f (map AtomVar xs1)
-        freeVars = f : xs1
-        freeVals = zipWith const
-            (Addr addrEnter : F.foldMap (\(ArgumentFrame v) -> [v]) argFrames)
-            freeVars
-        updatedClosure = Closure (LambdaForm freeVars NoUpdate [] fxs1) freeVals
+        updatedClosure =
+            let freeVars = f : xs1
+                freeVals = zipWith const
+                    (Addr addrEnter : F.foldMap (\(ArgumentFrame v) -> [v]) argFrames)
+                    freeVars
+            in Closure (LambdaForm freeVars NoUpdate [] fxs1) freeVals
 
         heap' = H.update (Mapping addrUpdate (HClosure updatedClosure)) heap
 
