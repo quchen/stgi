@@ -65,7 +65,7 @@ spaceSep = hsep . map pretty
 
 -- | Prefix all contained documents with a bullet symbol.
 bulletList :: Pretty a => [a] -> Doc
-bulletList = align . vsep . map (("  - " <>) . align) . map pretty
+bulletList = align . vsep . map (("  - " <>) . align . pretty)
 
 -- | Add an \'s' for non-singleton lists.
 pluralS :: IsString string => [a] -> string

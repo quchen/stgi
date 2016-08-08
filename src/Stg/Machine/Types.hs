@@ -280,7 +280,7 @@ instance Pretty InfoShort where
         GarbageCollection -> "Garbage collection"
 
 data StateTransition =
-    | Rule1_Eval_FunctionApplication
+      Rule1_Eval_FunctionApplication
     | Rule2_Enter_NonUpdatableClosure
     | Rule3_Eval_Let Rec
     | Rule4_Eval_Case
