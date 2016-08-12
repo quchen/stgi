@@ -2,9 +2,51 @@
 
 set -euo pipefail
 
-stack test --coverage          --ghc-options -Werror
+function colourize {
+    echo -e "$(tput setaf $1)$2$(tput sgr 0)"
+}
+function vspace {
+    echo -en "\n"
+}
+
+colour=4
+
+
+colourize $colour "╭───────────╮"
+colourize $colour "│ Testsuite │"
+colourize $colour "╰───────────╯"
+stack test --coverage --ghc-options -Werror --test-arguments --hide-successes
+
+
+vspace
+colourize $colour "╭──────────╮"
+colourize $colour "│ Doctests │"
+colourize $colour "╰──────────╯"
 stack test --flag stgi:doctest --ghc-options -Werror
+
+
+vspace
+colourize $colour "╭─────────╮"
+colourize $colour "│ Haddock │"
+colourize $colour "╰─────────╯"
 stack haddock --no-haddock-deps
+
+vspace
+colourize $colour "╭───────╮"
+colourize $colour "│ SDist │"
+colourize $colour "╰───────╯"
 stack sdist
+
+
+vspace
+colourize $colour "╭─────────────╮"
+colourize $colour "│ Cabal check │"
+colourize $colour "╰─────────────╯"
 cabal check
+
+
+vspace
+colourize $colour "╭───────╮"
+colourize $colour "│ HLint │"
+colourize $colour "╰───────╯"
 hlint src test app
