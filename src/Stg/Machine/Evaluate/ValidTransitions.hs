@@ -488,6 +488,16 @@ rule16_missingReturnUpdate _ = Nothing
 
 
 
+-- | Are there enough 'ArgumentFrame's on the stack to fill the args
+-- parameter? If so, return those frames, along with the rest of the stack.
+popArgsUntilUpdate :: Stack StackFrame -> Maybe ([StackFrame], Stack StackFrame)
+popArgsUntilUpdate withArgsStack
+  = let (argFrames, argsPoppedStack) = S.span isArgFrame withArgsStack
+    in Just ( filter isArgFrame (F.toList argFrames)
+            , argsPoppedStack )
+
+
+
 -- | Rule 17: Enter partially applied closure, update because of missing
 -- 'ArgumentFrame'
 --
@@ -511,8 +521,8 @@ rule17_missingArgUpdate s@StgState
   = let (xs1, xs2) = splitAt (length argFrames) xs
         updatedClosure =
             let freeVars = vs <> xs1
-                freeVals = wsf <> argFrames
-            in Closure (LambdaForm freeVars NoUpdate boundVars body) freeVals
+                freeVals = wsf <> [af | ArgumentFrame af <- argFrames]
+            in Closure (LambdaForm freeVars NoUpdate xs2 body) freeVals
 
         heap' = H.update (Mapping addrUpdate (HClosure updatedClosure)) heap
 
@@ -522,6 +532,8 @@ rule17_missingArgUpdate s@StgState
         , stgHeap  = heap'
         , stgInfo  = Info (StateTransition Rule17_Enter_PartiallyAppliedUpdate)
                           [Detail_PapUpdate addrUpdate] })
+
+rule17_missingArgUpdate _ = Nothing
 
 
 
@@ -559,15 +571,6 @@ rule17a_missingArgUpdate s@StgState
         , stgHeap  = heap'
         , stgInfo  = Info (StateTransition Rule17a_Enter_PartiallyAppliedUpdate)
                           [Detail_PapUpdate addrUpdate] })
-
-  where
-
-    -- | Are there enough 'ArgumentFrame's on the stack to fill the args
-    -- parameter? If so, return those frames, along with the rest of the stack.
-    popArgsUntilUpdate withArgsStack
-        = let (argFrames, argsPoppedStack) = S.span isArgFrame withArgsStack
-          in Just ( filter isArgFrame (F.toList argFrames)
-                  , argsPoppedStack )
 
 rule17a_missingArgUpdate _ = Nothing
 
