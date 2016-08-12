@@ -21,6 +21,7 @@ module Stg.Machine.Evaluate.ValidTransitions (
     rule14_primop,
     rule15_enterUpdatable,
     rule16_missingReturnUpdate,
+    rule17_missingArgUpdate,
     rule17a_missingArgUpdate,
     rule1819_casePrimopShortcut,
 ) where
@@ -73,7 +74,7 @@ rule1_functionApp s@StgState
         { stgCode  = Enter addr
         , stgStack = stack'
         , stgInfo  = Info
-            (StateTransition Eval_FunctionApplication)
+            (StateTransition Rule1_Eval_FunctionApplication)
             ( Detail_FunctionApplication f xs
             : mkDetail_UnusedLocalVariables (f : [ var | AtomVar var <- xs ]) locals )})
 
@@ -109,7 +110,7 @@ rule2_enterNonUpdatable s@StgState
     in Just (s
         { stgCode  = Eval body locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition Enter_NonUpdatableClosure)
+        , stgInfo  = Info (StateTransition Rule2_Enter_NonUpdatableClosure)
                           [Detail_EnterNonUpdatable addr boundLocals] })
 
 rule2_enterNonUpdatable _ = Nothing
@@ -168,7 +169,7 @@ rule3_let s@StgState
                     heapWithPreallocations
             in s { stgCode = Eval expr locals'
                  , stgHeap = heap'
-                 , stgInfo = Info (StateTransition (Eval_Let rec))
+                 , stgInfo = Info (StateTransition (Rule3_Eval_Let rec))
                                   [Detail_EvalLet letVars newAddrs] }
         Failure notInScope ->
             s { stgInfo = Info (StateError (VariablesNotInScope notInScope)) [] })
@@ -199,7 +200,7 @@ rule4_case s@StgState
     in Just (s
         { stgCode  = Eval expr locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition Eval_Case)
+        , stgInfo  = Info (StateTransition Rule4_Eval_Case)
                           [Detail_EvalCase] })
 
 rule4_case _ = Nothing
@@ -218,7 +219,7 @@ rule5_constructorApp s@StgState
   = Just (s
         { stgCode = ReturnCon con valsXs
         , stgInfo = Info
-            (StateTransition Eval_AppC)
+            (StateTransition Rule5_Eval_AppC)
             (mkDetail_UnusedLocalVariables [ var | AtomVar var <- xs ] locals) })
 
 rule5_constructorApp _ = Nothing
@@ -242,7 +243,7 @@ rule6_algebraicNormalMatch s@StgState
     in Just (s
         { stgCode  = Eval expr locals'
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnCon_Match)
+        , stgInfo  = Info (StateTransition Rule6_ReturnCon_Match)
                           [Detail_ReturnCon_Match con vars] })
 
 rule6_algebraicNormalMatch _ = Nothing
@@ -263,7 +264,7 @@ rule7_algebraicUnboundDefaultMatch s@StgState
   = Just (s
         { stgCode  = Eval expr locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnCon_DefUnbound) [] })
+        , stgInfo  = Info (StateTransition Rule7_ReturnCon_DefUnbound) [] })
 
 rule7_algebraicUnboundDefaultMatch _ = Nothing
 
@@ -291,7 +292,7 @@ rule8_algebraicBoundDefaultMatch s@StgState
     in Just (s { stgCode  = Eval expr locals'
          , stgStack = stack'
          , stgHeap  = heap'
-         , stgInfo  = Info (StateTransition ReturnCon_DefBound)
+         , stgInfo  = Info (StateTransition Rule8_ReturnCon_DefBound)
                            [Detail_ReturnConDefBound v addr] })
 
 rule8_algebraicBoundDefaultMatch _ = Nothing
@@ -305,7 +306,7 @@ rule9_primitiveLiteralEval :: StgState -> Maybe StgState
 rule9_primitiveLiteralEval s@StgState { stgCode = Eval (LitE (Literal k)) _locals}
   = Just (s
         { stgCode = ReturnInt k
-        , stgInfo = Info (StateTransition Eval_LitE) [] })
+        , stgInfo = Info (StateTransition Rule9_Lit) [] })
 
 rule9_primitiveLiteralEval _ = Nothing
 
@@ -320,7 +321,7 @@ rule10_primitiveLiteralApp s@StgState { stgCode = Eval (AppF f []) locals }
 
   = Just (s
         { stgCode = ReturnInt k
-        , stgInfo = Info (StateTransition Eval_LitEApp)
+        , stgInfo = Info (StateTransition Rule10_LitApp)
                          (mkDetail_UnusedLocalVariables [f] locals) })
 
 rule10_primitiveLiteralApp _ = Nothing
@@ -340,7 +341,7 @@ rule11_primitiveNormalMatch s@StgState
   = Just (s
         { stgCode  = Eval expr locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnInt_Match) [] })
+        , stgInfo  = Info (StateTransition Rule11_ReturnInt_Match) [] })
 
 rule11_primitiveNormalMatch _ = Nothing
 
@@ -364,7 +365,7 @@ rule12_primitiveBoundDefaultMatch s@StgState
     in Just ( s
         { stgCode  = Eval expr locals'
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnInt_DefBound)
+        , stgInfo  = Info (StateTransition Rule12_ReturnInt_DefBound)
                           [Detail_ReturnIntDefBound v k] })
 
 rule12_primitiveBoundDefaultMatch _ = Nothing
@@ -384,7 +385,7 @@ rule13_primitiveUnboundDefaultMatch s@StgState
   = Just (s
         { stgCode  = Eval expr locals
         , stgStack = stack'
-        , stgInfo  = Info (StateTransition ReturnInt_DefUnbound) [] })
+        , stgInfo  = Info (StateTransition Rule13_ReturnInt_DefUnbound) [] })
 
 rule13_primitiveUnboundDefaultMatch _ = Nothing
 
@@ -417,7 +418,7 @@ rule14_primop s@StgState
 
   = Just (s
         { stgCode = ReturnInt result
-        , stgInfo = Info (StateTransition Eval_AppP)
+        , stgInfo = Info (StateTransition Rule14_Eval_AppP)
                          (mkDetail_UnusedLocalVariables [var | AtomVar var <- [x,y]]
                                                         locals )})
 
@@ -451,7 +452,7 @@ rule15_enterUpdatable s@StgState
         { stgCode  = Eval body locals
         , stgStack = stack'
         , stgHeap  = heap'
-        , stgInfo  = Info (StateTransition Enter_UpdatableClosure)
+        , stgInfo  = Info (StateTransition Rule15_Enter_UpdatableClosure)
                           [Detail_EnterUpdatable addr] })
 
 rule15_enterUpdatable _ = Nothing
@@ -479,18 +480,67 @@ rule16_missingReturnUpdate s@StgState
         { stgCode  = ReturnCon con ws
         , stgStack = stack'
         , stgHeap  = heap'
-        , stgInfo  = Info (StateTransition ReturnCon_Update)
+        , stgInfo  = Info (StateTransition Rule16_ReturnCon_Update)
                           [Detail_ConUpdate con addr] })
 
 rule16_missingReturnUpdate _ = Nothing
 
 
 
--- | Rule 17a: Enter partially applied closure, update because of missing
+-- | Are there enough 'ArgumentFrame's on the stack to fill the args
+-- parameter? If so, return those frames, along with the rest of the stack.
+popArgsUntilUpdate :: Stack StackFrame -> Maybe ([StackFrame], Stack StackFrame)
+popArgsUntilUpdate withArgsStack
+  = let (argFrames, argsPoppedStack) = S.span isArgFrame withArgsStack
+    in Just ( filter isArgFrame (F.toList argFrames)
+            , argsPoppedStack )
+
+
+
+-- | Rule 17: Enter partially applied closure, update because of missing
 -- 'ArgumentFrame'
 --
 -- There are not enough 'ArgFrame's on the stack for a lambda's arguments,
 -- because an update frame blocks access to more.
+--
+-- Although this rule is a bit simpler to understand compared to rule 17a, it is
+-- hard to implement in a real STG compiler, since a new closure has to be made
+-- up during runtime, which means runtime code generation. Rule 17a remedies
+-- this problem. This rule (17) is included for comparison anyway.
+rule17_missingArgUpdate :: StgState -> Maybe StgState
+rule17_missingArgUpdate s@StgState
+    { stgCode  = Enter addrEnter
+    , stgStack = stack
+    , stgHeap  = heap }
+    | Just (HClosure (Closure (LambdaForm vs NoUpdate xs body) wsf))
+        <- H.lookup addrEnter heap
+    , Just (argFrames, UpdateFrame addrUpdate :< stack')
+        <- popArgsUntilUpdate stack
+
+  = let (xs1, xs2) = splitAt (length argFrames) xs
+        updatedClosure =
+            let freeVars = vs <> xs1
+                freeVals = wsf <> [af | ArgumentFrame af <- argFrames]
+            in Closure (LambdaForm freeVars NoUpdate xs2 body) freeVals
+
+        heap' = H.update (Mapping addrUpdate (HClosure updatedClosure)) heap
+
+    in Just (s
+        { stgCode  = Enter addrEnter
+        , stgStack = argFrames <>> stack'
+        , stgHeap  = heap'
+        , stgInfo  = Info (StateTransition Rule17_Enter_PartiallyAppliedUpdate)
+                          [Detail_PapUpdate addrUpdate] })
+
+rule17_missingArgUpdate _ = Nothing
+
+
+
+-- | Rule 17a: Enter partially applied closure, update because of missing
+-- 'ArgumentFrame'
+--
+-- This is a better version of rule 17, since it does not neccessitate runtime
+-- code generation. All required closures can be precompiled.
 rule17a_missingArgUpdate :: StgState -> Maybe StgState
 rule17a_missingArgUpdate s@StgState
     { stgCode  = Enter addrEnter
@@ -505,11 +555,12 @@ rule17a_missingArgUpdate s@StgState
   = let xs1 = zipWith const xs (F.toList argFrames)
         f = Var ("upd17a_" <> show' steps)
         fxs1 = AppF f (map AtomVar xs1)
-        freeVars = f : xs1
-        freeVals = zipWith const
-            (Addr addrEnter : F.foldMap (\(ArgumentFrame v) -> [v]) argFrames)
-            freeVars
-        updatedClosure = Closure (LambdaForm freeVars NoUpdate [] fxs1) freeVals
+        updatedClosure =
+            let freeVars = f : xs1
+                freeVals = zipWith const
+                    (Addr addrEnter : F.foldMap (\(ArgumentFrame v) -> [v]) argFrames)
+                    freeVars
+            in Closure (LambdaForm freeVars NoUpdate [] fxs1) freeVals
 
         heap' = H.update (Mapping addrUpdate (HClosure updatedClosure)) heap
 
@@ -517,17 +568,8 @@ rule17a_missingArgUpdate s@StgState
         { stgCode  = Enter addrEnter
         , stgStack = argFrames <>> stack'
         , stgHeap  = heap'
-        , stgInfo  = Info (StateTransition Enter_PartiallyAppliedUpdate)
+        , stgInfo  = Info (StateTransition Rule17a_Enter_PartiallyAppliedUpdate)
                           [Detail_PapUpdate addrUpdate] })
-
-  where
-
-    -- | Are there enough 'ArgumentFrame's on the stack to fill the args
-    -- parameter? If so, return those frames, along with the rest of the stack.
-    popArgsUntilUpdate withArgsStack
-        = let (argFrames, argsPoppedStack) = S.span isArgFrame withArgsStack
-          in Just ( filter isArgFrame (F.toList argFrames)
-                  , argsPoppedStack )
 
 rule17a_missingArgUpdate _ = Nothing
 
@@ -563,6 +605,6 @@ rule1819_casePrimopShortcut s@StgState
 
     in Just (
         s { stgCode = Eval expr locals'
-          , stgInfo = Info (StateTransition Eval_Case_Primop_DefaultBound) [] })
+          , stgInfo = Info (StateTransition Rule1819_Eval_Case_Primop_Shortcut) [] })
 
 rule1819_casePrimopShortcut _ = Nothing

@@ -17,6 +17,7 @@ import Stg.Language
 
 
 
+-- Difference operator, akin to 'Monoid's '<>'.
 (-<>) :: Ord a => Set a -> Set a -> Set a
 (-<>) = S.difference
 infix 6 -<> -- 6 like <>
@@ -34,6 +35,7 @@ instance FreeVariables Program where
 instance FreeVariables Binds where
     freeVariables (Binds bs) = freeVariables bs
 
+-- All the variables bound in a set of bindings.
 bindNames :: Binds -> Set Var
 bindNames (Binds bs) = M.keysSet bs
 

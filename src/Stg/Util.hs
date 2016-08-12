@@ -7,6 +7,7 @@ module Stg.Util (
 
     -- * Prettyprinter extensions
     commaSep,
+    spaceSep,
     bulletList,
     pluralS,
 ) where
@@ -55,12 +56,16 @@ instance Monoid a => Applicative (Validate a) where
     Failure x <*> Success _ = Failure x
 
 -- | @[a,b,c]  ==>  a, b, c@
-commaSep :: [Doc] -> Doc
-commaSep = encloseSep mempty mempty (comma <> space)
+commaSep :: Pretty a => [a] -> Doc
+commaSep = encloseSep mempty mempty (comma <> space) . map pretty
+
+-- | @[a,b,c]  ==>  a b c@
+spaceSep :: Pretty a => [a] -> Doc
+spaceSep = hsep . map pretty
 
 -- | Prefix all contained documents with a bullet symbol.
-bulletList :: [Doc] -> Doc
-bulletList = align . vsep . map (("  - " <>) . align)
+bulletList :: Pretty a => [a] -> Doc
+bulletList = align . vsep . map (("  - " <>) . align . pretty)
 
 -- | Add an \'s' for non-singleton lists.
 pluralS :: IsString string => [a] -> string

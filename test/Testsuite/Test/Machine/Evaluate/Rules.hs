@@ -304,7 +304,7 @@ enterUpdatableClosure = machineStateTest defSpec
         |]
     , allSatisfied =
         [ \state -> case stgInfo state of
-            Info (StateTransition Enter_UpdatableClosure) _ -> True
+            Info (StateTransition Rule15_Enter_UpdatableClosure) _ -> True
             _otherwise -> False ]
     }
 
@@ -318,7 +318,7 @@ algebraicReturnUpdate = machineStateTest defSpec
         |]
     , allSatisfied =
         [ \state -> case stgInfo state of
-            Info (StateTransition ReturnCon_Update) _ -> True
+            Info (StateTransition Rule16_ReturnCon_Update) _ -> True
             _otherwise -> False ]
     }
 
@@ -340,7 +340,7 @@ missingArgsUpdate = machineStateTest defSpec
         |]
     , allSatisfied =
         [ \state -> case stgInfo state of
-            Info (StateTransition Enter_PartiallyAppliedUpdate) _ -> True
+            Info (StateTransition Rule17a_Enter_PartiallyAppliedUpdate) _ -> True
             _otherwise -> False ]
     }
 
