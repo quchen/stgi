@@ -148,9 +148,9 @@ lambdaForm = lf >>= validateLambda <?> "lambda form"
 
     validateLambda = \case
         LambdaForm _ Update [] AppC{} ->
-           fail "Standard constructors are never updatable"
+           fail "Standard constructors are never updatable (\"=>\" instead of \"->\")"
         LambdaForm _ Update (_:_) _ ->
-           fail "Lambda forms with non-empty argument lists are never updatable"
+           fail "Lambda forms with non-empty argument lists are never updatable (\"=>\" instead of \"->\")"
         LambdaForm _ _ _ LitE{} ->
            fail "No lambda form has primitive type like 1#;\
                 \ primitives must be boxed, e.g. Int# (1#)"

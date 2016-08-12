@@ -349,18 +349,18 @@ data StateError =
 instance Pretty StateError where
     pretty = \case
         VariablesNotInScope notInScope -> pretty notInScope <+> "not in scope"
-        UpdatableClosureWithArgs -> "Closures with non-empty argument lists are never updatable"
-        ReturnIntWithEmptyReturnStack -> "ReturnInt state with empty return stack"
-        AlgReturnToPrimAlts -> "Algebraic constructor return to primitive alternatives"
-        PrimReturnToAlgAlts -> "Primitive return to algebraic alternatives"
-        InitialStateCreationFailed -> "Initial state creation failed"
-        EnterBlackhole -> "Entering black hole"
-        UpdateClosureWithPrimitive -> "Update closure with primitive value"
-        NonAlgPrimScrutinee -> "Non-algebraic/primitive case scrutinee"
-        DivisionByZero -> "Division by zero"
-        BadConArity retArity altArity -> "Return" <+> pprArity retArity
-                                     <+> "constructor to" <+> pprArity altArity
-                                     <+> "alternative"
+        UpdatableClosureWithArgs       -> "Closures with non-empty argument lists are never updatable"
+        ReturnIntWithEmptyReturnStack  -> "ReturnInt state with empty return stack"
+        AlgReturnToPrimAlts            -> "Algebraic constructor return to primitive alternatives"
+        PrimReturnToAlgAlts            -> "Primitive return to algebraic alternatives"
+        InitialStateCreationFailed     -> "Initial state creation failed"
+        EnterBlackhole                 -> "Entering black hole"
+        UpdateClosureWithPrimitive     -> "Update closure with primitive value"
+        NonAlgPrimScrutinee            -> "Non-algebraic/primitive case scrutinee"
+        DivisionByZero                 -> "Division by zero"
+        BadConArity retArity altArity  -> "Return" <+> pprArity retArity
+                                      <+> "constructor to" <+> pprArity altArity
+                                      <+> "alternative"
 
 
 
