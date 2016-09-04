@@ -141,8 +141,8 @@ data LambdaType =
 
 instance Pretty LambdaType where
     pretty = \case
-        LambdaCon -> "Con"
-        LambdaFun -> "Fun"
+        LambdaCon   -> "Con"
+        LambdaFun   -> "Fun"
         LambdaThunk -> "Thunk"
 
 -- | Classify the type of a lambda form based on its shape.

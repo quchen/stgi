@@ -23,7 +23,8 @@ module Stg.Machine (
 ) where
 
 
-import           Data.List.NonEmpty (NonEmpty (..))
+
+import           Data.List.NonEmpty (NonEmpty (..), (<|))
 import qualified Data.List.NonEmpty as NE
 
 import Stg.Language
@@ -71,6 +72,7 @@ initialState mainVar (Program binds) = initializedState
             { stgInfo = Info (StateError InitialStateCreationFailed) [] }
 
 
+
 -- | Predicate to decide whether the machine should halt.
 data RunForSteps =
       RunIndefinitely -- ^ Do not terminate based on the number of steps
@@ -98,6 +100,9 @@ evalUntil
 evalUntil runForSteps halt performGc state
     = NE.last (evalsUntil runForSteps halt performGc state)
 
+data AttemptGc = GcPossible | SkipGc
+    deriving (Eq, Ord, Show)
+
 -- | Evaluate the STG, and record all intermediate states.
 --
 -- * Stop when a predicate holds.
@@ -114,42 +119,48 @@ evalsUntil
     -> StgState          -- ^ Initial state
     -> NonEmpty StgState -- ^ Initial state plus intermediate states
 evalsUntil runForSteps (HaltIf haltIf) (PerformGc performGc)
-  = NE.fromList . go False
+  = step SkipGc
   where
-    terminate = (:[])
-    go attemptGc = \case
+    terminateWith :: a -> NonEmpty a
+    terminateWith = pure
 
-        state@StgState{ stgSteps = steps }
-            | RunForMaxSteps maxSteps <- runForSteps
-            , steps >= maxSteps
-            -> terminate (state { stgInfo = Info MaxStepsExceeded [] })
+    isInitialOrTransition state = case stgInfo state of
+        Info StateTransition{} _ -> True
+        Info StateInitial      _ -> True
+        _otherwise               -> False
 
-        state | haltIf state
-            -> terminate (state { stgInfo = Info HaltedByPredicate [] })
+    -- Max steps exceeded
+    step _ state
+        | RunForMaxSteps maxSteps <- runForSteps
+        , stgSteps state >= maxSteps
+        = terminateWith (state { stgInfo = Info MaxStepsExceeded [] })
 
-        state@StgState{ stgInfo = Info StateTransition{} _ }
-            | attemptGc
-            , Just algorithm <- performGc state
-            -> case garbageCollect algorithm state of
-                stateGc@StgState{stgInfo = Info GarbageCollection _} ->
-                    state : stateGc : go False (evalStep stateGc)
-                _otherwise -> state : go True (evalStep state)
-            | otherwise -> state : go True (evalStep state)
+    -- Halting predicate triggered
+    step _ state
+        | haltIf state
+        = terminateWith (state { stgInfo = Info HaltedByPredicate [] })
 
-        state@StgState{ stgInfo = Info StateInitial _ }
-            | attemptGc
-            , Just algorithm <- performGc state
-            -> case garbageCollect algorithm state of
-                stateGc@StgState{stgInfo = Info GarbageCollection _} ->
-                    state : stateGc : go False (evalStep stateGc)
-                _otherwise -> state : go True (evalStep state)
-            | otherwise -> state : go True (evalStep state)
+    -- Normal state transition, attempt GC
+    step gcPossible state
+        | isInitialOrTransition state
+        , gcPossible == GcPossible
+        , Just gcAlgorithm <- performGc state
+        = case garbageCollect gcAlgorithm state of
+            stateGc@StgState{stgInfo = Info GarbageCollection _} ->
+                state <| stateGc <| step SkipGc (evalStep stateGc)
+            _otherwise -> state <| step GcPossible (evalStep state)
 
-        state@StgState{ stgInfo = Info GarbageCollection _ }
-            -> state : go False (evalStep state)
+    -- Normal state transition, no GC
+    step _ state
+        | isInitialOrTransition state
+        = state <| step GcPossible (evalStep state)
 
-        state
-            -> terminate state
+    -- Garbage collection triggered last time
+    step _ state@StgState{ stgInfo = Info GarbageCollection _ }
+        = state <| step SkipGc (evalStep state)
+
+    -- Anything else: terminateWith in the current state
+    step _ state = terminateWith state
 
 -- | Check whether a state is terminal.
 terminated :: StgState -> Bool
