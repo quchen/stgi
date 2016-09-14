@@ -105,7 +105,7 @@ style = StgStateStyle
     , stackFrameType = bold
     }
 
--- Local re-definition to avoid cyclic import with the Heap module
+-- | Local re-definition to avoid cyclic import with the Heap module
 heapSize :: Heap -> Int
 heapSize (Heap h) = length h
 

@@ -71,4 +71,4 @@ forEachPop (_:xs) (s :< stack) = case forEachPop xs stack of
 -- | Like 'Prelude.span' for lists.
 span :: (a -> Bool) -> Stack a -> (Stack a, Stack a)
 span p stack = let (a,b) = P.span p (toList stack)
-                in (OL.fromList a, OL.fromList b)
+               in (OL.fromList a, OL.fromList b)
