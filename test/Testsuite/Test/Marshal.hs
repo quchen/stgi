@@ -61,7 +61,7 @@ roundTripTest
     -> TestTree
 roundTripTest spec = testProperty (T.unpack (testName spec)) test
   where
-    test :: (Arbitrary a, ToStg a, FromStg a, Show a, Eq a) => a -> Property
+    test :: a -> Property
     test payload = counterexample (T.unpack (prettyprint finalState))
                                   (expected === Right payload)
       where

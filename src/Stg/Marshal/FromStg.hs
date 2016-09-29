@@ -70,8 +70,7 @@ data FromStgError =
 -- Slighly bent version of 'Env.globalVal' to fit the types in this module
 -- better.
 globalVal
-    :: FromStg value
-    => StgState
+    :: StgState
     -> (Value -> Either FromStgError value) -- ^ What to do with the value if found
     -> Var                                  -- ^ Name of the global value to inspect
     -> Either FromStgError value
@@ -101,8 +100,7 @@ atomVal stgState locals var = case Env.val locals (stgGlobals stgState) var of
 -- | Inspect whether a closure at a certain memory address matches the desired
 -- criteria.
 inspect
-    :: FromStg value
-    => StgState
+    :: StgState
     -> (Closure -> [Either (Maybe FromStgError) value])
         -- ^ List of possible matches, e.g. Nil and Cons in the list case.
         -- See e.g. @matchCon2@ in order to implement these matchers.
@@ -120,7 +118,6 @@ inspect stgState inspectClosure addr = case H.lookup addr (stgHeap stgState) of
     firstMatch (Left Nothing : rest) = firstMatch rest
     firstMatch (Left (Just err) : _) = Left err
     firstMatch []                    = Left NoConstructorMatch
-    firstMatch _ghc7_10_3 = error "Default to silence GHC's broken exhaustiveness checker"
 
 instance FromStg () where
     fromStgAddr stgState = inspect stgState (\closure ->
