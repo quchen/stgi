@@ -80,7 +80,8 @@ library
                      , th-lift          >= 0.7
                      , transformers     >= 0.4
                      , trifecta         >= 1.5
-  other-extensions:    DeriveGeneric
+  other-extensions:    CPP
+                     , DeriveGeneric
                      , FlexibleInstances
                      , GeneralizedNewtypeDeriving
                      , LambdaCase

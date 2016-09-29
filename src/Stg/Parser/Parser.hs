@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedLists            #-}
@@ -70,7 +71,12 @@ import Stg.Language
 parse :: StgParser ast -> Text -> Either Doc ast
 parse (StgParser p) input = case parseString (whiteSpace *> p <* eof) mempty (T.unpack input) of
     Success a -> Right a
-    Failure e -> Left e
+#if MIN_VERSION_trifecta(1,6,0)
+    Failure ErrInfo{ _errDoc = e }
+#else
+    Failure e
+#endif
+        -> Left e
 
 -- | Skip a certain token. Useful to consume, but not otherwise use, certain
 -- tokens.
@@ -148,15 +154,13 @@ lambdaForm = lf >>= validateLambda <?> "lambda form"
 
     validateLambda = \case
         LambdaForm _ Update [] AppC{} ->
-           fail "Standard constructors are never updatable (\"=>\" instead of \"->\")"
+            fail "Standard constructors are never updatable (\"=>\" instead of \"->\")"
         LambdaForm _ Update (_:_) _ ->
-           fail "Lambda forms with non-empty argument lists are never updatable (\"=>\" instead of \"->\")"
+            fail "Lambda forms with non-empty argument lists are never updatable (\"=>\" instead of \"->\")"
         LambdaForm _ _ _ LitE{} ->
-           fail "No lambda form has primitive type like 1#;\
-                \ primitives must be boxed, e.g. Int# (1#)"
+            fail "No lambda form has primitive type like 1#; primitives must be boxed, e.g. Int# (1#)"
         LambdaForm _ _ _ AppP{} ->
-           fail "No lambda form has primitive type like \"+# a b\";\
-                \ only \"case\" can evaluate them"
+            fail "No lambda form has primitive type like \"+# a b\"; only \"case\" can evaluate them"
         x -> pure x
 
     -- Parse an update flag arrow. @->@ means no update, @=>@ update.
