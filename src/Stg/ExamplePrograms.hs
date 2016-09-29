@@ -304,7 +304,7 @@ fibonacciNaive n = mconcat
         in fib n
     |]]
 
--- | Calculate the n-th Fibonacci number using the more effective formula
+-- | Calculate the n-th Fibonacci number using the more efficient formula
 --
 -- @
 -- fib = fib' 0 1
@@ -314,8 +314,8 @@ fibonacciNaive n = mconcat
 -- @
 --
 -- This implementation is a lot faster than the naive exponential
--- implementation. For examle, calculating the 10th Fibonacci number (55) takes
--- only 490 steps, compared to the many thousand of the exponential version.
+-- implementation. For example, calculating the 10th Fibonacci number (55) takes
+-- only 490 steps, compared to the many thousands of the exponential version.
 fibonacciImproved :: Integer -> Program
 fibonacciImproved n = mconcat
     [ Stg.add
@@ -441,12 +441,12 @@ repeatNaive = repeatSharing <> [program|
 --            in repeatX
 -- @
 --
--- This program does only a total of three heap allocations before continously
+-- This program does only a total of three heap allocations before continuously
 -- running without interruption: one for the @repeated@ value, one for the
--- self-referencing cons cell, and one beacuse of how 'Stg.forceSpine' works.
+-- self-referencing cons cell, and one because of how 'Stg.forceSpine' works.
 --
 -- Note how much smaller the cycles between the traversal of two neighbouring
--- list cells is!
+-- list cells are!
 repeatSharing :: Program
 repeatSharing = mconcat
     [ Stg.forceSpine
