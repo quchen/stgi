@@ -16,20 +16,19 @@ addons:
 # The different configurations we want to test. You could also do things like
 # change flags or use --stack-yaml to point to a different file.
 env:
-    - ARGS=""
-    - ARGS="--resolver lts-3 --stack-yaml stack-lts3.yaml"
-    - ARGS="--resolver lts-4"
-    - ARGS="--resolver lts-5"
-    - ARGS="--resolver lts-6"
-    - ARGS="--resolver lts-7"
-    - ARGS="--resolver lts"
-    - ARGS="--resolver nightly"
-    # - ARGS="--resolver nightly"
+    - STACK_ARGS=""                                              GHC_ARGS=""
+    - STACK_ARGS="--resolver lts-3 --stack-yaml stack-lts3.yaml" GHC_ARGS=""
+    - STACK_ARGS="--resolver lts-4"                              GHC_ARGS=""
+    - STACK_ARGS="--resolver lts-5"                              GHC_ARGS=""
+    - STACK_ARGS="--resolver lts-6"                              GHC_ARGS=""
+    - STACK_ARGS="--resolver lts-7"                              GHC_ARGS="-Werror"
+    - STACK_ARGS="--resolver lts"                                GHC_ARGS=""
+    - STACK_ARGS="--resolver nightly"                            GHC_ARGS=""
 
 matrix:
     fast_finish: true
     allow_failures:
-        - env: ARGS="--resolver nightly"
+        - env: STACK_ARGS="--resolver nightly"
 
 
 before_install:
@@ -38,15 +37,15 @@ before_install:
     - export PATH=$HOME/.local/bin:$PATH
     - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 
-    - stack $ARGS --no-terminal setup
-    - stack $ARGS --no-terminal install hlint hscolour cabal-install
+    - stack $STACK_ARGS --no-terminal setup
+    - stack $STACK_ARGS --no-terminal install hlint hscolour cabal-install
 
 script:
-    - travis_wait stack $ARGS --no-terminal test --coverage --ghc-options -Werror
-    - travis_wait stack $ARGS --no-terminal test --flag stgi:doctest --ghc-options -Werror
-    - stack $ARGS --no-terminal haddock --no-haddock-deps
+    - travis_wait stack $STACK_ARGS --no-terminal test --coverage --ghc-options $GHC_ARGS
+    - travis_wait stack $STACK_ARGS --no-terminal test --flag stgi:doctest --ghc-options $GHC_ARGS
+    - stack $STACK_ARGS --no-terminal haddock --no-haddock-deps
 
-    - stack $ARGS --no-terminal sdist
+    - stack $STACK_ARGS --no-terminal sdist
     - cabal check
     - hlint src test app
 
