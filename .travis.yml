@@ -21,6 +21,7 @@ env:
     - ARGS="--resolver lts-4"
     - ARGS="--resolver lts-5"
     - ARGS="--resolver lts-6"
+    - ARGS="--resolver lts-7"
     - ARGS="--resolver lts"
     - ARGS="--resolver nightly"
     # - ARGS="--resolver nightly"
