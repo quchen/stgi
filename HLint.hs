@@ -35,4 +35,4 @@ error "Avoid return" =
     where note = "return is obsolete as of GHC 7.10"
 
 -- Avoid operator soup
-error "Use parentheses instead of ($)" = f $ x ==> ()
+error "Use parentheses instead of ($)" = f $ x ==> f (x)
