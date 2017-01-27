@@ -46,6 +46,7 @@ import qualified Data.List.NonEmpty           as NonEmpty
 import           Data.Map                     (Map)
 import qualified Data.Map                     as M
 import           Data.Monoid                  hiding (Alt)
+import qualified Data.Semigroup               as Semigroup
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           GHC.Exts
@@ -103,7 +104,10 @@ newtype Program = Program Binds
 -- @
 instance Monoid Program where
     mempty = Program mempty
-    Program x `mappend` Program y = Program (x <> y)
+    mappend = (Semigroup.<>)
+
+instance Semigroup.Semigroup Program where
+    Program x <> Program y = Program (x <> y)
 
 -- | Bindings are collections of lambda forms, indexed over variables.
 --
@@ -114,7 +118,10 @@ newtype Binds = Binds (Map Var LambdaForm)
 -- | __Right-biased__ union. See 'Monoid' 'Program' for further information.
 instance Monoid Binds where
     mempty = Binds mempty
-    Binds x `mappend` Binds y = Binds (y <> x)
+    mappend = (Semigroup.<>)
+
+instance Semigroup.Semigroup Binds where
+    Binds x <> Binds y = Binds (x <> y)
 
 instance Show Binds where
     show (Binds binds) = "(Binds " <> show (M.assocs binds) <> ")"

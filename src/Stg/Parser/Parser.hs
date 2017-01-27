@@ -71,12 +71,7 @@ import Stg.Language
 parse :: StgParser ast -> Text -> Either Doc ast
 parse (StgParser p) input = case parseString (whiteSpace *> p <* eof) mempty (T.unpack input) of
     Success a -> Right a
-#if MIN_VERSION_trifecta(1,6,0)
-    Failure ErrInfo{ _errDoc = e }
-#else
-    Failure e
-#endif
-        -> Left e
+    Failure ErrInfo{ _errDoc = e } -> Left e
 
 -- | Skip a certain token. Useful to consume, but not otherwise use, certain
 -- tokens.

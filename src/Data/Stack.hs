@@ -15,11 +15,11 @@ module Data.Stack (
 import           Control.DeepSeq
 import           Data.Foldable                as F
 import           Data.Monoid
+import qualified Data.Semigroup               as Semigroup
 import qualified GHC.Exts                     as OL
 import           Prelude                      hiding (span)
 import qualified Prelude                      as P
 import           Text.PrettyPrint.ANSI.Leijen hiding (list, (<>))
-
 
 
 -- | The usual stack data structure.
@@ -42,8 +42,11 @@ instance Foldable Stack where
 
 instance Monoid (Stack a) where
     mempty = Empty
-    Empty `mappend` s = s
-    (x :< xs) `mappend` ys = x :< (xs <> ys)
+    mappend = (Semigroup.<>)
+
+instance Semigroup.Semigroup (Stack a) where
+    Empty <> s = s
+    (x :< xs) <> ys = x :< (xs <> ys)
 
 instance OL.IsList (Stack a) where
     type Item (Stack a) = a

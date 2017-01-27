@@ -37,6 +37,7 @@ import           Data.Foldable
 import           Data.Map                     (Map)
 import qualified Data.Map                     as M
 import           Data.Monoid
+import qualified Data.Semigroup               as Semigroup
 import           Data.Set                     (Set)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
@@ -215,7 +216,7 @@ prettyMap m = (align . vsep) [ pretty (Mapping k v) | (k,v) <- M.assocs m ]
 -- | The global environment consists of the mapping from top-level definitions
 -- to their respective values.
 newtype Globals = Globals (Map Var Value)
-    deriving (Eq, Ord, Show, Monoid, Generic)
+    deriving (Eq, Ord, Show, Semigroup.Semigroup, Monoid, Generic)
 
 instance Pretty Globals where
     pretty (Globals globals) = prettyMap globals
@@ -223,7 +224,7 @@ instance Pretty Globals where
 -- | The global environment consists if the mapping from local definitions
 -- to their respective values.
 newtype Locals = Locals (Map Var Value)
-    deriving (Eq, Ord, Show, Monoid, Generic)
+    deriving (Eq, Ord, Show, Semigroup.Semigroup, Monoid, Generic)
 
 instance Pretty Locals where
     pretty (Locals locals) = prettyMap locals
@@ -326,7 +327,7 @@ instance Pretty StateTransition where
 
 -- | Type safety wrapper to report variables that were not in scope.
 newtype NotInScope = NotInScope [Var]
-    deriving (Eq, Ord, Show, Generic, Monoid)
+    deriving (Eq, Ord, Show, Generic, Semigroup.Semigroup, Monoid)
 
 instance Pretty NotInScope where
     pretty (NotInScope vars) = commaSep (map pretty vars)
@@ -512,7 +513,7 @@ instance Pretty Closure where
 
 -- | The heap stores closures addressed by memory location.
 newtype Heap = Heap (Map MemAddr HeapObject)
-    deriving (Eq, Ord, Show, Generic, Monoid)
+    deriving (Eq, Ord, Show, Generic, Semigroup.Semigroup, Monoid)
 
 instance Pretty Heap where
     pretty (Heap heap) = prettyMap heap

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+set -v
+
+stack --no-terminal \
+    test --coverage \
+    --test-arguments "--quickcheck-tests 128" \
+    --ghc-options "$GHC_ARGS"
