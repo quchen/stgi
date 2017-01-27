@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+set -v
+
+stack --no-terminal \
+    test \
+    --flag stgi:doctest \
+    --ghc-options "$GHC_ARGS"

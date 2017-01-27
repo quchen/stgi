@@ -46,7 +46,6 @@ testOptions = do
     runnerOptions numThreads = option (NumThreads numThreads)
     quickcheckOptions =
         mconcat [ option (QuickCheckShowReplay False)
-                , option (QuickCheckTests 1000)
                 , option (QuickCheckMaxSize 5) ]
 
 tests :: TestTree

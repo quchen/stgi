@@ -13,41 +13,21 @@ addons:
         packages:
             - libgmp-dev
 
-# The different configurations we want to test. You could also do things like
-# change flags or use --stack-yaml to point to a different file.
-env:
-    - STACK_ARGS=""                                              GHC_ARGS=""
-    - STACK_ARGS="--resolver lts-3 --stack-yaml stack-lts3.yaml" GHC_ARGS=""
-    - STACK_ARGS="--resolver lts-4"                              GHC_ARGS=""
-    - STACK_ARGS="--resolver lts-5"                              GHC_ARGS=""
-    - STACK_ARGS="--resolver lts-6"                              GHC_ARGS=""
-    - STACK_ARGS="--resolver lts-7"                              GHC_ARGS="-Werror"
-    - STACK_ARGS="--resolver lts"                                GHC_ARGS=""
-    - STACK_ARGS="--resolver nightly"                            GHC_ARGS=""
-
-matrix:
-    fast_finish: true
-    allow_failures:
-        - env: STACK_ARGS="--resolver nightly"
-
-
 before_install:
     # Download and unpack the stack executable
     - mkdir -p ~/.local/bin
-    - export PATH=$HOME/.local/bin:$PATH
-    - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-
-    - stack $STACK_ARGS --no-terminal setup
-    - stack $STACK_ARGS --no-terminal install hlint hscolour cabal-install
+    - export PATH="$HOME/.local/bin:$PATH"
+    - export GHC_ARGS="-Wcompat -Werror"
+    - travis_retry ./.travis-scripts/setup
 
 script:
-    - travis_wait stack $STACK_ARGS --no-terminal test --coverage --ghc-options $GHC_ARGS
-    - travis_wait stack $STACK_ARGS --no-terminal test --flag stgi:doctest --ghc-options $GHC_ARGS
-    - stack $STACK_ARGS --no-terminal haddock --no-haddock-deps
+    - travis_wait ./.travis-scripts/test-testsuite
+    - travis_wait ./.travis-scripts/test-doctest
 
-    - stack $STACK_ARGS --no-terminal sdist
-    - cabal check
-    - hlint src test app
+    - travis_wait ./.travis-scripts/run-haddock
+    - travis_wait ./.travis-scripts/generate-sdist
+    - travis_wait ./.travis-scripts/test-cabal-check
+    - travis_wait ./.travis-scripts/test-hlint
 
 # Caching so the next build will be fast too.
 cache:
