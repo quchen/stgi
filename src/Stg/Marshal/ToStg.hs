@@ -153,8 +153,8 @@ instance ToStg a => ToStg [a] where
     toStgWithGlobals name dataValues = do
         tell Stg.nil
         case dataValues of
-            (x:xs) -> do
-                (Just inExpression, letBindings)
+            x:xs -> do
+                (inExpression, letBindings)
                     <- mkListBinds Nothing (NonEmpty.zip [0..] (x :| xs))
                 let rec = if null xs then NonRecursive else Recursive
                 pure (Program (Binds [(name, LambdaForm [] Update []
@@ -171,7 +171,7 @@ instance ToStg a => ToStg [a] where
                           -- set, and if yes to what? Used to avoid allocating
                           -- the first cons cell, avoiding an immediate GC.
             -> NonEmpty (Int, value) -- ^ Index and value of the cells
-            -> Writer Program (Maybe Expr, Binds)
+            -> Writer Program (Expr, Binds)
         mkListBinds inExpression ((i, value) :| rest) = do
 
             let valueVar = Var (genPrefix <> show' i <> "_value")
@@ -190,10 +190,10 @@ instance ToStg a => ToStg [a] where
                             consExpr )
                     consExpr = AppC (Constr "Cons") (map AtomVar [valueVar, nextConsVar])
 
-                    inExpression' = inExpression <|> Just consExpr
+                    Just inExpression' = inExpression <|> Just consExpr
 
                 recursiveBinds <- case rest of
-                    (i',v') : isvs -> fmap snd (mkListBinds inExpression' ((i',v') :| isvs))
+                    (i',v') : isvs -> fmap snd (mkListBinds (Just inExpression') ((i',v') :| isvs))
                     _nil           -> pure mempty
 
                 pure (inExpression', consBind <> recursiveBinds)
