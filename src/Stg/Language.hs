@@ -168,7 +168,7 @@ data UpdateFlag =
 
 -- | Distinguishes @let@ from @letrec@.
 data Rec =
-      NonRecursive -- ^ Binings have no access to each other
+      NonRecursive -- ^ Bindings have no access to each other
     | Recursive -- ^ Bindings can be given to each other as free variables
     deriving (Eq, Ord, Show, Generic, Enum, Bounded)
 
