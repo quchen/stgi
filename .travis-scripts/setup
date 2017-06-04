@@ -7,4 +7,4 @@ curl -L https://www.stackage.org/stack/linux-x86_64 \
     | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 
 stack --no-terminal setup
-stack --no-terminal install hlint hscolour cabal-install
+stack --no-terminal install hlint-2.0.8 hscolour cabal-install

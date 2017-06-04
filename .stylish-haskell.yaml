@@ -19,9 +19,9 @@ steps:
   # and only applies to statements where each element occupies a single
   # line.
   - simple_align:
-      cases: true
-      top_level_patterns: true
-      records: true
+      cases: false
+      top_level_patterns: false
+      records: false
 
   # Import cleanup
   - imports:
@@ -41,7 +41,7 @@ steps:
       # Default: global.
       align: group
 
-      # Folowing options affect only import list alignment.
+      # The following options affect only import list alignment.
       #
       # List align has following options:
       #
@@ -75,7 +75,7 @@ steps:
       #   short enough to fit to single line. Otherwise it'll be multiline.
       #
       # - multiline: One line per import list entry.
-      #   Type with contructor list acts like single import.
+      #   Type with constructor list acts like single import.
       #
       #   > import qualified Data.Map as M
       #   >     ( empty
@@ -109,7 +109,7 @@ steps:
       #   Useful for 'file' and 'group' align settings.
       list_padding: 4
 
-      # Separate lists option affects formating of import list for type
+      # Separate lists option affects formatting of import list for type
       # or class. The only difference is single space between type and list
       # of constructors, selectors and class functions.
       #
@@ -142,7 +142,7 @@ steps:
 
       # Align affects alignment of closing pragma brackets.
       #
-      # - true: Brackets are aligned in same collumn.
+      # - true: Brackets are aligned in same column.
       #
       # - false: Brackets are not aligned together. There is only one space
       #   between actual import and closing bracket.

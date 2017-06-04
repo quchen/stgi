@@ -23,7 +23,7 @@ copyright:           David Luposchainsky <dluposchainsky (λ) gmail (dot) com>
 category:            Development
 build-type:          Simple
 extra-source-files:  .stylish-haskell.yaml
-                   , HLint.hs
+                   , .hlint.yaml
                    , LICENSE.md
                    , README.md
                    , screenshot.png

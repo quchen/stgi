@@ -1,0 +1,50 @@
+# Avoiding lambdas is not always a good idea if you keep in mind that GHC's
+# inliner will only consider fully applied functions.
+- ignore: {name: "Avoid lambda"}
+
+# Naming can be useful
+- ignore: {name: "Eta reduce"}
+- ignore: {name: "Redundant lambda"}
+- ignore: {name: "Use const"}
+
+# Sometimes, it can make code more readable if underscores are allowed as a
+# form of a "large" separator. For example, one might give all tests the prefix
+# "test_", followed by a camel-case test name.
+- ignore: {name: "Use camelCase"}
+
+# Sometimes a »case« can be clearer
+- ignore: {name: "Use fromMaybe"}
+- ignore: {name: "Use if"}
+
+# Obfuscation much?
+- ignore: {name: "Use uncurry"}
+- ignore: {name: "Use first"}
+- ignore: {name: "Use second"}
+
+# I don’t like $
+- error:
+    name: Use parentheses instead of $
+    lhs: f $ x
+    rhs: f (x)
+
+# AMP fallout
+- error:
+    name: generalize mapM
+    lhs: mapM
+    rhs: traverse
+- error:
+    name: generalize mapM_
+    lhs: mapM_
+    rhs: traverse_
+- error:
+    name: generalize forM
+    lhs: forM
+    rhs: for
+- error:
+    name: generalize forM_
+    lhs: forM_
+    rhs: for_
+- error:
+    name: Avoid return
+    lhs: return
+    rhs: pure
