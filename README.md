@@ -308,7 +308,7 @@ value be required again. This is the mechanism that is key to the lazy
 evaluation model the STG implements. For example, evaluating `main` in
 
 ```haskell
-add = <add two boxed ints>
+add2 = … -- <add two boxed ints>
 one = \ -> Int# 1#;
 two = \ -> Int# 2#;
 main = \ => add2 one two
