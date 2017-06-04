@@ -79,7 +79,7 @@ library
                      , text             >= 1.2
                      , th-lift          >= 0.7
                      , transformers     >= 0.4
-                     , trifecta         >= 1.5
+                     , trifecta         >= 1.6
   other-extensions:    CPP
                      , DeriveGeneric
                      , FlexibleInstances
