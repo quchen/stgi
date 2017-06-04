@@ -22,6 +22,7 @@ import qualified Prelude                      as P
 import           Text.PrettyPrint.ANSI.Leijen hiding (list, (<>))
 
 
+
 -- | The usual stack data structure.
 data Stack a = Empty | a :< Stack a
     deriving (Eq, Ord)
@@ -33,11 +34,11 @@ instance Pretty a => Pretty (Stack a) where
     pretty = prettyList . toList
 
 instance Functor Stack where
-    fmap _ Empty = Empty
+    fmap _ Empty     = Empty
     fmap f (x :< xs) = f x :< fmap f xs
 
 instance Foldable Stack where
-    foldMap _ Empty = mempty
+    foldMap _ Empty     = mempty
     foldMap f (x :< xs) = f x <> foldMap f xs
 
 instance Monoid (Stack a) where
@@ -54,7 +55,7 @@ instance OL.IsList (Stack a) where
     toList = F.toList
 
 instance NFData a => NFData (Stack a) where
-    rnf Empty = ()
+    rnf Empty     = ()
     rnf (x :< xs) = rnf x `seq` rnf xs
 
 -- | Push a list of items onto the stack. The first item will be at the
@@ -68,7 +69,7 @@ forEachPop :: [x] -> Stack a -> Maybe ([a], Stack a)
 forEachPop (_:_) Empty = Nothing
 forEachPop [] stack = Just ([], stack)
 forEachPop (_:xs) (s :< stack) = case forEachPop xs stack of
-    Nothing -> Nothing
+    Nothing           -> Nothing
     Just (pops, rest) -> Just (s:pops, rest)
 
 -- | Like 'Prelude.span' for lists.
