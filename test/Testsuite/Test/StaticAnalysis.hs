@@ -9,10 +9,9 @@ module Test.StaticAnalysis (tests) where
 
 
 import           Data.Foldable
-import           Data.Monoid
-import           Data.Set                     (Set)
-import qualified Data.Text                    as T
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
+import           Data.Set                  (Set)
+import qualified Data.Text                 as T
+import           Data.Text.Prettyprint.Doc
 
 import Stg.Language
 import Stg.Language.Prettyprint
@@ -48,14 +47,14 @@ tests = testGroup "Static analysis"
         ]
     ]
 
-pprFreeVars :: Set Var -> Doc
-pprFreeVars = commaSep . map pretty . toList
+pprFreeVars :: Set Var -> Doc StgiAnn
+pprFreeVars = commaSep . map prettyStgi . toList
 
 assertFreeVariablesEqual :: Set Var -> Set Var -> Assertion
 assertFreeVariablesEqual expected actual
   = assertBool err (expected == actual)
   where
-    err = (T.unpack . prettyprintPlain . hang 4 . vsep)
+    err = (T.unpack . renderPlain . hang 4 . vsep)
         [ "Free variables:"
         , "Expected: " <> pprFreeVars expected
         , "Actual:   " <> pprFreeVars actual ]

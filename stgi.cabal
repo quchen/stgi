@@ -71,6 +71,8 @@ library
   ghc-options:         -Wall
   build-depends:       base >= 4.8 && < 5
                      , ansi-wl-pprint
+                     , prettyprinter >= 1
+                     , prettyprinter-ansi-terminal >= 1
                      , containers       >= 0.5
                      , deepseq          >= 1.4
                      , parsers          >= 0.12
@@ -148,6 +150,7 @@ test-suite testsuite
   build-depends:       base
                      , stgi
                      , ansi-wl-pprint
+                     , prettyprinter >= 1
                      , containers >= 0.5
                      , deepseq >= 1.4
                      , semigroups >= 0.16

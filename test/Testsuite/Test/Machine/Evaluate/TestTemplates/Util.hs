@@ -4,14 +4,12 @@
 module Test.Machine.Evaluate.TestTemplates.Util (
     hasValue,
     isLambdaForm,
-    PrettyprinterDict(..),
 ) where
 
 
-import           Data.Monoid
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import           Text.PrettyPrint.ANSI.Leijen (Doc)
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
+import           Data.Text.Prettyprint.Doc
 
 import Stg.Language
 import Stg.Machine.Env
@@ -57,6 +55,3 @@ varLookup state var =
             Just (Blackhole _bhTick) -> VarLookupBlackhole
             Nothing                  -> VarLookupError "not found on heap"
         Success (PrimInt i) -> VarLookupPrim i
-
-data PrettyprinterDict = PrettyprinterDict (forall a. Pretty a => a -> Text)
-                                           (forall a. Pretty a => a -> Doc)

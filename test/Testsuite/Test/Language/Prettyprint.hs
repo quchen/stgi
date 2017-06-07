@@ -35,7 +35,7 @@ tests = localOption (QuickCheckMaxSize 3)
         , inverseOfParserQC "Atom"              Parser.atom ])
 
 inverseOfParserQC
-    :: (Arbitrary ast, Show ast, Eq ast, Pretty ast)
+    :: (Arbitrary ast, Show ast, Eq ast, PrettyStgi ast)
     => Text
     -> StgParser ast
     -> TestTree
@@ -50,7 +50,7 @@ inverseOfParserQC testName parser
                                (inputAst == parsedAst) )
 
 inverseOfParserSC
-    :: (Serial IO ast, Show ast, Eq ast, Pretty ast)
+    :: (Serial IO ast, Show ast, Eq ast, PrettyStgi ast)
     => Text
     -> StgParser ast
     -> TestTree
@@ -64,22 +64,22 @@ inverseOfParserSC testName parser
                 | otherwise -> Left (T.unpack (prettySuccess inputAst parsedAst)) ))
 
 parserRoundtrip
-    :: Pretty ast
+    :: PrettyStgi ast
     => StgParser ast
     -> ast
     -> Either Text ast
-parserRoundtrip parser = first prettyprintPlain . parse parser . prettyprintPlain
+parserRoundtrip parser = first prettyprintOldAnsi . parse parser . renderPlain . prettyStgi
 
-prettySuccess :: Pretty ast => ast -> ast -> Text
+prettySuccess :: PrettyStgi ast => ast -> ast -> Text
 prettySuccess inputAst parsedAst =
     T.unlines [ "Input AST:"
-              , prettyprintPlain inputAst
+              , renderPlain (prettyStgi inputAst)
               , "Parsed, parser inverse printed AST:"
-              , prettyprintPlain parsedAst ]
+              , renderPlain (prettyStgi parsedAst) ]
 
-prettyFailure :: Pretty ast => ast -> Text -> Text
+prettyFailure :: PrettyStgi ast => ast -> Text -> Text
 prettyFailure inputAst err =
     T.unlines [ "Input AST:"
-              , prettyprintPlain inputAst
+              , renderPlain (prettyStgi inputAst)
               , "Parse error:"
               , err ]

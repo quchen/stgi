@@ -16,10 +16,11 @@ module Test.Machine.Evaluate.TestTemplates.MarshalledValue (
 
 
 
-import           Data.List.NonEmpty           (NonEmpty (..))
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
+import           Data.List.NonEmpty                    (NonEmpty (..))
+import           Data.Text                             (Text)
+import qualified Data.Text                             as T
+import           Data.Text.Prettyprint.Doc
+import           Data.Text.Prettyprint.Doc.Render.Text
 
 import Stg.Language
 import Stg.Language.Prettyprint
@@ -28,11 +29,9 @@ import Stg.Machine.Types
 import Stg.Marshal
 import Stg.Parser.QuasiQuoter   (stg)
 
-import Test.Machine.Evaluate.TestTemplates.Util
-import Test.Orphans                             ()
+import Test.Orphans          ()
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.Runners.Html
 
 
 
@@ -76,21 +75,16 @@ defSpec = MarshalledValueTestSpec
 marshalledValueTest
     :: forall input output.
        ( Show input, Arbitrary input
-       , Eq output, Show output, FromStg output, Pretty output )
+       , Eq output, Show output, FromStg output, PrettyStgi output )
     => MarshalledValueTestSpec input output
     -> TestTree
-marshalledValueTest testSpec = askOption (\htmlOpt ->
-    let pprDict = case htmlOpt of
-            Just HtmlPath{} -> PrettyprinterDict prettyprintPlain (plain . pretty)
-            Nothing         -> PrettyprinterDict prettyprint pretty
-    in testProperty (T.unpack (testName testSpec)) (test pprDict) )
+marshalledValueTest testSpec = testProperty (T.unpack (testName testSpec)) test
   where
     test :: ( Show input, Arbitrary input
-            , Eq output, Show output, FromStg output, Pretty output )
-         => PrettyprinterDict
-         -> input
+            , Eq output, Show output, FromStg output, PrettyStgi output )
+         => input
          -> Property
-    test pprDict input =
+    test input =
         let program = initialState "main" (source (sourceSpec testSpec input))
             states = evalsUntil
                 (RunForMaxSteps (maxSteps testSpec))
@@ -99,86 +93,85 @@ marshalledValueTest testSpec = askOption (\htmlOpt ->
                 program
             verifyLoop (state :| _)
                 | failPredicate testSpec state =
-                    fail_failPredicateTrue pprDict testSpec input state
+                    fail_failPredicateTrue testSpec input state
             verifyLoop (state :| rest) = case fromStg state (resultVar (sourceSpec testSpec input)) of
                 Left err -> case err of
-                    TypeMismatch -> fail_typeMismatch pprDict testSpec input state
+                    TypeMismatch -> fail_typeMismatch testSpec input state
                     IsBlackhole -> continue state rest
-                    IsWrongLambdaType LambdaFun -> fail_functionValue pprDict testSpec input state
+                    IsWrongLambdaType LambdaFun -> fail_functionValue testSpec input state
                     IsWrongLambdaType LambdaThunk -> continue state rest
                     IsWrongLambdaType LambdaCon -> error
                         "Critial error in test: found a constructor, expected\
                         \ a constructor, but still ran into the failure case\
                         \ somehow. Please report this as a bug."
-                    BadArity -> fail_conArity pprDict testSpec input state
-                    NotFound{} -> fail_notFound pprDict testSpec input state
-                    AddrNotOnHeap -> fail_addrNotOnHeap pprDict testSpec input state
-                    NoConstructorMatch -> fail_NoConstructorMatch pprDict testSpec input state
-                Right actualValue -> assertEqual actualValue pprDict testSpec input state
+                    BadArity -> fail_conArity testSpec input state
+                    NotFound{} -> fail_notFound testSpec input state
+                    AddrNotOnHeap -> fail_addrNotOnHeap testSpec input state
+                    NoConstructorMatch -> fail_NoConstructorMatch testSpec input state
+                Right actualValue -> assertEqual actualValue testSpec input state
             continue lastState = \case
-                [] -> fail_valueNotFound pprDict testSpec input lastState
+                [] -> fail_valueNotFound testSpec input lastState
                 (x:xs) -> verifyLoop (x :| xs)
 
         in verifyLoop states
 
 assertEqual
-    :: (Eq output, Pretty output)
+    :: forall input output. (Eq output, PrettyStgi output)
     => output
-    -> PrettyprinterDict
     -> MarshalledValueTestSpec input output
     -> input
     -> StgState
     -> Property
 assertEqual
     actual
-    (PrettyprinterDict pprText pprDoc)
     testSpec
     input
     finalState
-  = counterexample failText (actual == expected)
+  = counterexample (failText expected) (actual == expected)
   where
+    expected :: output
     expected = expectedValue (sourceSpec testSpec input)
-    failText = (T.unpack . pprText . vsep)
+
+    failText :: PrettyStgi a => a -> String
+    failText ex = (T.unpack . renderStrict . layoutPretty defaultLayoutOptions . vsep)
         [ "Machine produced an invalid result."
-        , "Expected:" <+> pprDoc expected
-        , "Actual:  " <+> pprDoc actual
+        , "Expected:" <+> (prettyStgi ex :: Doc StgiAnn)
+        , "Actual:  " <+> (prettyStgi actual :: Doc StgiAnn)
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", pprDoc (source (sourceSpec testSpec input))])
-                , hang 4 (vsep ["Final state:", pprDoc finalState]) ]
+                [ hang 4 (vsep ["Program:", prettyStgi (source (sourceSpec testSpec input))])
+                , hang 4 (vsep ["Final state:", prettyStgi finalState]) ]
             else failWithInfoInfoText ]
 
-failWithInfoInfoText :: Doc
+failWithInfoInfoText :: Doc ann
 failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
 
 fail_template
-    :: Doc
-    -> PrettyprinterDict
+    :: Doc StgiAnn
     -> MarshalledValueTestSpec input a
     -> input
     -> StgState
     -> Property
 fail_template
     failMessage
-    (PrettyprinterDict pprText pprDoc)
     testSpec
     input
     finalState
   = counterexample failText False
   where
-    failText = (T.unpack . pprText . vsep)
+    failText = (T.unpack . renderStrict . layoutPretty defaultLayoutOptions . vsep)
         [ failMessage
         , "Final machine state info:"
-            <+> pprDoc (stgInfo finalState)
+            <+> (prettyStgi (stgInfo finalState) :: Doc StgiAnn)
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", pprDoc (source (sourceSpec testSpec input))])
-                , hang 4 (vsep ["Final state:", pprDoc finalState]) ]
+                [ hang 4 (vsep ["Program:", prettyStgi (source (sourceSpec testSpec input)) :: Doc StgiAnn])
+                , hang 4 (vsep ["Final state:", prettyStgi finalState :: Doc StgiAnn]) ]
             else failWithInfoInfoText ]
 
 fail_failPredicateTrue, fail_valueNotFound, fail_typeMismatch, fail_conArity,
     fail_notFound, fail_addrNotOnHeap, fail_NoConstructorMatch, fail_functionValue
-    :: PrettyprinterDict -> MarshalledValueTestSpec a b -> a -> StgState -> Property
+    :: MarshalledValueTestSpec a b -> a -> StgState -> Property
 fail_failPredicateTrue  = fail_template "Failure predicate held for an intemediate state"
 fail_valueNotFound      = fail_template "None of the machine states produced a (marshallable)\
                                         \ value to compare the expected value to"

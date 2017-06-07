@@ -95,7 +95,7 @@ stg = defaultQuoter { quoteExp = expQuoter }
     -- generated expression on success.
     quoteAs :: Lift ast => Text -> Parser.StgParser ast -> Text -> Either Text (Q Exp)
     quoteAs parserName parser input = fmap lift (case Parser.parse parser input of
-        Left err -> Left (prettyprint ("  -" <+> text (T.unpack parserName) <> ":" <+> plain (align err)))
+        Left err -> Left (prettyprintOldAnsi ("  -" <+> text (T.unpack parserName) <> ":" <+> plain (align err)))
         Right r -> Right r )
 
 -- | Build a quasiquoter from a 'Parser'.
@@ -107,7 +107,7 @@ stgQQ
 stgQQ parser elementName = defaultQuoter { quoteExp  = expQuoter }
     where
     expQuoter input = case parse parser (T.pack input) of
-        Left err  -> fail (T.unpack ("Invalid STG " <> elementName <> ":\n" <> prettyprint (plain err)))
+        Left err  -> fail (T.unpack ("Invalid STG " <> elementName <> ":\n" <> prettyprintOldAnsi (plain err)))
         Right ast -> [| ast |]
 
 -- | Quasiquoter for 'Stg.Language.Program's.

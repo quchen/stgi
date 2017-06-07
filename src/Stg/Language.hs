@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 -- | The STG language syntax tree, modeled after the description in the
 -- 1992 paper
@@ -41,53 +42,25 @@ module Stg.Language (
 
 
 import           Control.DeepSeq
-import           Data.List.NonEmpty           (NonEmpty (..))
-import qualified Data.List.NonEmpty           as NonEmpty
-import           Data.Map                     (Map)
-import qualified Data.Map                     as M
-import           Data.Monoid                  hiding (Alt)
-import qualified Data.Semigroup               as Semigroup
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
+import           Data.List.NonEmpty        (NonEmpty (..))
+import qualified Data.List.NonEmpty        as NonEmpty
+import           Data.Map                  (Map)
+import qualified Data.Map                  as M
+import qualified Data.Semigroup            as Semigroup
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
+import           Data.Text.Prettyprint.Doc
 import           GHC.Exts
 import           GHC.Generics
 import           Language.Haskell.TH.Lift
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
 
-import Stg.Util
+import Stg.Language.Prettyprint
 
 
 
 -- $setup
 -- >>> :set -XQuasiQuotes
 -- >>> import Stg.Parser.QuasiQuoter
-
-
-
--- | Package of style definitions used for prettyprinting the STG AST.
-data StgAstStyle = StgAstStyle
-    { keyword :: Doc -> Doc
-        -- ^ Keyword style
-    , prim :: Doc -> Doc
-        -- ^ Primitive style, for literals and functions
-    , variable :: Doc -> Doc
-        -- ^ Variable style
-    , constructor :: Doc -> Doc
-        -- ^ Constructor style
-    , semicolon :: Doc -> Doc
-        -- ^ Semicolons separating lists of bindings and alternatives
-    }
-
--- | Colour definitions used by the STG AST.
-style :: StgAstStyle
-style = StgAstStyle
-    { keyword     = id
-    , prim        = dullgreen
-    , variable    = dullyellow
-    , constructor = dullmagenta
-    , semicolon   = dullwhite
-    }
-
 
 
 -- | An STG 'Program' is the unit that can be loaded by the STG machine. It
@@ -146,8 +119,8 @@ data LambdaType =
     | LambdaThunk -- ^ Thunk (everything else)
     deriving (Eq, Ord, Show)
 
-instance Pretty LambdaType where
-    pretty = \case
+instance PrettyStgi LambdaType where
+    prettyStgi = \case
         LambdaCon   -> "Con"
         LambdaFun   -> "Fun"
         LambdaThunk -> "Thunk"
@@ -284,18 +257,18 @@ instance Lift Var where
 --------------------------------------------------------------------------------
 -- Pretty instances
 
-semicolonTerminated :: [Doc] -> Doc
-semicolonTerminated = align . vsep . punctuate (semicolon style ";")
+semicolonTerminated :: [Doc StgiAnn] -> Doc StgiAnn
+semicolonTerminated = align . vsep . punctuate (annotate (AstAnn Semicolon) ";")
 
-instance Pretty Program where
-    pretty (Program binds) = pretty binds
+instance PrettyStgi Program where
+    prettyStgi (Program binds) = prettyStgi binds
 
-instance Pretty Binds where
-    pretty (Binds bs) =
+instance PrettyStgi Binds where
+    prettyStgi (Binds bs) =
         (semicolonTerminated . map prettyBinding . M.assocs) bs
       where
         prettyBinding (var, lambda) =
-            pretty var <+> "=" <+> pretty lambda
+            prettyStgi var <+> "=" <+> prettyStgi lambda
 
 -- | Prettyprint a 'LambdaForm', given prettyprinters for the free variable
 -- list.
@@ -303,9 +276,9 @@ instance Pretty Binds where
 -- Introduced so 'Stg.Machine.Types.Closure' can hijack it to display
 -- the free value list differently.
 prettyLambda
-    :: ([Var] -> Doc) -- ^ Free variable list printer
+    :: ([Var] -> Doc StgiAnn) -- ^ Free variable list printer
     -> LambdaForm
-    -> Doc
+    -> Doc StgiAnn
 prettyLambda pprFree (LambdaForm free upd bound expr) =
     (prettyExp . prettyUpd . prettyBound . prettyFree) "\\"
   where
@@ -314,68 +287,68 @@ prettyLambda pprFree (LambdaForm free upd bound expr) =
     prettyUpd = (<+> case upd of Update   -> "=>"
                                  NoUpdate -> "->" )
     prettyBound | null bound = id
-                | null free = (<> prettyList bound)
-                | otherwise = (<+> prettyList bound)
-    prettyExp = (<+> pretty expr)
+                | null free = (<> hsep (map prettyStgi bound))
+                | otherwise = (<+> hsep (map prettyStgi bound))
+    prettyExp = (<+> prettyStgi expr)
 
-instance Pretty LambdaForm where
-    pretty = prettyLambda prettyList
+instance PrettyStgi LambdaForm where
+    prettyStgi = prettyLambda (hsep . map prettyStgi)
 
-instance Pretty Rec where
-    pretty = \case
+instance PrettyStgi Rec where
+    prettyStgi = \case
         NonRecursive -> ""
         Recursive    -> "rec"
 
-instance Pretty Expr where
-    pretty = \case
+instance PrettyStgi Expr where
+    prettyStgi = \case
         Let rec binds expr ->
-            let inBlock = indent 4 (keyword style "in" <+> pretty expr)
+            let inBlock = indent 4 (annotate (AstAnn Keyword) "in" <+> prettyStgi expr)
                 bindingBlock = line <> indent 4 (
-                    keyword style ("let" <> pretty rec) <+> pretty binds )
+                    annotate (AstAnn Keyword) ("let" <> prettyStgi rec) <+> prettyStgi binds )
             in vsep [bindingBlock, inBlock]
 
-        Case expr alts -> vsep [ hsep [ keyword style "case"
-                                      , pretty expr
-                                      , keyword style "of" ]
-                               , indent 4 (align (pretty alts)) ]
+        Case expr alts -> vsep [ hsep [ annotate (AstAnn Keyword) "case"
+                                      , prettyStgi expr
+                                      , annotate (AstAnn Keyword) "of" ]
+                               , indent 4 (align (prettyStgi alts)) ]
 
-        AppF var []   -> pretty var
-        AppF var args -> pretty var <+> prettyList args
+        AppF var []   -> prettyStgi var
+        AppF var args -> prettyStgi var <+> hsep (map prettyStgi args)
 
-        AppC con []   -> pretty con
-        AppC con args -> pretty con <+> prettyList args
+        AppC con []   -> prettyStgi con
+        AppC con args -> prettyStgi con <+> hsep (map prettyStgi args)
 
-        AppP op arg1 arg2 -> pretty op <+> pretty arg1 <+> pretty arg2
+        AppP op arg1 arg2 -> prettyStgi op <+> prettyStgi arg1 <+> prettyStgi arg2
 
-        LitE lit -> pretty lit
+        LitE lit -> prettyStgi lit
 
-instance Pretty Alts where
-    pretty (Alts NoNonDefaultAlts def) = pretty def
-    pretty (Alts (AlgebraicAlts alts) def) =
-        semicolonTerminated (map pretty (toList alts) <> [pretty def])
-    pretty (Alts (PrimitiveAlts alts) def) =
-        semicolonTerminated (map pretty (toList alts) <> [pretty def])
+instance PrettyStgi Alts where
+    prettyStgi (Alts NoNonDefaultAlts def) = prettyStgi def
+    prettyStgi (Alts (AlgebraicAlts alts) def) =
+        semicolonTerminated (map prettyStgi (toList alts) <> [prettyStgi def])
+    prettyStgi (Alts (PrimitiveAlts alts) def) =
+        semicolonTerminated (map prettyStgi (toList alts) <> [prettyStgi def])
 
-instance Pretty AlgebraicAlt where
-    pretty (AlgebraicAlt con [] expr)
-        = pretty con <+> "->" <+> pretty expr
-    pretty (AlgebraicAlt con args expr)
-        = pretty con <+> prettyList args <+> "->" <+> pretty expr
+instance PrettyStgi AlgebraicAlt where
+    prettyStgi (AlgebraicAlt con [] expr)
+        = prettyStgi con <+> "->" <+> prettyStgi expr
+    prettyStgi (AlgebraicAlt con args expr)
+        = prettyStgi con <+> hsep (map prettyStgi args) <+> "->" <+> prettyStgi expr
 
-instance Pretty PrimitiveAlt where
-    pretty (PrimitiveAlt lit expr) =
-        pretty lit <+> "->" <+> pretty expr
+instance PrettyStgi PrimitiveAlt where
+    prettyStgi (PrimitiveAlt lit expr) =
+        prettyStgi lit <+> "->" <+> prettyStgi expr
 
-instance Pretty DefaultAlt where
-    pretty = \case
-        DefaultNotBound expr  -> "default" <+> "->" <+> pretty expr
-        DefaultBound var expr -> pretty var <+> "->" <+> pretty expr
+instance PrettyStgi DefaultAlt where
+    prettyStgi = \case
+        DefaultNotBound expr  -> "default" <+> "->" <+> prettyStgi expr
+        DefaultBound var expr -> prettyStgi var <+> "->" <+> prettyStgi expr
 
-instance Pretty Literal where
-    pretty (Literal i) = prim style (integer i <> "#")
+instance PrettyStgi Literal where
+    prettyStgi (Literal i) = annotate (AstAnn Prim) (pretty i <> "#")
 
-instance Pretty PrimOp where
-    pretty op = prim style (case op of
+instance PrettyStgi PrimOp where
+    prettyStgi op = annotate (AstAnn Prim) (case op of
         Add -> "+#"
         Sub -> "-#"
         Mul -> "*#"
@@ -388,18 +361,16 @@ instance Pretty PrimOp where
         Geq -> ">=#"
         Neq -> "/=#" )
 
-instance Pretty Var where
-    pretty (Var name) = variable style (string (T.unpack name))
-    prettyList = spaceSep
+instance PrettyStgi Var where
+    prettyStgi (Var name) = annotate (AstAnn Variable) (pretty name)
 
-instance Pretty Atom where
-    pretty = \case
-        AtomVar var -> pretty var
-        AtomLit lit -> pretty lit
-    prettyList = spaceSep
+instance PrettyStgi Atom where
+    prettyStgi = \case
+        AtomVar var -> prettyStgi var
+        AtomLit lit -> prettyStgi lit
 
-instance Pretty Constr where
-    pretty (Constr name) = constructor style (string (T.unpack name))
+instance PrettyStgi Constr where
+    prettyStgi (Constr name) = annotate (AstAnn Constructor) (pretty name)
 
 instance NFData Program
 instance NFData Binds

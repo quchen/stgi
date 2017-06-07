@@ -26,8 +26,27 @@ main = do
     let prog = Example.implies True False
 
     _finalState <-
-        runForPager (if ansi then prettyprint else prettyprintPlain)
+        runForPager (if ansi then richRenderer else plainRenderer)
                     numStates
                     verbosity
                     prog
     pure ()
+
+richRenderer :: Renderer
+richRenderer = Renderer
+    { renderProgram   = renderRich . prettyStgi
+    , renderState     = renderRich . prettyStgi
+    , renderInfo      = renderRich . prettyStgi
+    , renderInfoShort = renderRich . prettyStgi
+    }
+
+plainRenderer :: Renderer
+plainRenderer = Renderer
+    { renderProgram   = renderPlain . unit . prettyStgi
+    , renderState     = renderPlain . unit . prettyStgi
+    , renderInfo      = renderPlain . unit . prettyStgi
+    , renderInfoShort = renderPlain . unit . prettyStgi
+    }
+
+unit :: m StgiAnn -> m StgiAnn
+unit = id

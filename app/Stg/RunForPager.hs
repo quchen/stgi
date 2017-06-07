@@ -1,9 +1,10 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
 -- | Run a STG program with output suitable for use in a pager, such as @less@.
-module Stg.RunForPager (runForPager) where
+module Stg.RunForPager (runForPager, Renderer(..)) where
 
 
 
@@ -21,14 +22,20 @@ import Stg.Machine.Types
 import Stg.Util
 
 
+data Renderer = Renderer
+    { renderProgram   :: Program   -> Text
+    , renderState     :: StgState  -> Text
+    , renderInfo      :: Info      -> Text
+    , renderInfoShort :: InfoShort -> Text
+    }
 
 runForPager
-    :: (forall a. Pretty a => a -> Text)
+    :: Renderer
     -> Maybe Int -- ^ Steps to show. Negative numbers count from the end.
     -> Int       -- ^ Verbosity level
     -> Program
     -> IO StgState
-runForPager ppr showSteps verbosity prog =
+runForPager renderer showSteps verbosity prog =
     let allStates = evalsUntil RunIndefinitely
                                (HaltIf (const False))
                                (PerformGc (const (Just triStateTracing)))
@@ -43,11 +50,11 @@ runForPager ppr showSteps verbosity prog =
         T.putStrLn fatLine
         T.putStrLn "Program:"
         T.putStrLn line
-        T.putStrLn (ppr prog)
+        T.putStrLn (renderProgram renderer prog)
         let loop (state :| rest) = do
                 T.putStrLn fatLine
-                printInfo ppr verbosity state line
-                T.putStrLn (ppr state)
+                printInfo renderer verbosity state line
+                T.putStrLn (renderState renderer state)
                 case rest of
                     [] -> pure state
                     (s:ss) -> loop (s:|ss)
@@ -57,18 +64,18 @@ runForPager ppr showSteps verbosity prog =
 
 
 printInfo
-    :: (forall a. Pretty a => a -> Text)
+    :: Renderer
     -> Int
     -> StgState
     -> Text -- ^ Line
     -> IO ()
-printInfo ppr verbosity state line =
+printInfo renderer verbosity state line =
     when (verbosity > 0)
         (do T.putStr (show' (stgSteps state) <> ". ")
             T.putStrLn
-                (if | verbosity == 2 -> ppr (stgInfo state)
-                    | verbosity == 1 -> ppr (let Info shortInfo _ = stgInfo state
-                                             in shortInfo ))
+                (if | verbosity == 2 -> renderInfo renderer (stgInfo state)
+                    | verbosity == 1 -> renderInfoShort renderer (let Info shortInfo _ = stgInfo state
+                                                                  in shortInfo ))
             T.putStrLn line )
 
 -- | Take the last N elements of a list (in original order).

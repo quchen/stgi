@@ -7,19 +7,14 @@ module Stg.Util (
 
     -- * Prettyprinter extensions
     commaSep,
-    spaceSep,
-    bulletList,
-    pluralS,
 ) where
 
 
 
 import           Data.Bifunctor
-import           Data.Monoid
-import           Data.String
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
+import           Data.Text.Prettyprint.Doc
 
 
 
@@ -52,22 +47,9 @@ instance Monoid a => Applicative (Validate a) where
     pure = Success
     Success f <*> Success x = Success (f x)
     Success _ <*> Failure x = Failure x
-    Failure x <*> Failure y = Failure (x <> y)
+    Failure x <*> Failure y = Failure (x `mappend` y)
     Failure x <*> Success _ = Failure x
 
 -- | @[a,b,c]  ==>  a, b, c@
-commaSep :: Pretty a => [a] -> Doc
-commaSep = encloseSep mempty mempty (comma <> space) . map pretty
-
--- | @[a,b,c]  ==>  a b c@
-spaceSep :: Pretty a => [a] -> Doc
-spaceSep = hsep . map pretty
-
--- | Prefix all contained documents with a bullet symbol.
-bulletList :: Pretty a => [a] -> Doc
-bulletList = align . vsep . map (("  - " <>) . align . pretty)
-
--- | Add an \'s' for non-singleton lists.
-pluralS :: IsString string => [a] -> string
-pluralS [_] = ""
-pluralS _ = "s"
+commaSep :: [Doc ann] -> Doc ann
+commaSep = encloseSep mempty mempty (comma <> space)

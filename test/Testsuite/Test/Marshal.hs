@@ -7,10 +7,11 @@ module Test.Marshal (tests) where
 
 
 
-import qualified Data.List.NonEmpty as NE
+import qualified Data.List.NonEmpty        as NE
 import           Data.Proxy
-import           Data.Text          (Text)
-import qualified Data.Text          as T
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
+import           Data.Text.Prettyprint.Doc
 
 import Stg.Language.Prettyprint
 import Stg.Machine
@@ -20,6 +21,8 @@ import Stg.Parser.QuasiQuoter
 import Test.Orphans          ()
 import Test.Tasty
 import Test.Tasty.QuickCheck
+
+
 
 tests :: TestTree
 tests = testGroup "Marshalling"
@@ -62,7 +65,7 @@ roundTripTest
 roundTripTest spec = testProperty (T.unpack (testName spec)) test
   where
     test :: a -> Property
-    test payload = counterexample (T.unpack (prettyprint finalState))
+    test payload = counterexample (T.unpack ((renderPlain :: Doc StgiAnn -> Text) (prettyStgi finalState)))
                                   (expected === Right payload)
       where
         source = mconcat

@@ -11,12 +11,12 @@ module Test.Machine.Evaluate.TestTemplates.MachineState (
 
 
 
-import qualified Data.List                    as L
-import qualified Data.List.NonEmpty           as NE
-import           Data.Monoid
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<>))
+import qualified Data.List                             as L
+import qualified Data.List.NonEmpty                    as NE
+import           Data.Text                             (Text)
+import qualified Data.Text                             as T
+import           Data.Text.Prettyprint.Doc
+import           Data.Text.Prettyprint.Doc.Render.Text
 
 import Stg.Language
 import Stg.Language.Prettyprint
@@ -27,7 +27,6 @@ import Stg.Parser.QuasiQuoter   (stg)
 import Test.Machine.Evaluate.TestTemplates.Util
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.Runners.Html
 
 
 
@@ -78,11 +77,7 @@ defSpec = MachineStateTestSpec
 -- | Evaluate the @main@ closure of a STG program, and check whether the machine
 -- state satisfies a predicate when it is evaluated.
 machineStateTest :: MachineStateTestSpec -> TestTree
-machineStateTest testSpec = askOption (\htmlOpt ->
-    let pprDict = case htmlOpt of
-            Just HtmlPath{} -> PrettyprinterDict prettyprintPlain (plain . pretty)
-            Nothing         -> PrettyprinterDict prettyprint pretty
-    in testCase (T.unpack (testName testSpec)) (test pprDict) )
+machineStateTest testSpec = testCase (T.unpack (testName testSpec)) test
   where
     program = initialState "main" (source testSpec)
     states = evalsUntil (RunForMaxSteps (maxSteps testSpec))
@@ -91,54 +86,49 @@ machineStateTest testSpec = askOption (\htmlOpt ->
                         program
     finalState = NE.last states
 
-    test :: PrettyprinterDict -> Assertion
-    test pprDict = case L.find (failPredicate testSpec) states of
-        Just badState -> fail_failPredicateTrue pprDict testSpec badState
+    test :: Assertion
+    test = case L.find (failPredicate testSpec) states of
+        Just badState -> fail_failPredicateTrue testSpec badState
         Nothing -> case NE.toList states `allSatisfyAtSomePoint` allSatisfied testSpec of
             True -> case stgInfo finalState of
                 Info HaltedByPredicate _ -> pure ()
-                _otherwise -> fail_successPredicateNotTrue pprDict testSpec finalState
+                _otherwise -> fail_successPredicateNotTrue testSpec finalState
             False -> (assertFailure . T.unpack)
                 "No intermediate state satisfied the required predicate."
 
-failWithInfoInfoText :: Doc
+failWithInfoInfoText :: Doc ann
 failWithInfoInfoText = "Run test case with failWithInfo to see the final state."
 
 fail_successPredicateNotTrue
-    :: PrettyprinterDict
-    -> MachineStateTestSpec
+    :: MachineStateTestSpec
     -> StgState
     -> Assertion
 fail_successPredicateNotTrue
-    (PrettyprinterDict pprText pprDoc)
     testSpec
     finalState
-  = (assertFailure . T.unpack . pprText . vsep)
+  = (assertFailure . T.unpack . renderStrict . layoutPretty defaultLayoutOptions . vsep)
         [ "STG failed to satisfy predicate: "
-            <> pprDoc (stgInfo finalState)
+            <> prettyStgi (stgInfo finalState)
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", pprDoc (source testSpec)])
-                , hang 4 (vsep ["Final state:", pprDoc finalState]) ]
+                [ hang 4 (vsep ["Program:", prettyStgi (source testSpec)])
+                , hang 4 (vsep ["Final state:", prettyStgi finalState]) ]
             else failWithInfoInfoText ]
 
 fail_failPredicateTrue
-    :: PrettyprinterDict
-    -> MachineStateTestSpec
+    :: MachineStateTestSpec
     -> StgState
     -> Assertion
 fail_failPredicateTrue
-    (PrettyprinterDict pprText pprDoc)
     testSpec
     badState
-  = (assertFailure . T.unpack . pprText . vsep)
+  = (assertFailure . T.unpack . renderStrict . layoutPretty defaultLayoutOptions . vsep)
         [ "Failure predicate held for an intemediate state"
         , if failWithInfo testSpec
             then vsep
-                [ hang 4 (vsep ["Program:", pprDoc (source testSpec)])
-                , hang 4 (vsep ["Bad state:", pprDoc badState]) ]
+                [ hang 4 (vsep ["Program:", prettyStgi (source testSpec)])
+                , hang 4 (vsep ["Bad state:", prettyStgi badState]) ]
             else failWithInfoInfoText ]
-
 
 allSatisfyAtSomePoint
     :: [StgState]

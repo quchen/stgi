@@ -1,19 +1,21 @@
-{-# LANGUAGE NumDecimals       #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumDecimals           #-}
+{-# LANGUAGE OverloadedLists       #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE QuasiQuotes           #-}
 
 module Test.Machine.GarbageCollection (tests) where
 
 
 
 import           Control.DeepSeq
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Map           as M
-import           Data.Monoid
-import qualified Data.Set           as S
-import           Data.Text          (Text)
-import qualified Data.Text          as T
+import qualified Data.List.NonEmpty                    as NE
+import qualified Data.Map                              as M
+import qualified Data.Set                              as S
+import           Data.Text                             (Text)
+import qualified Data.Text                             as T
+import           Data.Text.Prettyprint.Doc
+import           Data.Text.Prettyprint.Doc.Render.Text
 
 import           Stg.Language.Prettyprint
 import           Stg.Machine
@@ -39,8 +41,8 @@ gcTests name algorithm = testGroup (T.unpack name)
     [ test algorithm | test <- [ splitHeapTest
                                , fibonacciSumTest ]]
 
-prettyIndented :: Pretty a => a -> Text
-prettyIndented = T.unlines . map ("    " <>) . T.lines . prettyprint
+prettyIndented :: SimpleDocStream ann -> Text
+prettyIndented = T.unlines . map ("    " <>) . T.lines . renderStrict
 
 splitHeapTest :: GarbageCollectionAlgorithm -> TestTree
 splitHeapTest algorithm = testGroup "Split heap in dead/alive"
@@ -70,11 +72,11 @@ splitHeapTest algorithm = testGroup "Split heap in dead/alive"
 
     errorMsg = T.unlines
         [ "Globals:"
-        , prettyIndented globals
+        , prettyIndented (layoutPretty defaultLayoutOptions (prettyStgi globals :: Doc StgiAnn))
         , "Dirty heap:"
-        , prettyIndented dirtyHeap
+        , prettyIndented (layoutPretty defaultLayoutOptions (prettyStgi dirtyHeap :: Doc StgiAnn))
         , "Clean heap:"
-        , prettyIndented cleanHeap ]
+        , prettyIndented (layoutPretty defaultLayoutOptions (prettyStgi cleanHeap :: Doc StgiAnn)) ]
 
     (deadAddrs, _forwards, StgState{stgHeap = cleanHeap})
       = splitHeapWith algorithm dummyState

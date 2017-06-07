@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
@@ -16,7 +17,9 @@ module Test.Util (
 
 
 import Data.Ratio
-import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+import Data.Text.Prettyprint.Doc
+
+import Stg.Language.Prettyprint
 
 import Test.QuickCheck
 import Test.UtilTH
@@ -40,7 +43,7 @@ $(arbitraryN 2)
 $(arbitraryN 3)
 
 infix 4 ==*==
-(==*==) :: (Eq a, Pretty a) => a -> a -> Property
+(==*==) :: (Eq a, PrettyStgi a) => a -> a -> Property
 x ==*== y = counterexample example (x == y)
   where
-    example = (show . align . vsep) [pretty x, "is not equal to", pretty y]
+    example = (show . align . vsep) [prettyStgi x :: Doc StgiAnn, "is not equal to", prettyStgi y]

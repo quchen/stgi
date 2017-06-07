@@ -7,9 +7,9 @@ module Test.Parser.Parser (tests) where
 
 
 import           Data.Bifunctor
-import           Data.Monoid
-import           Data.Text      (Text)
-import qualified Data.Text      as T
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
+import           Data.Text.Prettyprint.Doc
 
 import           Stg.Language
 import           Stg.Language.Prettyprint
@@ -37,7 +37,7 @@ shouldParseTo
     -> TestTree
 shouldParseTo testName input output = testCase (T.unpack testName) test
   where
-    actual = first prettyprint (parse program input)
+    actual = first prettyprintOldAnsi (parse program input)
     expected = Right (Program output)
     failMessage = case actual of
        Left err -> T.unlines
@@ -47,7 +47,7 @@ shouldParseTo testName input output = testCase (T.unpack testName) test
           , "Error encountered:"
           , (T.unlines . map (" > " <>) . T.lines) err
           , "=============" ]
-       Right r -> prettyprint r
+       Right r -> (renderPlain :: Doc StgiAnn -> Text) (prettyStgi r)
     test = assertEqual (T.unpack failMessage) expected actual
 
 
@@ -195,7 +195,7 @@ shouldFailToParse testName input = testCase (T.unpack testName) test
     test = case parse program input of
         Right ast -> (assertFailure . T.unpack . T.unlines)
             [ "Parser should have failed, but succeeded to parse to"
-            , (T.unlines . map (" > " <>) . T.lines . prettyprint) ast ]
+            , (T.unlines . map (" > " <>) . T.lines . (renderPlain :: Doc StgiAnn -> Text) . prettyStgi) ast ]
         Left _err -> pure ()
 
 badParses :: TestTree
