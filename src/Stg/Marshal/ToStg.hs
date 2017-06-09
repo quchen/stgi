@@ -26,7 +26,8 @@ import           Stg.Util
 
 -- $setup
 -- >>> :set -XOverloadedStrings
--- >>> let ppr = Data.Text.IO.putStrLn . Stg.Language.Prettyprint.prettyprintPlain
+-- >>> import Stg.Language.Prettyprint
+-- >>> let ppr = Data.Text.IO.putStrLn . Stg.Language.Prettyprint.renderPlain . prettyStgi
 
 
 

@@ -342,7 +342,7 @@ instance PrettyStgi StateError where
 
 -- | Prettyprint an arity.
 --
--- >>> let ppr = Data.Text.IO.putStrLn . Stg.Language.Prettyprint.prettyprint
+-- >>> let ppr = Data.Text.IO.putStrLn . Stg.Language.Prettyprint.renderPlain
 -- >>> for_ [0..5] (ppr . pprArity)
 -- nullary
 -- unary
