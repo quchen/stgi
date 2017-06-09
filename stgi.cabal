@@ -121,6 +121,10 @@ executable stgi-react
                      , stgi
                      , prettyprinter
                      , text
+                     , aeson
+                     , aeson-pretty
+                     , containers
+                     , bytestring
   default-language:    Haskell2010
 
 test-suite testsuite

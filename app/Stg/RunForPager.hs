@@ -22,6 +22,7 @@ import Stg.Machine.Types
 import Stg.Util
 
 
+
 data Renderer = Renderer
     { renderProgram   :: Program   -> Text
     , renderState     :: StgState  -> Text
