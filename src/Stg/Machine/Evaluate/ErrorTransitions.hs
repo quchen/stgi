@@ -1,6 +1,4 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLists #-}
 
 -- | STG error transitions, in order to provide useful information to the user.
 module Stg.Machine.Evaluate.ErrorTransitions (

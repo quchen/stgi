@@ -1,4 +1,3 @@
-{-# LANGUAGE NumDecimals       #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Machine.Evaluate (tests) where

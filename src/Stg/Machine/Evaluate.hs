@@ -1,6 +1,4 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLists #-}
 
 -- | Evaluate STG 'Program's.
 module Stg.Machine.Evaluate (

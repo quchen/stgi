@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NumDecimals         #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE QuasiQuotes         #-}

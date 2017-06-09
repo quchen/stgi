@@ -1,6 +1,5 @@
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE QuasiQuotes     #-}
 
 -- | Functions as found in Haskell's "Data.Maybe" module.
 --
