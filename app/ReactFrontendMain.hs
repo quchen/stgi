@@ -66,8 +66,8 @@ toJson_StgState (StgState
 
 toJson_Code :: Code -> Aeson.Value
 toJson_Code = \case
-    Eval expr _locals   -> object [ "eval" .= toJson_Expr expr
-                                  , "locals" .= notImplementedYet ]
+    Eval expr locals   -> object [ "eval" .= toJson_Expr expr
+                                 , "locals" .= toJson_Locals locals ]
     Enter addr          -> object [ "enter" .= toJson_Addr addr ]
     ReturnCon con _args -> object [ "ReturnCon" .= toJson_Constr con
                                   , "args" .= notImplementedYet ]
@@ -104,8 +104,12 @@ toJson_Expr :: Expr -> Aeson.Value
 toJson_Expr = toJSON . renderReactHtml . prettyStgi
 
 toJson_Globals :: Globals -> Aeson.Value
-toJson_Globals (Globals gs) = object
-    [ var .= toJson_Value val | (Var var, val) <- M.toList gs ]
+toJson_Globals (Globals globals) = object
+    [ var .= toJson_Value val | (Var var, val) <- M.toList globals ]
+
+toJson_Locals :: Locals -> Aeson.Value
+toJson_Locals (Locals locals) = object
+    [ var .= toJson_Value val | (Var var, val) <- M.toList locals ]
 
 toJson_Value :: Value -> Aeson.Value
 toJson_Value = \case
