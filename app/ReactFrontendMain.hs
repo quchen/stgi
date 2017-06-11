@@ -129,14 +129,35 @@ toJson_Addr :: MemAddr -> Aeson.Value
 toJson_Addr (MemAddr addr) = toJSON addr
 
 toJson_Info :: Info -> Aeson.Value
-toJson_Info (Info short _details)
+toJson_Info (Info short details)
   = object
         [ "short" .= toJson_InfoShort short
-        , "details" .= notImplementedYet
+        , "details" .= toJSON (map toJson_Detail details)
         ]
+
+toJson_Detail :: InfoDetail -> Aeson.Value
+toJson_Detail = \case
+    Detail_FunctionApplication _ _    -> notImplementedYet
+    Detail_UnusedLocalVariables _ _   -> notImplementedYet
+    Detail_EnterNonUpdatable _ _      -> notImplementedYet
+    Detail_EvalLet _ _                -> notImplementedYet
+    Detail_EvalCase                   -> notImplementedYet
+    Detail_ReturnCon_Match _ _        -> notImplementedYet
+    Detail_ReturnConDefBound _ _      -> notImplementedYet
+    Detail_ReturnIntDefBound _ _      -> notImplementedYet
+    Detail_EnterUpdatable _           -> notImplementedYet
+    Detail_ConUpdate _ _              -> notImplementedYet
+    Detail_PapUpdate _                -> notImplementedYet
+    Detail_ReturnIntCannotUpdate      -> notImplementedYet
+    Detail_StackNotEmpty              -> notImplementedYet
+    Detail_GarbageCollected _ _ _     -> notImplementedYet
+    Detail_EnterBlackHole _ _         -> notImplementedYet
+    Detail_UpdateClosureWithPrimitive -> notImplementedYet
+    Detail_BadConArity                -> notImplementedYet
 
 notImplementedYet :: Aeson.Value
 notImplementedYet = toJSON ("Not implemented yet" :: Text)
+
 
 toJson_InfoShort :: InfoShort -> Aeson.Value
 toJson_InfoShort = \case
