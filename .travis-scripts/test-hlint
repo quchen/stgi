@@ -3,5 +3,4 @@
 set -euo pipefail
 set -v
 
-stack --no-terminal \
-    haddock --no-haddock-deps
+hlint .

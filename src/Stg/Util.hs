@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | Useful utilities that don't really fit in a specific location.
 module Stg.Util (
     show',

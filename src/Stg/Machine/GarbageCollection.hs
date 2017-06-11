@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase        #-}
 
 -- | Remove unused heap objects.
 module Stg.Machine.GarbageCollection (
