@@ -86,7 +86,9 @@ toJson_Stack = toJSON . toList . fmap toJson_StackFrame
 toJson_StackFrame :: StackFrame -> Aeson.Value
 toJson_StackFrame = \case
     ArgumentFrame val -> object ["argument" .= toJson_Value val]
-    ReturnFrame{}     -> notImplementedYet
+    ReturnFrame alts locals -> object
+        ["return" .= object [ "alts" .= toJson_htmlPrettyDump alts
+                            , "locals" .= toJson_Locals locals ]]
     UpdateFrame addr  -> object ["update" .= toJson_Addr addr]
 
 toJson_Heap :: Heap -> Aeson.Value
@@ -102,7 +104,10 @@ toJson_HeapObject = \case
     HClosure closure -> object ["closure" .= toJson_Closure closure ]
 
 toJson_Closure :: Closure -> Aeson.Value
-toJson_Closure = toJSON . renderReactHtml . prettyStgi
+toJson_Closure = toJson_htmlPrettyDump
+
+toJson_htmlPrettyDump :: PrettyStgi a => a -> Aeson.Value
+toJson_htmlPrettyDump = toJSON . renderReactHtml . prettyStgi
 
 toJson_Expr :: Expr -> Aeson.Value
 toJson_Expr = toJSON . renderReactHtml . prettyStgi
