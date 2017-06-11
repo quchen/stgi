@@ -16,15 +16,13 @@ module Stg.Language.Prettyprint (
 
 
 
-import           Data.Text                                           (Text)
-import qualified Data.Text                                           as T
+import           Data.Text                                 (Text)
+import qualified Data.Text                                 as T
 import           Data.Text.Prettyprint.Doc
-import           Data.Text.Prettyprint.Doc.Render.Terminal           as PrettyAnsi
-import           Data.Text.Prettyprint.Doc.Render.Text               as PrettyPlain
-import           Data.Text.Prettyprint.Doc.Render.Util.SimpleDocTree
-import           Prelude                                             hiding
-    ((<$>))
-import qualified Text.PrettyPrint.ANSI.Leijen                        as Leijen
+import           Data.Text.Prettyprint.Doc.Render.Terminal as PrettyAnsi
+import           Data.Text.Prettyprint.Doc.Render.Text     as PrettyPlain
+import           Prelude                                   hiding ((<$>))
+import qualified Text.PrettyPrint.ANSI.Leijen              as Leijen
 
 
 
