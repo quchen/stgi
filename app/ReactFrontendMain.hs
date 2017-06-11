@@ -66,12 +66,16 @@ toJson_StgState (StgState
 
 toJson_Code :: Code -> Aeson.Value
 toJson_Code = \case
-    Eval expr locals   -> object [ "eval" .= toJson_Expr expr
-                                 , "locals" .= toJson_Locals locals ]
-    Enter addr          -> object [ "enter" .= toJson_Addr addr ]
-    ReturnCon con _args -> object [ "ReturnCon" .= toJson_Constr con
-                                  , "args" .= notImplementedYet ]
-    ReturnInt i         -> object ["ReturnInt" .= toJSON i]
+    Eval expr locals -> object
+        [ "eval"   .= toJson_Expr expr
+        , "locals" .= toJson_Locals locals ]
+    Enter addr -> object
+        [ "enter" .= toJson_Addr addr ]
+    ReturnCon con args -> object
+        [ "ReturnCon" .= toJson_Constr con
+        , "args" .= toJSON (map toJson_Value args) ]
+    ReturnInt i -> object
+        ["ReturnInt" .= toJSON i]
 
 toJson_Constr :: Constr -> Aeson.Value
 toJson_Constr (Constr con) = toJSON con
