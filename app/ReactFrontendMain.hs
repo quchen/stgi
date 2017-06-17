@@ -101,10 +101,18 @@ toJson_Heap (Heap h) = toJSON (do
 toJson_HeapObject :: HeapObject -> Aeson.Value
 toJson_HeapObject = \case
     Blackhole step -> object ["blackhole" .= toJSON step]
-    HClosure closure -> object ["closure" .= toJson_Closure closure ]
+    HClosure closure@(Closure lambdaForm _) -> object
+        [ "closure" .= toJson_Closure closure
+        , "classification" .= toJson_ClosureClassification (classify lambdaForm) ]
 
 toJson_Closure :: Closure -> Aeson.Value
 toJson_Closure = toJson_htmlPrettyDump
+
+toJson_ClosureClassification :: LambdaType -> Aeson.Value
+toJson_ClosureClassification = \case
+    LambdaCon   -> "constructor"
+    LambdaFun   -> "function"
+    LambdaThunk -> "thunk"
 
 toJson_htmlPrettyDump :: PrettyStgi a => a -> Aeson.Value
 toJson_htmlPrettyDump = toJSON . renderReactHtml . prettyStgi
