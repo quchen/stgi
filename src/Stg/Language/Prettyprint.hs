@@ -27,22 +27,22 @@ import qualified Text.PrettyPrint.ANSI.Leijen              as Leijen
 
 
 renderRich :: Doc StgiAnn -> Text
-renderRich = PrettyAnsi.renderStrict . alterAnnotationsS terminalStyle . layoutPretty layoutOptions
+renderRich = PrettyAnsi.renderStrict . alterAnnotationsS (Just . terminalStyle) . layoutPretty layoutOptions
   where
-    terminalStyle :: StgiAnn -> Maybe AnsiTerminal
+    terminalStyle :: StgiAnn -> AnsiStyle
     terminalStyle = \case
         StateAnn x -> case x of
-            Headline       -> Just (Color Foreground Dull Blue)
-            Address        -> Just (Color Foreground Dull Cyan)
-            AddressCore    -> Just Underlined
-            ClosureType    -> Just Bold
-            StackFrameType -> Just Bold
+            Headline       -> colorDull Blue
+            Address        -> colorDull Cyan
+            AddressCore    -> underlined
+            ClosureType    -> bold
+            StackFrameType -> bold
         AstAnn x -> case x of
-            Keyword     -> Nothing
-            Prim        -> Just (Color Foreground Dull Green)
-            Variable    -> Just (Color Foreground Dull Yellow)
-            Constructor -> Just (Color Foreground Dull Magenta)
-            Semicolon   -> Just (Color Foreground Dull White)
+            Keyword     -> colorDull White
+            Prim        -> colorDull Green
+            Variable    -> colorDull Yellow
+            Constructor -> colorDull Magenta
+            Semicolon   -> colorDull White
 
 renderPlain :: Doc ann -> Text
 renderPlain = PrettyPlain.renderStrict . layoutPretty layoutOptions
