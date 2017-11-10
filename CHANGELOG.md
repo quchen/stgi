@@ -1,7 +1,6 @@
 # Changelog
 
-## Currently in development (at least >= 1.1 because of API changes)
-
+## 1.1
 
 ### Features
 
@@ -12,6 +11,8 @@
 
 - Fixed a bug that made case evaluation/return frames unnecessarily prolong the
   lifetime of objects (#86)
+- Fix buildability with `stack install stgi`, because Trifecta changed its API
+  for errors in 1.6
 
 ### Refactoring
 

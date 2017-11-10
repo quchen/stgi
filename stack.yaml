@@ -1,8 +1,5 @@
-resolver: lts-8.20
+resolver: lts-9.12
 packages:
     - '.'
-extra-deps:
-    - prettyprinter-1.1
-    - prettyprinter-ansi-terminal-1.1
 flags: {}
 extra-package-dbs: []

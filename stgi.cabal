@@ -1,5 +1,5 @@
 name:                stgi
-version:             1.0.1
+version:             1.1
 synopsis:            Educational implementation of the STG (Spineless Tagless
                      G-machine)
 description:         STGi is a visual STG implementation to help understand
