@@ -25,23 +25,23 @@ Table of contents
 - [About the machine](#about-the-machine)
 - [Useful applications](#useful-applications)
 - [Language introduction](#language-introduction)
-	- [Top-level](#top-level)
+    - [Top-level](#top-level)
     - [The `main` value, termination](#the-main-value-termination)
-	- [Expressions](#expressions)
-	- [Updates](#updates)
-	- [Pitfalls](#pitfalls)
-	- [Code example](#code-example)
-	- [Marshalling values](#marshalling-values)
+    - [Expressions](#expressions)
+    - [Updates](#updates)
+    - [Pitfalls](#pitfalls)
+    - [Code example](#code-example)
+    - [Marshalling values](#marshalling-values)
 - [Runtime behaviour](#runtime-behaviour)
-	- [Code segment](#code-segment)
-	- [Stack](#stack)
-	- [Heap](#heap)
+    - [Code segment](#code-segment)
+    - [Stack](#stack)
+    - [Heap](#heap)
     - [Black holes](#black-holes)
     - [Garbage collection](#garbage-collection)
-	- [Unhelpful error message?](#unhelpful-error-message)
+    - [Unhelpful error message?](#unhelpful-error-message)
 - [Differences from the 1992 paper](#differences-from-the-1992-paper)
-	- [Grammar](#grammar)
-	- [Evaluation](#evaluation)
+    - [Grammar](#grammar)
+    - [Evaluation](#evaluation)
 - [GHC's current STG](#ghcs-current-stg)
 
 
@@ -144,7 +144,7 @@ Haskell code
 ```haskell
 foldl' _ acc [] = acc
 foldl' f acc (y:ys) = case f acc y of
-	!acc' -> foldl' f acc' ys
+    !acc' -> foldl' f acc' ys
 
 sum = foldl' add 0
 ```
@@ -386,7 +386,7 @@ A couple of things to keep in mind:
 
   ```haskell
   replicate = \x -> let rep = \(rep x) -> Cons x rep
-  				    in rep
+                    in rep
   ```
 
 
@@ -454,18 +454,18 @@ The code segment is the current instruction the machine evaluates.
 - **Eval** evaluates expressions.
     - **Function application** pushes the function's arguments on the stack
       and **Enter**s the address of the function.
-	- **Constructor applications** simply transition into the
-	  **ReturnCon** state when evaluated.
-	- Similarly, **primitive ints** transition into the **ReturnInt** state.
-	- **Case** pushes a return frame, and proceeds evaluating the scrutinee.
-	- **Let(rec)** allocates heap closures, and extends the local environment
-	  with the new bindings.
+    - **Constructor applications** simply transition into the
+      **ReturnCon** state when evaluated.
+    - Similarly, **primitive ints** transition into the **ReturnInt** state.
+    - **Case** pushes a return frame, and proceeds evaluating the scrutinee.
+    - **Let(rec)** allocates heap closures, and extends the local environment
+      with the new bindings.
 - **Enter** evaluates memory addresses by looking up the value at a memory
   address on the heap, and evaluating its body.
-  	- If the closure entered is updatable, push an update frame so it can later
-	  be overwritten with the value it evaluates to.
-	- If the closure takes any arguments, supply it with values taken from
-	  argument frames.
+    - If the closure entered is updatable, push an update frame so it can later
+      be overwritten with the value it evaluates to.
+    - If the closure takes any arguments, supply it with values taken from
+      argument frames.
 - **ReturnCon** instructs the machine to branch depending on which constructor
   is present, by popping a return frame.
 - **ReturnInt** does the same, but for primitive values.
