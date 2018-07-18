@@ -15,7 +15,6 @@ import           Control.Monad.Trans.Writer
 import           Data.List.NonEmpty         (NonEmpty (..))
 import qualified Data.List.NonEmpty         as NonEmpty
 import qualified Data.Map                   as M
-import           Data.Monoid
 import           Data.Text                  (Text)
 
 import           Stg.Language

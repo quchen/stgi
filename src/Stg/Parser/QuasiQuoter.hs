@@ -27,7 +27,6 @@ module Stg.Parser.QuasiQuoter (
 
 
 import           Data.Either
-import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Language.Haskell.TH

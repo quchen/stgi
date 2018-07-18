@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Test.UtilTH (
-    arbitraryN,
+    arbitrary_N,
 ) where
 
 
@@ -13,22 +13,22 @@ import Language.Haskell.TH
 import Test.QuickCheck
 
 
-arbitraryN :: Natural -> DecsQ
-arbitraryN n = sequence [arbitraryNType n, arbitraryNValue n]
+arbitrary_N :: Natural -> DecsQ
+arbitrary_N n = sequence [arbitraryNType n, arbitraryNValue n]
 
 
 
 arbitraryName :: Natural -> Name
-arbitraryName n = mkName ("arbitrary" ++ show n)
+arbitraryName n = mkName ("arbitrary_" ++ show n)
 
 
 
 -- | Generate n-ary arbitrary chains.
 --
 -- @
--- arbitraryN n :: (Arbitrary a, Arbitrary b, ...) -> (a -> b -> ... -> g) -> Gen g
--- arbitraryN n = \f -> f <$> arbitrary <*> arbitrary <*> ...
---                            ^------  n arbitraries  ------^
+-- arbitrary_N n :: (Arbitrary a, Arbitrary b, ...) -> (a -> b -> ... -> g) -> Gen g
+-- arbitrary_N n = \f -> f <$> arbitrary <*> arbitrary <*> ...
+--                             ^------  n arbitraries  ------^
 -- @
 arbitraryNValue :: Natural -> DecQ
 arbitraryNValue n

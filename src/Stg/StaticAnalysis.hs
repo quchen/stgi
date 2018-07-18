@@ -9,7 +9,6 @@ module Stg.StaticAnalysis (
 
 
 import           Data.Map    as M
-import           Data.Monoid
 import           Data.Set    (Set)
 import qualified Data.Set    as S
 

@@ -6,7 +6,6 @@ module Test.Prelude.Number (tests) where
 
 
 
-import Data.Monoid
 import Data.Text   (Text)
 
 import           Stg.Language

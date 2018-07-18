@@ -14,5 +14,5 @@ import Test.Util
 
 
 instance Arbitrary a => Arbitrary (Stack a) where
-    arbitrary = arbitrary1 fromList
+    arbitrary = arbitrary_1 fromList
     shrink = map fromList . shrink . toList

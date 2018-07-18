@@ -3,7 +3,6 @@ module Test.Stack (tests) where
 
 
 import Data.Foldable
-import Data.Monoid
 import GHC.Exts      (fromList)
 
 import Data.Stack

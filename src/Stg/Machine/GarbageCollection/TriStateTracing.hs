@@ -13,7 +13,6 @@ module Stg.Machine.GarbageCollection.TriStateTracing (
 
 import           Data.Map      (Map)
 import qualified Data.Map      as M
-import           Data.Monoid   hiding (Alt)
 import           Data.Sequence (Seq)
 import           Data.Set      (Set)
 import qualified Data.Set      as S

@@ -65,7 +65,6 @@ module Stg.ExamplePrograms (
 
 
 
-import           Data.Monoid
 import           Stg.Language
 import           Stg.Marshal
 import           Stg.Parser.QuasiQuoter

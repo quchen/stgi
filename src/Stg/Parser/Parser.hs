@@ -52,7 +52,6 @@ import           Data.List                    as L
 import qualified Data.List.NonEmpty           as NonEmpty
 import qualified Data.Map.Strict              as M
 import           Data.Maybe
-import           Data.Monoid
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Text.Parser.Token.Highlight

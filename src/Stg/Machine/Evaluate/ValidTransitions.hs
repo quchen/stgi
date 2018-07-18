@@ -30,7 +30,6 @@ module Stg.Machine.Evaluate.ValidTransitions (
 import           Data.Bifunctor
 import qualified Data.Foldable  as F
 import qualified Data.Map       as M
-import           Data.Monoid    hiding (Alt)
 import qualified Data.Set       as S
 
 import           Data.Stack                  (Stack (..), (<>>))

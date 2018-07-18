@@ -8,7 +8,6 @@ module Test.Prelude.List (tests) where
 
 
 import qualified Data.List   as L
-import           Data.Monoid
 import           Data.Text   (Text)
 
 import           Stg.Language

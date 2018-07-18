@@ -13,7 +13,6 @@ module Test.Orphans.Language () where
 import           Control.Applicative
 import qualified Data.List.NonEmpty  as NonEmpty
 import qualified Data.Map            as M
-import           Data.Monoid         hiding (Alt)
 import           Data.Ratio
 import           Data.Text           (Text)
 import qualified Data.Text           as T
@@ -45,7 +44,7 @@ reservedKeywords = ["let", "in", "case", "of", "default"]
 -- QuickCheck
 
 instance Arbitrary Program where
-    arbitrary = arbitrary1 Program
+    arbitrary = arbitrary_1 Program
     shrink = genericShrink
 
 instance Arbitrary Binds where
@@ -70,13 +69,13 @@ instance Arbitrary LambdaForm where
             Update -> pure []
             NoUpdate -> arbitrary
         body <- oneof
-            ([ arbitrary3 Let
-            , arbitrary2 Case
+            ([ arbitrary_3 Let
+            , arbitrary_2 Case
             -- Lambdas cannot have primitive type, so we exclude AppP and Lit
-            , arbitrary2 AppF ]
+            , arbitrary_2 AppF ]
             <>
             -- Standard constructors are never updatable, so we exclude those
-            [arbitrary2 AppC | updateFlag == NoUpdate] )
+            [arbitrary_2 AppC | updateFlag == NoUpdate] )
         pure (LambdaForm free updateFlag bound body)
     shrink lf =
           [lambdaForm| \ -> x |]
@@ -103,31 +102,31 @@ instance Arbitrary Rec where
 
 instance Arbitrary Expr where
     arbitrary = oneof
-        [ arbitrary3 Let
-        , arbitrary2 Case
-        , arbitrary2 AppF
-        , arbitrary2 AppC
-        , arbitrary3 AppP
-        , arbitrary1 LitE ]
+        [ arbitrary_3 Let
+        , arbitrary_2 Case
+        , arbitrary_2 AppF
+        , arbitrary_2 AppC
+        , arbitrary_3 AppP
+        , arbitrary_1 LitE ]
     shrink = genericShrink
 
 instance Arbitrary Alts where
-    arbitrary = arbitrary2 Alts
+    arbitrary = arbitrary_2 Alts
 
 instance Arbitrary NonDefaultAlts where
     arbitrary = oneof
         [ pure NoNonDefaultAlts
         , fmap (AlgebraicAlts . NonEmpty.fromList)
-            (listOf1 (scaled (2%3) (arbitrary3 AlgebraicAlt)))
+            (listOf1 (scaled (2%3) (arbitrary_3 AlgebraicAlt)))
         , fmap (PrimitiveAlts . NonEmpty.fromList)
-            (listOf1 (scaled (2%3) (arbitrary2 PrimitiveAlt))) ]
+            (listOf1 (scaled (2%3) (arbitrary_2 PrimitiveAlt))) ]
 
 instance Arbitrary DefaultAlt where
-    arbitrary = oneof [arbitrary1 DefaultNotBound, arbitrary2 DefaultBound]
+    arbitrary = oneof [arbitrary_1 DefaultNotBound, arbitrary_2 DefaultBound]
     shrink = genericShrink
 
 instance Arbitrary Literal where
-    arbitrary = resize 128 (arbitrary1 Literal)
+    arbitrary = resize 128 (arbitrary_1 Literal)
     shrink = genericShrink
 
 instance Arbitrary PrimOp where
@@ -148,7 +147,7 @@ instance Arbitrary Var where
     shrink (Var var) = map Var (shrinkBut1stLetter var)
 
 instance Arbitrary Atom where
-    arbitrary = oneof [arbitrary1 AtomVar, arbitrary1 AtomLit]
+    arbitrary = oneof [arbitrary_1 AtomVar, arbitrary_1 AtomLit]
     shrink = genericShrink
 
 instance Arbitrary Constr where

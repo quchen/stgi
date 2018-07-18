@@ -9,7 +9,6 @@ module Test.Machine.Evaluate.TestTemplates.Util (
 
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
-import           Data.Text.Prettyprint.Doc
 
 import Stg.Language
 import Stg.Machine.Env

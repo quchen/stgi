@@ -20,7 +20,6 @@ import           Control.Monad.Trans.State
 import           Data.Foldable
 import           Data.Map                   (Map)
 import qualified Data.Map                   as M
-import           Data.Monoid
 import           Data.Sequence              (Seq, ViewL (..), (|>))
 import qualified Data.Sequence              as Seq
 import           Data.Set                   (Set)
