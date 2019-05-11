@@ -237,12 +237,13 @@ rule6_algebraicNormalMatch s@StgState
     , length ws == length vars
 
   = let locals' = addLocals (zipWith Mapping vars ws) locals
+        boundLocals = zipWith Mapping vars ws
 
     in Just (s
         { stgCode  = Eval expr locals'
         , stgStack = stack'
         , stgInfo  = Info (StateTransition Rule6_ReturnCon_Match)
-                          [Detail_ReturnCon_Match con vars] })
+                          [Detail_ReturnCon_Match con boundLocals] })
 
 rule6_algebraicNormalMatch _ = Nothing
 
