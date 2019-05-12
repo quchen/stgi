@@ -347,8 +347,8 @@ rule11_primitiveNormalMatch _ = Nothing
 
 -- | Rule 12: Primitive return, bound default match
 --
--- Similar to 'rule8_algebraicBoundDefaultMatch', but for primtives. Since the
--- bound variable is primitive, this rule is a bit sompler since we can store
+-- Similar to 'rule8_algebraicBoundDefaultMatch', but for primitives. Since the
+-- bound variable is primitive, this rule is a bit simpler since we can store
 -- the value directly in its binding, instead of allocating it on the heap and
 -- storing the address.
 rule12_primitiveBoundDefaultMatch :: StgState -> Maybe StgState
