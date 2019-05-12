@@ -236,14 +236,14 @@ rule6_algebraicNormalMatch s@StgState
         lookupAlgebraicAlt alts con
     , length ws == length vars
 
-  = let locals' = addLocals (zipWith Mapping vars ws) locals
-        boundLocals = zipWith Mapping vars ws
+  = let locals' = addLocals newLocals locals
+        newLocals = zipWith Mapping vars ws
 
     in Just (s
         { stgCode  = Eval expr locals'
         , stgStack = stack'
         , stgInfo  = Info (StateTransition Rule6_ReturnCon_Match)
-                          [Detail_ReturnCon_Match con boundLocals] })
+                          [Detail_ReturnCon_Match con newLocals] })
 
 rule6_algebraicNormalMatch _ = Nothing
 
