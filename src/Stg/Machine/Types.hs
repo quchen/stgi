@@ -366,7 +366,7 @@ data InfoDetail =
     | Detail_EnterNonUpdatable MemAddr [Mapping Var Value]
     | Detail_EvalLet [Var] [MemAddr]
     | Detail_EvalCase
-    | Detail_ReturnCon_Match Constr [Var]
+    | Detail_ReturnCon_Match Constr [Mapping Var Value]
     | Detail_ReturnConDefBound Var MemAddr
     | Detail_ReturnIntDefBound Var Integer
     | Detail_EnterUpdatable MemAddr
@@ -429,7 +429,13 @@ instance PrettyStgi InfoDetail where
             ["Save alternatives and local environment as a stack frame"]
 
         Detail_ReturnCon_Match con args ->
-            ["Pattern" <+> prettyStgi (AppC con (map AtomVar args)) <+> "matches, follow its branch"]
+            let pat = prettyStgi (AppC con (map (\(Mapping a _) -> AtomVar a) args))
+            in ["Pattern" <+> pat <+> "matches, follow its branch"
+               , if null args
+                   then "No need to augment local environment for nullary constructor" <+> pat
+                   else hang 4 (vsep
+                           [ "Extend local environment with matched pattern variables' values:"
+                           , commaSep (foldMap (\arg -> [prettyStgi arg]) args) ])]
 
         Detail_ReturnConDefBound var addr ->
             [ "Allocate closure at" <+> prettyStgi addr <+> "for the bound value"
