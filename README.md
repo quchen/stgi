@@ -14,7 +14,9 @@ intermediate state looks like:
 [![Hackage](https://img.shields.io/hackage/v/stgi.svg?style=flat-square)](http://hackage.haskell.org/packages/search?terms=stgi)
 [![BSD3](https://img.shields.io/badge/License-BSD-blue.svg?style=flat-square)](https://en.wikipedia.org/wiki/BSD_License)
 
+<!--
 [![Master build](https://img.shields.io/travis/quchen/stgi/master.svg?style=flat-square&label=Master%20build)](https://travis-ci.org/quchen/stgi)
+-->
 
 
 
