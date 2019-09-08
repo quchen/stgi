@@ -32,8 +32,8 @@ test_popN = testGroup "forEachPop"
         naive xs stack
             | length xs > length stack = Nothing
             | otherwise =
-                let (before, after) = splitAt (length xs) (toList stack)
-                in Just (before, fromList after)
+                let (before, rest) = splitAt (length xs) (toList stack)
+                in Just (before, fromList rest)
 
     roundtrip = QC.testProperty
         "pop-then-push"

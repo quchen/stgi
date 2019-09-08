@@ -49,6 +49,7 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.Char                    (isSpace)
 import           Data.List                    as L
+import           Data.Functor
 import qualified Data.List.NonEmpty           as NonEmpty
 import qualified Data.Map.Strict              as M
 import           Data.Maybe
@@ -159,8 +160,8 @@ lambdaForm = lf >>= validateLambda <?> "lambda form"
 
     -- Parse an update flag arrow. @->@ means no update, @=>@ update.
     updateArrow :: StgParser UpdateFlag
-    updateArrow = token (symbol "->" *> pure NoUpdate
-                     <|> symbol "=>" *> pure Update
+    updateArrow = token (symbol "->" $> NoUpdate
+                     <|> symbol "=>" $> Update
                      <?> "update arrow" )
 
 -- | Parse an arrow token, @->@.
@@ -229,7 +230,7 @@ primOp = choice ops <?> "primitive function"
           , "/=" ~> Neq
           , ">=" ~> Geq
           , ">"  ~> Gt ]
-    op ~> val = token (try (string op <* char '#')) *> pure val
+    op ~> val = token (try (string op <* char '#')) $> val
 
 -- | Parse an integer literal
 --

@@ -6,7 +6,6 @@ import Control.Concurrent
 import Data.Monoid
 
 import Test.Tasty
-import Test.Tasty.Ingredients.Rerun
 import Test.Tasty.Options
 import Test.Tasty.QuickCheck
 import Test.Tasty.Runners
@@ -29,7 +28,7 @@ main = do
     defaultMainWithIngredients ingredients (options tests)
 
 ingredients :: [Ingredient]
-ingredients = [rerunningTests (htmlRunner : defaultIngredients)]
+ingredients = htmlRunner : defaultIngredients
 
 testOptions :: IO (TestTree -> TestTree)
 testOptions = do

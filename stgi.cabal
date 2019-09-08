@@ -158,7 +158,6 @@ test-suite testsuite
                      , tasty-html
                      , tasty-hunit
                      , tasty-quickcheck, QuickCheck
-                     , tasty-rerun
                      , tasty-smallcheck, smallcheck
                      , template-haskell
                      , text
