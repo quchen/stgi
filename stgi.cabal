@@ -70,7 +70,6 @@ library
                      , Stg.Util
   ghc-options:         -Wall
   build-depends:       base >= 4.8 && < 5
-                     , ansi-wl-pprint
                      , prettyprinter >= 1
                      , prettyprinter-ansi-terminal >= 1
                      , containers       >= 0.5
@@ -79,7 +78,6 @@ library
                      , semigroups       >= 0.16
                      , template-haskell >= 2.10
                      , text             >= 1.2
-                     , th-lift          >= 0.7
                      , transformers     >= 0.4
                      , trifecta         >= 1.6
   other-extensions:    CPP
@@ -149,7 +147,6 @@ test-suite testsuite
                      , Test.UtilTH
   build-depends:       base
                      , stgi
-                    --  , ansi-wl-pprint
                      , prettyprinter >= 1
                      , containers >= 0.5
                      , deepseq >= 1.4

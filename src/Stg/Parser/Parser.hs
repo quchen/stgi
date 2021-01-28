@@ -56,7 +56,8 @@ import           Data.Maybe
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Text.Parser.Token.Highlight
-import           Text.PrettyPrint.ANSI.Leijen (Doc)
+import           Prettyprinter                (Doc)
+import           Prettyprinter.Render.Terminal (AnsiStyle)
 import           Text.Trifecta                as Trifecta
 
 import Stg.Language
@@ -68,7 +69,7 @@ import Stg.Language
 --
 -- >>> parse program "id = \\x -> x"
 -- Right (Program (Binds [(Var "id",LambdaForm [] NoUpdate [Var "x"] (AppF (Var "x") []))]))
-parse :: StgParser ast -> Text -> Either Doc ast
+parse :: StgParser ast -> Text -> Either (Doc AnsiStyle) ast
 parse (StgParser p) input = case parseString (whiteSpace *> p <* eof) mempty (T.unpack input) of
     Success a -> Right a
     Failure ErrInfo{ _errDoc = e } -> Left e
@@ -80,7 +81,7 @@ skipToken = void . token
 
 -- | A parser for an STG syntax element.
 newtype StgParser ast = StgParser (Trifecta.Parser ast)
-    deriving (CharParsing, Parsing, Alternative, Applicative, Functor, Monad)
+    deriving (CharParsing, Parsing, Alternative, Applicative, Functor, Monad, MonadFail)
 
 instance TokenParsing StgParser where
     someSpace = skipMany (void (satisfy isSpace) <|> comment)

@@ -68,7 +68,7 @@ parserRoundtrip
     => StgParser ast
     -> ast
     -> Either Text ast
-parserRoundtrip parser = first prettyprintOldAnsi . parse parser . renderPlain . prettyStgi
+parserRoundtrip parser = first renderPlain . parse parser . renderPlain . prettyStgi
 
 prettySuccess :: PrettyStgi ast => ast -> ast -> Text
 prettySuccess inputAst parsedAst =

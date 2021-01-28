@@ -37,7 +37,7 @@ shouldParseTo
     -> TestTree
 shouldParseTo testName input output = testCase (T.unpack testName) test
   where
-    actual = first prettyprintOldAnsi (parse program input)
+    actual = first renderPlain (parse program input)
     expected = Right (Program output)
     failMessage = case actual of
        Left err -> T.unlines
