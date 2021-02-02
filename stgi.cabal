@@ -149,7 +149,7 @@ test-suite testsuite
                      , Test.UtilTH
   build-depends:       base
                      , stgi
-                     , ansi-wl-pprint
+                    --  , ansi-wl-pprint
                      , prettyprinter >= 1
                      , containers >= 0.5
                      , deepseq >= 1.4
