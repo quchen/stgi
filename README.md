@@ -433,11 +433,11 @@ this is all you should need to get started.
 ### Marshalling values
 
 The `Stg.Marshal` module provides functions to inject Haskell values into the
-STG (`toStg`), and extract them from a machine state again (`toStg`). These
+STG (`toStg`), and extract them from a machine state again (`fromStg`). These
 functions are tremendously useful in practice, make use of them! After chasing a
 list value on the heap manually you'll know the value of `fromStg`, and in order
 to get data structures into the STG you have to write a lot of code, and be
-careful doing it at that. Keep in mind that `fromStg` requires the value to  be
+careful doing it at that. Keep in mind that `fromStg` requires the value to be
 in normal form, or extraction will fail.
 
 
