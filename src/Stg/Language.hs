@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveLift            #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -52,7 +53,7 @@ import qualified Data.Text                 as T
 import           Data.Text.Prettyprint.Doc
 import           GHC.Exts
 import           GHC.Generics
-import           Language.Haskell.TH.Lift
+import           Language.Haskell.TH.Syntax (Lift(liftTyped))
 
 import Stg.Language.Prettyprint
 
@@ -66,7 +67,7 @@ import Stg.Language.Prettyprint
 -- | An STG 'Program' is the unit that can be loaded by the STG machine. It
 -- consists of a set of bindings.
 newtype Program = Program Binds
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | __Right-biased union__ of the contained bindings. This makes for a poor man's
 -- module system by appending multiple, potentially partially incomplete,
@@ -110,7 +111,7 @@ data LambdaForm = LambdaForm ![Var] !UpdateFlag ![Var] !Expr
     --   * Update flag
     --   * Bound variables
     --   * Body
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | Possible classification of lambda forms.
 data LambdaType =
@@ -137,13 +138,13 @@ data UpdateFlag =
       Update -- ^ Overwrite the heap object in-place with its reduced value
              -- once available, making recurring access cheap
     | NoUpdate -- ^ Don't touch the heap object after evaluation
-    deriving (Eq, Ord, Show, Generic, Enum, Bounded)
+    deriving (Eq, Ord, Show, Generic, Enum, Bounded, Lift)
 
 -- | Distinguishes @let@ from @letrec@.
 data Rec =
       NonRecursive -- ^ Bindings have no access to each other
     | Recursive -- ^ Bindings can be given to each other as free variables
-    deriving (Eq, Ord, Show, Generic, Enum, Bounded)
+    deriving (Eq, Ord, Show, Generic, Enum, Bounded, Lift)
 
 -- | An expression in the STG language.
 data Expr =
@@ -153,14 +154,14 @@ data Expr =
     | AppC !Constr ![Atom]     -- ^ Saturated constructor application @Just a@
     | AppP !PrimOp !Atom !Atom -- ^ Primitive function application @+# 1# 2#@
     | LitE !Literal            -- ^ Literal expression @1#@
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | List of possible alternatives in a 'Case' expression.
 --
 -- The list of alts has to be homogeneous. This is not ensured by the type
 -- system, and should be handled by the parser instead.
 data Alts = Alts !NonDefaultAlts !DefaultAlt
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | The part of a 'Case' alternative that's not the default.
 data NonDefaultAlts =
@@ -177,22 +178,22 @@ data NonDefaultAlts =
 
 -- | As in @True | False@
 data AlgebraicAlt = AlgebraicAlt !Constr ![Var] !Expr
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | As in @1#@, @2#@, @3#@
 data PrimitiveAlt = PrimitiveAlt !Literal !Expr
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | If no viable alternative is found in a pattern match, use a 'DefaultAlt'
 -- as fallback.
 data DefaultAlt =
        DefaultNotBound !Expr
      | DefaultBound !Var !Expr
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | Literals are the basis of primitive operations.
 newtype Literal = Literal Integer
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | Primitive operations.
 data PrimOp =
@@ -207,7 +208,7 @@ data PrimOp =
     | Gt  -- ^ @>@
     | Geq -- ^ @>=@
     | Neq -- ^ @/=@
-    deriving (Eq, Ord, Show, Generic, Bounded, Enum)
+    deriving (Eq, Ord, Show, Generic, Bounded, Enum, Lift)
 
 -- | Variable.
 newtype Var = Var Text
@@ -220,7 +221,7 @@ instance IsString Var where fromString = coerce . T.pack
 data Atom =
       AtomVar !Var
     | AtomLit !Literal
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Lift)
 
 -- | Constructors of algebraic data types.
 newtype Constr = Constr Text
@@ -228,31 +229,23 @@ newtype Constr = Constr Text
 
 instance IsString Constr where fromString = coerce . T.pack
 
-
-
 --------------------------------------------------------------------------------
 -- Lift instances
-deriveLiftMany [ ''Program, ''Literal, ''LambdaForm, ''UpdateFlag, ''Rec
-               , ''Expr, ''Alts, ''AlgebraicAlt, ''PrimitiveAlt, ''DefaultAlt
-               , ''PrimOp, ''Atom ]
-
 instance Lift NonDefaultAlts where
-    lift NoNonDefaultAlts = [| NoNonDefaultAlts |]
-    lift (AlgebraicAlts alts) =
-        [| AlgebraicAlts (NonEmpty.fromList $(lift (toList alts))) |]
-    lift (PrimitiveAlts alts) =
-        [| PrimitiveAlts (NonEmpty.fromList $(lift (toList alts))) |]
+    liftTyped NoNonDefaultAlts = [|| NoNonDefaultAlts ||]
+    liftTyped (AlgebraicAlts alts) =
+        [|| AlgebraicAlts (NonEmpty.fromList $$(liftTyped (toList alts))) ||]
+    liftTyped (PrimitiveAlts alts) =
+        [|| PrimitiveAlts (NonEmpty.fromList $$(liftTyped (toList alts))) ||]
 
 instance Lift Binds where
-    lift (Binds binds) = [| Binds (M.fromList $(lift (M.assocs binds))) |]
+    liftTyped (Binds binds) = [|| Binds (M.fromList $$(liftTyped (M.assocs binds))) ||]
 
 instance Lift Constr where
-    lift (Constr con) = [| Constr (T.pack $(lift (T.unpack con))) |]
+    liftTyped (Constr con) = [|| Constr (T.pack $$(liftTyped (T.unpack con))) ||]
 
 instance Lift Var where
-    lift (Var var) = [| Var (T.pack $(lift (T.unpack var))) |]
-
-
+    liftTyped (Var var) = [|| Var (T.pack $$(liftTyped (T.unpack var))) ||]
 
 --------------------------------------------------------------------------------
 -- Pretty instances

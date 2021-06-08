@@ -3,6 +3,6 @@ extra-package-dbs: []
 packages:
   - .
 extra-deps:
-  - tasty-html-0.4.1.2
-  - tasty-rerun-1.1.12
-resolver: lts-14.4
+  - tasty-1.4.0.3
+  - tasty-html-0.4.1.4
+resolver: lts-17.0

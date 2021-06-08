@@ -18,7 +18,7 @@ import qualified Data.Semigroup               as Semigroup
 import qualified GHC.Exts                     as OL
 import           Prelude                      hiding (span)
 import qualified Prelude                      as P
-import           Text.PrettyPrint.ANSI.Leijen hiding (list, (<>))
+import           Prettyprinter                hiding (list)
 
 
 

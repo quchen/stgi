@@ -11,18 +11,15 @@ module Stg.Language.Prettyprint (
 
     renderRich,
     renderPlain,
-    prettyprintOldAnsi,
 ) where
 
 
 
 import           Data.Text                                 (Text)
-import qualified Data.Text                                 as T
 import           Data.Text.Prettyprint.Doc
 import           Data.Text.Prettyprint.Doc.Render.Terminal as PrettyAnsi
 import           Data.Text.Prettyprint.Doc.Render.Text     as PrettyPlain
 import           Prelude                                   hiding ((<$>))
-import qualified Text.PrettyPrint.ANSI.Leijen              as Leijen
 
 
 
@@ -49,10 +46,6 @@ renderPlain = PrettyPlain.renderStrict . layoutPretty layoutOptions
 
 layoutOptions :: LayoutOptions
 layoutOptions = defaultLayoutOptions { layoutPageWidth = Unbounded }
-
--- | Prettyprint a value as 'Text', including styles such as colours.
-prettyprintOldAnsi :: Leijen.Doc -> Text
-prettyprintOldAnsi input = T.pack (Leijen.displayS (Leijen.renderPretty 0.4 1000 input) "")
 
 class PrettyStgi a where
     prettyStgi :: a -> Doc StgiAnn
